@@ -6,8 +6,6 @@ Excerpt-driven session branching and conversation lineage for DeepSeek Harness.
 
 把选中文本和会话摘录变成可复用的分支起点，让主会话保持专注，也让每一次发散探索都有迹可循。
 
-完整的源码导读、复现课程与实战实验见 [`course/README.md`](course/README.md)。
-
 BranchMark 是一个独立的 DeepSeek Harness 插件 Bundle。每一枚“枝签”都由不可改写的摘录正文、来源锚点、可编辑备注和标签组成，可以作为临时 Side Chat、继承来源上下文的新会话或全新会话的分支起点。
 
 插件不修改 DeepSeek Harness 源码。它只使用现有的 Cordis 插件、Typed Remote、`storageDomain`、Session/Workspace、Client Slot、`ctx.llm.stream`、文件系统和 Web capability。
@@ -157,4 +155,4 @@ pnpm run pack:bundle
 
 `release:check` 在常规构建测试之外校验公开包元数据、私有工作区边界、DSH peer 声明、npm 文件清单和 dry-run 发布结果。真实 provider 请求不进入 keyless CI；发布候选仍需按 [`RELEASING.md`](RELEASING.md) 完成独立 profile smoke test。
 
-详细需求和设计见 [`docs/PRD.md`](docs/PRD.md) 与 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。参与开发前请阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md)；版本变化记录在 [`CHANGELOG.md`](CHANGELOG.md)。
+参与开发前请阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md)；版本变化记录在 [`CHANGELOG.md`](CHANGELOG.md)。

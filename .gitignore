@@ -10,3 +10,10 @@ coverage/
 .env.*
 !.env.example
 .DS_Store
+
+# Local-only product research, course material, and interaction prototypes.
+/CONTEXT.md
+/course/
+/docs/
+/prototype/
+/prototypes/

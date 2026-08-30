@@ -23,8 +23,6 @@ pnpm run check
 - `packages/host/`：持久化、Remote、来源校验、衍生 Session 和 Side Chat 运行时。
 - `packages/client/`：消息选区、Dock、项目集合、Composer 引用、关系树和 Side Chat UI。
 - `packages/bundle/`：唯一公开发布包；把 Host、Typert、Remote 与浏览器入口编译为自包含 Bundle。
-- `docs/`：产品需求、架构和架构决策。
-- `course/`：面向复现与学习的分阶段教程，不是运行时文档。
 - `scripts/`：品牌、Bundle 和发布前机械校验。
 
 `dsh-branchmark-host` 与 `dsh-branchmark-client` 必须保持私有。运行时依赖 DSH 提供的 package 应保持 peer dependency，不要把 Cordis 或 DSH 核心 package 改成普通 dependency，否则 profile 可能加载重复框架实例。

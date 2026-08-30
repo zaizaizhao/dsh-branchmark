@@ -5,11 +5,14 @@ import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const ignoredDirectories = new Set(['.git', '.playwright-mcp', 'dist', 'lib', 'node_modules'])
+const localOnlyRootEntries = new Set(['CONTEXT.md', 'course', 'docs', 'prototype', 'prototypes'])
 
 async function collect(directory) {
   const entries = await readdir(directory, { withFileTypes: true })
   const files = []
+  const isRepositoryRoot = resolve(directory) === resolve(root)
   for (const entry of entries) {
+    if (isRepositoryRoot && localOnlyRootEntries.has(entry.name)) continue
     if (entry.isDirectory() && ignoredDirectories.has(entry.name)) continue
     const path = resolve(directory, entry.name)
     if (entry.isDirectory()) files.push(...await collect(path))
