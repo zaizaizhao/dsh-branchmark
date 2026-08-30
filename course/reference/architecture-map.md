@@ -1,0 +1,142 @@
+# 系统架构与数据流
+
+本页是查阅型参考，回答“一个动作跨过了哪些模块、最后写到哪里”。实现顺序见[主线课程](../README.md#主线课程)，类型和方法细节见[Remote API](remote-api.md)。
+
+## 运行时组件
+
+```text
+DSH Web profile
+├── Host process
+│   ├── DSH services
+│   │   ├── ctx.sessions / ctx.sessionPersistence / ctx.workspaceRegistry
+│   │   ├── ctx.storageDomain
+│   │   ├── ctx.llm
+│   │   ├── ctx.fs
+│   │   └── ctx.web
+│   └── BranchMarkService
+│       ├── clips KvTable
+│       ├── derived_sessions KvTable
+│       ├── 14-method Typert Remote namespace
+│       └── TemporarySideChatRuntime Map
+└── Browser
+    ├── generated remote.branchmark methods
+    ├── BranchMarkClient
+    ├── BranchMarkUiController
+    └── DSH Slots
+        ├── shell.overlay
+        ├── sidebar.footer.action
+        ├── conversation.input.left
+        ├── conversation.session.header.actions
+        └── conversation.chat.node
+    └── ctx.inputTriggers
+        └── branchmark Reference codec
+```
+
+Host 的入口是 [`BranchMarkService`](../../packages/host/src/index.ts)，Side Chat 执行器是 [`TemporarySideChatRuntime`](../../packages/host/src/side-chat.ts)，浏览器组装入口是 [`packages/client/src/client/index.tsx`](../../packages/client/src/client/index.tsx)，单包分发入口是 [`packages/bundle`](../../packages/bundle)。
+
+## 数据所有权
+
+| 数据 | 所有者 | 介质 | Host 重启后 | 删除 Clip 后 |
+| --- | --- | --- | --- | --- |
+| Clip 正文、来源、备注、标签、状态 | BranchMark | `clip_explorer/clips` | 保留 | 被删除 |
+| 衍生关系与 Clip 使用快照 | BranchMark | `clip_explorer/derived_sessions` | 保留 | 保留 |
+| 普通 Session 历史、parent、seed | DSH Session/Persistence | DSH Session backend | 保留 | 不受影响 |
+| Side Chat 隐藏上下文、消息、流式状态 | `TemporarySideChatRuntime` | Host 内存 | 丢失 | 只要标签未关闭就保留内存引用副本 |
+| Dock 显示模式、视图和宽度 | `BranchMarkUiController` | 浏览器 `localStorage` | 保留 | 不含 Clip 内容 |
+| Composer 中显式插入的 Clip occurrence | DSH Composer | 浏览器当前 input state | 服从 DSH draft 生命周期 | 提交时重新读取 active Clip；删除后阻止发送 |
+
+这张表解释了插件为何同时需要两个持久系统：普通 Session 的模型历史属于 DSH 日志，Clip 知识对象与双向使用关系属于插件 domain。插件不得把 Session 日志复制到自己的 KV 表，也不得用 Clip 表替代 DSH lineage。
+
+## Clip 创建数据流
+
+```text
+DOM Range
+  ↓ useChatSelection
+DSH Chat node key + rendered excerpt
+  ↓ selectionCandidate
+SessionId + MessageId + eventSeq + turn + UTF-16 range
+  ↓ remote.branchmark.create
+Host sessionPersistence.inspect(sessionId)
+  ↓ deriveEventMessage + canonicalMessageText
+严格校验 identity / role / turn / slice === excerpt
+  ↓ clips.put
+durable Clip
+```
+
+浏览器只负责观察和定位。Host 在 [`resolvePersistedSource`](../../packages/host/src/index.ts) 中重新读取持久化历史，因此修改 DOM、伪造 `MessageId` 或伪造 `excerpt` 都不能绕过来源校验。
+
+跨消息选区不会产生一个跨消息 range。[`useChatSelection`](../../packages/client/src/components/SelectionToolbar.tsx) 枚举 Range 相交的每个 `[data-chat-flow-key]` 行，为每行构造独立 `ClipSelectionCandidate`，随后 `SelectionToolbar` 根据显式选择的会话或项目范围为每个 candidate 发出一次创建请求。
+
+## 普通衍生 Session 数据流
+
+```text
+selected Clips
+  ↓ BranchMarkLauncherSheet chooses mode, primary Clip, note flags
+  ├── full-fork
+  │     ↓ SessionRuntime.fork({ sourceSessionId, atSeq: sourceEventSeq })
+  │   DSH Host extends cut to the first matching turn/end and trailing standalone events
+  │     ↓ child header: parentSession + seedLength
+  └── clips-only
+        ↓ concrete SessionRuntime.create({ workspaceId })
+      fresh header: no parentSession, no seedLength
+
+created SessionId
+  ↓ remote.branchmark.recordDerivedSession
+Host re-inspects child and source headers
+  ↓ one-record derived_sessions.put(relation + ClipUsage snapshots)
+  ↓ child.append(user/message, plugin recall)
+  ├── create-and-open → sessions.open(child)
+  └── create-and-send → child binding.session.prompt(question, 'queue')
+```
+
+DSH header 是 full-fork 父子关系的权威来源。插件关系表只能在 Host 确认 `parentSession` 和精确 `seedLength` 后写入。`clips-only` 不设置 DSH parent；它是一个根 Session，只和 Clip 使用记录有关。
+
+Relation 与 usages 在一个 KV record 内共同提交，但随后的 Session recall append 属于另一个 durable subsystem，两步之间没有跨系统事务；失败窗口见[兼容性与限制](compatibility-and-limitations.md#跨-durable-subsystem-的提交限制)。
+
+## Side Chat 数据流
+
+```text
+selected Clips + primary Clip
+  ↓ createSideChat
+inspect source prefix through primary Clip's completed turn
+  ↓ foldRequestHeader
+freeze source Message[] + source LlmCallConfig
+  ↓ allocate SideChatEntry in Host Map
+browser receives preparing snapshot
+
+first question
+  ↓ sendSideChat returns immediately
+lazy context preparation
+  ├── earlier messages → one untrusted JSON text transcript → ctx.llm.stream → AI summary recall
+  ├── safe user boundary onward → at least N exact DSH Messages
+  └── selected Clips + enabled notes → full recall Message
+  ↓ ctx.llm.stream(system + context + Side Chat messages + fixed tools)
+  ↓ BlockAssembler + optional tool-call rounds
+browser polls getSideChat every 500 ms
+  ↓ text/reasoning/tool snapshots
+closeSideChat → AbortController.abort + Map.delete
+```
+
+Side Chat 不是普通 Session，因此不会生成 Session id、Session event 或持久化记录。它使用 DSH 的消息和模型协议，但自己承担内存状态、取消、缩窄 wire projection 与不可恢复语义。
+
+## 父子层级的两份数据
+
+| 关系 | 权威字段 | 用途 |
+| --- | --- | --- |
+| DSH Session lineage | `SessionHeader.parentSession` → Host `parentSessionId` → Client `SessionSummary.parentId` | 树结构、侧边栏嵌套、父会话导航 |
+| BranchMark relation | `DerivedSessionRelation` + `ClipUsage[]` | 主要 Clip、来源消息、创建模式、Clip→Session 反向导航、删除后的快照 |
+
+full-fork 同时拥有两份关系：DSH lineage 说明“从哪个 Session 分叉”，插件关系说明“使用了哪些 Clip、哪一个是主要来源”。clips-only 只有插件关系，没有 DSH parent。Side Chat 两份都没有。
+
+## 信任边界
+
+- 浏览器提交的 Workspace、Session、消息锚点、选区与 Clip id 都是不可信输入。
+- Typert Gateway 校验 wire JSON 的字段和类型，但业务归属仍由 `BranchMarkService` 校验。
+- `workspaceRegistry.sessionIds` 与 `sessionPersistence.inspect()` 是 Session/Workspace 来源真相。
+- `ctx.fs.contains(root, target)` 是项目文件工具的路径 containment 检查；字符串前缀比较不具备这个保证。
+- `ctx.web.fetch` 的网络安全取决于已装 provider。DSH 当前本地 HTTP provider 不默认阻断私网地址，Web profile 默认也没有 fetch provider；详见[兼容性与限制](compatibility-and-limitations.md#web-fetch-不是默认可用能力)。
+- Side Chat 不获得 Shell、写文件、Session 修改、subagent 或权限升级工具。
+
+## 设计检查
+
+当你新增功能时，先问数据应落在哪个所有者：需要进入普通 Session 模型历史的内容必须写 Session 日志；需要跨会话检索但不属于会话历史的 Clip 元数据写 storage domain；只在临时 Side Chat 存活期间有意义的状态只放 Host `Map`；纯显示偏好才可放浏览器 `localStorage`。

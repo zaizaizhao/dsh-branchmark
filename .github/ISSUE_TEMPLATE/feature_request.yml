@@ -1,0 +1,34 @@
+name: Feature request
+description: Propose a focused BranchMark behavior or interaction
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: User scenario
+      description: Describe the conversation state, the user goal, and where the current flow becomes difficult.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe observable behavior without prescribing an internal implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Note any current workaround and why it is insufficient.
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Scope
+      options:
+        - label: This can remain a pure plugin and does not require a DSH source change.
+        - label: This changes what data reaches a model or Web provider.
+        - label: This changes persistence, deletion, or session isolation.
+        - label: This changes Side Chat tool permissions.

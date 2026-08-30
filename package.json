@@ -1,0 +1,59 @@
+{
+  "name": "dsh-branchmark-workspace",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Excerpt-driven session branching and conversation lineage for DeepSeek Harness",
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "conversation-branching",
+    "session-lineage",
+    "side-chat",
+    "local-first"
+  ],
+  "author": "zaizaizhao",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zaizaizhao/dsh-branchmark.git"
+  },
+  "homepage": "https://github.com/zaizaizhao/dsh-branchmark#readme",
+  "bugs": {
+    "url": "https://github.com/zaizaizhao/dsh-branchmark/issues"
+  },
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build:host": "pnpm --filter dsh-branchmark-host run build",
+    "build:client": "pnpm --filter dsh-branchmark-client run build",
+    "build:bundle": "pnpm --filter dsh-branchmark run build",
+    "build": "pnpm run build:host && pnpm run build:client && pnpm run build:bundle",
+    "typecheck": "pnpm run build:host && pnpm --recursive --if-present run typecheck",
+    "test": "pnpm --recursive --if-present run test",
+    "verify:brand": "node scripts/verify-brand.mjs",
+    "verify:bundle": "node scripts/verify-bundle.mjs",
+    "verify:docs": "node scripts/verify-doc-links.mjs",
+    "verify:release": "node scripts/verify-release.mjs",
+    "check": "pnpm run verify:brand && pnpm run typecheck && pnpm run test && pnpm run build && pnpm run verify:bundle",
+    "pack:bundle": "pnpm run build:bundle && pnpm --dir packages/bundle pack --pack-destination ../../dist",
+    "release:check": "pnpm run check && pnpm run verify:docs && pnpm run verify:release && pnpm exec publint packages/bundle && pnpm --dir packages/bundle publish --dry-run --access public --no-git-checks"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-typert-generator": "0.1.1-rc.2",
+    "@types/node": "^22.20.0",
+    "@types/react": "~18.3.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "publint": "^0.3.21",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3",
+    "unrun": "0.3.1",
+    "vitest": "^4.1.8"
+  }
+}

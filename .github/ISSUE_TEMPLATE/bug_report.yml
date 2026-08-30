@@ -1,0 +1,79 @@
+name: Bug report
+description: Report a reproducible BranchMark defect
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Remove API keys, credential files, private conversation text, and other secrets before submitting.
+  - type: input
+    id: branchmark_version
+    attributes:
+      label: BranchMark version
+      placeholder: 0.2.0
+    validations:
+      required: true
+  - type: input
+    id: dsh_version
+    attributes:
+      label: DeepSeek Harness version
+      placeholder: 0.1.1-rc.2
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OS, Node.js version, browser, DSH profile, and install source.
+      placeholder: macOS 15, Node 24.x, Chrome, web profile, npm package
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest sequence that reproduces the problem with non-sensitive sample text.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include a redacted stack trace or screenshot when useful.
+    validations:
+      required: true
+  - type: dropdown
+    id: data_scope
+    attributes:
+      label: Affected surface
+      options:
+        - Message selection
+        - Session clips
+        - Project clips
+        - Composer references
+        - Derived sessions
+        - Side Chat
+        - Dock or theme
+        - Installation or startup
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Checklist
+      options:
+        - label: I reproduced this on a supported BranchMark and DSH version.
+          required: true
+        - label: I removed secrets and private conversation content.
+          required: true
+        - label: This is not an undisclosed security vulnerability; those go through the private security reporting link.
+          required: true
