@@ -326,6 +326,15 @@ export function BranchMarkShell({ useSessions, useWorkspaces, controller, client
   const placement = useDockPlacement(state.dock.mode === 'expanded', currentSessionId)
   const handleCount = (counts.session ?? 0) + (counts.project ?? 0)
   useChatSelection(currentSessionId, client, controller)
+  useEffect(() => {
+    if (currentSessionId === undefined || workspaceId === undefined) return
+    return client.watchComposerReferenceRecovery(
+      currentSessionId,
+      workspaceId,
+      result => { controller.notify('success', `已恢复 ${String(result.inserted.length)} 枚枝签引用`) },
+      error => { controller.notify('error', error instanceof Error ? error.message : String(error)) },
+    )
+  }, [client, controller, currentSessionId, workspaceId])
   return (
     <div className="dbm-overlay-root">
       {state.selection !== null && <SelectionToolbar candidates={state.selection} client={client} controller={controller} />}

@@ -70,6 +70,18 @@ function byteLength(value: string): number {
   return Buffer.byteLength(value, 'utf8')
 }
 
+function compareClips(left: Clip, right: Clip): number {
+  const pinOrder = Number(right.pinnedAt !== undefined) - Number(left.pinnedAt !== undefined)
+  if (pinOrder !== 0) return pinOrder
+  if (left.sortIndex !== undefined && right.sortIndex !== undefined && left.sortIndex !== right.sortIndex) {
+    return left.sortIndex - right.sortIndex
+  }
+  if ((left.sortIndex !== undefined) !== (right.sortIndex !== undefined)) {
+    return left.sortIndex === undefined ? -1 : 1
+  }
+  return right.createdAt.localeCompare(left.createdAt) || left.id.localeCompare(right.id)
+}
+
 function canonicalMessageText(message: Message): string {
   const texts: string[] = []
   for (const block of message.content) {
@@ -291,7 +303,7 @@ export class BranchMarkService extends Service {
         if (!haystack.includes(search)) return false
       }
       return true
-    }).sort((left, right) => right.createdAt.localeCompare(left.createdAt) || left.id.localeCompare(right.id))
+    }).sort(compareClips)
     const tagVocabulary = [...new Set(clips.flatMap(clip => clip.tags))].sort()
     return success({ clips: Object.freeze(clips), tags: Object.freeze(tagVocabulary) })
   }
@@ -311,14 +323,25 @@ export class BranchMarkService extends Service {
     if (!note.ok) return note
     const tags = request.tags === undefined ? success(current.value.tags) : this.validateTags(request.tags)
     if (!tags.ok) return tags
+    const timestamp = now()
     const updated = await this.requireClips().update(request.clipId, (clip) => {
-      const { note: _priorNote, ...withoutNote } = clip
+      const {
+        note: _priorNote,
+        pinnedAt: _priorPinnedAt,
+        sortIndex: _priorSortIndex,
+        ...stable
+      } = clip
+      const scope = request.scope ?? clip.scope
+      const pinned = request.pinned ?? clip.pinnedAt !== undefined
+      const collectionChanged = scope !== clip.scope || pinned !== (clip.pinnedAt !== undefined)
       return Object.freeze({
-        ...withoutNote,
-        scope: request.scope ?? clip.scope,
+        ...stable,
+        scope,
         ...(note.value === undefined ? {} : { note: note.value }),
         tags: Object.freeze([...tags.value]),
-        updatedAt: now(),
+        ...(pinned ? { pinnedAt: clip.pinnedAt ?? timestamp } : {}),
+        ...(!collectionChanged && clip.sortIndex !== undefined ? { sortIndex: clip.sortIndex } : {}),
+        updatedAt: timestamp,
       })
     })
     return success(updated)
@@ -372,6 +395,38 @@ export class BranchMarkService extends Service {
       if (!owned.ok) return owned
       current.push(owned.value)
     }
+    if (request.mutation.kind === 'reorder') {
+      const mutation = request.mutation
+      if (mutation.scope === 'session' && mutation.ownerSessionId === undefined) {
+        return rejected({ code: 'invalid-request', message: 'session reorder requires ownerSessionId' })
+      }
+      const collection = [...this.requireClips().entries()].map(([, clip]) => clip).filter((clip) => {
+        if (clip.workspaceId !== request.workspaceId || clip.status !== 'active') return false
+        if (mutation.scope === 'project') return clip.scope === 'project'
+        return clip.scope === 'session' && clip.ownerSessionId === mutation.ownerSessionId
+      })
+      const collectionIds = new Set(collection.map(clip => clip.id))
+      if (collection.length !== current.length || current.some(clip => !collectionIds.has(clip.id))) {
+        return rejected({ code: 'invalid-request', message: 'reorder requires the complete active Clip collection' })
+      }
+      let reachedUnpinned = false
+      for (const clip of current) {
+        if (clip.pinnedAt === undefined) reachedUnpinned = true
+        else if (reachedUnpinned) {
+          return rejected({ code: 'invalid-request', message: 'pinned Clips must remain before unpinned Clips' })
+        }
+      }
+      const timestamp = now()
+      const committed: Clip[] = []
+      for (const [sortIndex, clip] of current.entries()) {
+        committed.push(await this.requireClips().update(clip.id, value => Object.freeze({
+          ...value,
+          sortIndex,
+          updatedAt: timestamp,
+        })))
+      }
+      return success({ clips: Object.freeze(committed) })
+    }
     let tags: readonly string[] | undefined
     if (request.mutation.kind === 'add-tags') {
       const validated = this.validateTags(request.mutation.tags)
@@ -398,7 +453,9 @@ export class BranchMarkService extends Service {
           clipId: clip.id,
           ...(request.mutation.kind === 'set-scope'
             ? { scope: request.mutation.scope }
-            : { tags: [...new Set([...clip.tags, ...(tags ?? [])])] }),
+            : request.mutation.kind === 'set-pinned'
+              ? { pinned: request.mutation.pinned }
+              : { tags: [...new Set([...clip.tags, ...(tags ?? [])])] }),
         })
         if (!result.ok) return result
         committed.push(result.value)

@@ -59,6 +59,8 @@ export const clipSchema = z.object({
   excerpt: nonEmptyString,
   note: nonEmptyString.optional(),
   tags: z.array(nonEmptyString),
+  pinnedAt: nonEmptyString.optional(),
+  sortIndex: safeInteger.optional(),
   status: z.union([z.literal('active'), z.literal('trashed')]),
   createdAt: nonEmptyString,
   updatedAt: nonEmptyString,

@@ -20,13 +20,14 @@ BranchMark 是一个独立的 DeepSeek Harness 插件 Bundle。每一枚“枝�
 - 右侧 Dock 默认最小化为一个中部把手；展开后作为不改变 DSH 布局尺寸的浮层避开 Session Header 与 Composer。Dock 可拖动调整宽度、再次最小化或完全隐藏，只持久化显示模式、当前视图和宽度。
 - 本会话枝签、项目枝签、会话关系和 Side Chat 共用一个 Dock。关闭 Dock 不关闭 Side Chat，关闭 Side Chat 标签才会立即销毁对应临时上下文。
 - Dock 的本会话视图只读取当前会话私有枝签；项目视图只读取显式提升为项目级的枝签。
-- 项目枝签视图提供卡片/列表、全文搜索、多标签交集筛选、批量追加标签、批量保存到项目和批量回收站操作。
+- 项目枝签视图提供卡片/列表、全文搜索和多标签交集筛选。多选后只显示一个“处理 N 枚枝签”命令胶囊，展开后可按选择顺序引用到输入框、创建 Side Chat 或新会话、切换置顶、追加标签和移入回收站；窄宽度下命令自动收敛为图标。
+- 卡片保持统一阅读高度，长正文可在卡片内展开或进入居中的聚焦阅读视图。无搜索和标签筛选时，可在置顶组或普通组内拖动并持久化顺序；跨组移动必须先显式切换置顶状态。
 - 回收站可恢复或永久删除枝签；已创建的衍生会话与使用快照不受影响。
 - “完整分叉”调用 DSH 原生 `SessionRuntime.fork({ atSeq })`，继承主要来源消息所在完整轮次及其之前的上下文。
 - “仅携带枝签”调用 DSH 已导出的 `SessionRuntime.create`，保证创建一个不同于任何既有空白会话的新 Session。
 - “创建并打开”把枝签内容以只读 `recall` 上下文写入新会话日志，保持 Composer 空白且不发送；“创建并发送”在来源页收集问题，并通过 DSH Session `prompt()` 让新会话后台运行。
 - 衍生会话显示继承分隔线和来源入口；枝签卡片列出“完整分叉 / 仅枝签”衍生会话并可反向打开；双方保留双向关系和不可变使用快照。
-- 每张枝签卡片可直接启动 Side Chat、打开新会话流程或引用到当前主输入框。Composer 只显示 DSH 原生引用 Chip，完整摘录在用户显式发送时序列化；逐条移除不会把相邻引用降级为普通文本。
+- 每张枝签卡片可直接启动 Side Chat、打开新会话流程或引用到当前主输入框。Composer 只显示 DSH 原生引用 Chip，完整摘录在用户显式发送时序列化；逐条移除不会把相邻引用降级为普通文本，页面重载后也会把 DSH draft mirror 中的 `@branchmark:<id>` 持久化投影恢复为 Chip。
 - Side Chat 使用 Host 进程内存，不创建普通 Session，不写入 Session 日志，支持多个标签页、独立模型与思考强度切换、思考过程、只读工具活动、Markdown 回答、停止和关闭即销毁。
 - Side Chat 在首次发送时将较早历史转换为单条纯文本 transcript 后交给 AI 摘要；最近历史向前扩展到安全的用户消息边界，避免拆开工具调用与结果。摘要默认使用此时选定的 Side Chat 模型，也可配置专用摘要模型；摘要失败时保留最近原始消息与完整摘录继续回答，并显示 provider 错误。
 - Side Chat 只提供固定的只读工具：项目文件读取、目录列举、项目文本搜索、Web 搜索与由部署配置 provider 执行的 Web 抓取。
@@ -38,7 +39,7 @@ BranchMark 是一个独立的 DeepSeek Harness 插件 Bundle。每一枚“枝�
 
 | BranchMark | DeepSeek Harness | Node.js | DSH surface |
 | --- | --- | --- | --- |
-| `0.2.x` public preview | `0.1.1-rc.2` | `^22.19.0 \|\| >=24.0.0` | Web profile |
+| `0.3.x` public preview | `0.1.1-rc.2` | `^22.19.0 \|\| >=24.0.0` | Web profile |
 
 DeepSeek Harness 仍处于预发布阶段，插件直接使用其 Host、Remote 与 Client 扩展点。升级 DSH 前应先运行 BranchMark 的发布检查并在独立 profile 中验收；上表之外的组合不属于当前支持范围。
 
@@ -49,7 +50,7 @@ DeepSeek Harness 仍处于预发布阶段，插件直接使用其 Host、Remote 
 安装前确认 `dsh --version` 为 `0.1.1-rc.2`，Node.js 满足上表要求。正式版本发布到 npm 后，可直接加入 Web profile：
 
 ```sh
-dsh plugin --profile web add dsh-branchmark@0.2.0
+dsh plugin --profile web add dsh-branchmark@0.3.0
 dsh --profile web --dump-config
 dsh --profile web
 ```
@@ -77,7 +78,7 @@ corepack enable
 pnpm install --frozen-lockfile
 pnpm run release:check
 pnpm run pack:bundle
-dsh plugin --profile web add ./dist/dsh-branchmark-0.2.0.tgz
+dsh plugin --profile web add ./dist/dsh-branchmark-0.3.0.tgz
 ```
 
 不要使用 `github:zaizaizhao/dsh-branchmark`、Git URL 或 GitHub source specifier 直接安装。源码仓库不提交构建后的 `lib/`，并且有意不设置安装生命周期脚本；npm tarball 和本地 `pnpm run pack:bundle` 产物才是可安装介质。
@@ -103,7 +104,7 @@ Bundle 的默认配置在 [`packages/bundle/cordis.patch.yml`](packages/bundle/c
 
 ## 数据与隐私
 
-- 枝签、标签、备注、回收站状态、衍生关系和使用快照只写入 DSH 本地 `storageDomain` 的 `clip_explorer` domain；`Clip` 是枝签摘录数据在源码中的类型名。
+- 枝签、标签、备注、置顶与集合顺序、回收站状态、衍生关系和使用快照只写入 DSH 本地 `storageDomain` 的 `clip_explorer` domain；`Clip` 是枝签摘录数据在源码中的类型名。
 - 枝签绑定 Workspace 与 owner Session，不绑定 Worktree。
 - Session 私有枝签永远不会通过项目集合或项目回收站 Remote 返回给其他会话。
 - 项目枝签只在项目标签中全局可见，并且只有用户显式选择后才进入 Side Chat、衍生 Session 或当前 Composer。
@@ -127,7 +128,7 @@ Bundle 的默认配置在 [`packages/bundle/cordis.patch.yml`](packages/bundle/c
 - Side Chat 是 Host 内存中的临时上下文。关闭标签、卸载插件或退出 Host 后不可恢复。
 - BranchMark 的关系树只存在于插件 Dock 中；它不能把 DSH 原生侧边栏改造成嵌套会话树。
 - 枝签按 Workspace 与 Session 绑定，不把 Worktree 作为隔离边界。
-- 创建衍生 Session 时，BranchMark 关系记录与 DSH `recall` 日志分属两个持久化子系统，当前没有跨子系统事务。Host 在两次写入之间异常退出可能留下已记录关系但缺少 `recall` 的低概率部分提交；`0.2.x` 尚未提供自动对账修复。
+- 创建衍生 Session 时，BranchMark 关系记录与 DSH `recall` 日志分属两个持久化子系统，当前没有跨子系统事务。Host 在两次写入之间异常退出可能留下已记录关系但缺少 `recall` 的低概率部分提交；`0.3.x` 尚未提供自动对账修复。
 - DSH 的 provider、Session 与 Client API 仍可能在后续预发布版本中变化，因此兼容性按明确版本验证，而不是声明宽泛范围。
 
 ## 类型策略
@@ -151,7 +152,7 @@ pnpm run pack:bundle
 
 当前宿主源码声明的 Node 最低版本是 22.19。低于该版本时 pnpm 会警告；即使本机偶然通过构建，也不构成受支持运行时。
 
-自包含包已安装到真实 DSH Web profile，并完成常驻 Dock、本会话与项目枝签隔离、内嵌新会话流程、临时 Side Chat 创建、模型目录与思考强度菜单以及亮色/深色主题的浏览器验收。验收没有发送模型请求，因此 Side Chat 的真实摘要、工具调用和回答质量仍应使用配置好的 provider 单独做 API e2e；自动化测试覆盖模型路由切换、上下文组装、工具活动投影和生命周期。
+自包含包已安装到真实 DSH Web profile，并完成常驻 Dock、本会话与项目枝签隔离、多选命令胶囊、340px Dock 图标化、固定卡片、卡片内展开、聚焦阅读、置顶分组、批量 Composer 引用顺序、内嵌新会话流程、临时 Side Chat 创建、模型目录与思考强度菜单以及亮色/深色主题的浏览器验收。验收没有发送模型请求，因此 Side Chat 的真实摘要、工具调用和回答质量仍应使用配置好的 provider 单独做 API e2e；自动化测试覆盖完整排序请求、模型路由切换、上下文组装、工具活动投影和生命周期。
 
 `release:check` 在常规构建测试之外校验公开包元数据、私有工作区边界、DSH peer 声明、npm 文件清单和 dry-run 发布结果。真实 provider 请求不进入 keyless CI；发布候选仍需按 [`RELEASING.md`](RELEASING.md) 完成独立 profile smoke test。
 

@@ -21,6 +21,7 @@ export function BranchMarkLauncherSheet({ launcher, client, controller }: {
   readonly client: BranchMarkClient
   readonly controller: BranchMarkUiController
 }) {
+  const sideChatIntent = launcher.intent === 'side-chat'
   const sourceClips = launcher.clips.filter(clip => clip.source.kind === 'session-message' && clip.source.forkable)
   const sourceIds = [...new Set(sourceClips.map(clip => clip.source.kind === 'session-message' ? clip.source.sessionId : undefined).filter(Boolean))]
   const defaultPrimary = sourceClips.toSorted((left, right) => {
@@ -66,11 +67,16 @@ export function BranchMarkLauncherSheet({ launcher, client, controller }: {
       controller.notify('error', '请为 Side Chat 显式选择一个主要来源。')
       return
     }
+    const primary = launcher.clips.find(clip => clip.id === sidePrimaryId)
+    if (primary?.source.kind !== 'session-message') {
+      controller.notify('error', '主要来源当前不能恢复为 Side Chat。')
+      return
+    }
     setBusy(true)
     try {
       const snapshot = await client.createSideChat({
         workspaceId: launcher.workspaceId,
-        ownerSessionId: launcher.sourceSessionId,
+        ownerSessionId: primary.source.sessionId,
         primaryClipId: sidePrimaryId,
         clips: launcher.clips.map(clip => ({ clipId: clip.id, includeNote: notes.has(clip.id) })),
       })
@@ -82,26 +88,31 @@ export function BranchMarkLauncherSheet({ launcher, client, controller }: {
     }
   }
   return (
-    <section className="dbm-launch-sheet" aria-label="从枝签继续探索">
+    <section className="dbm-launch-sheet" aria-label={sideChatIntent ? '创建 Side Chat' : '从枝签创建新会话'}>
       <div className="dbm-launch-header">
-        <div><strong>从枝签继续探索</strong><span>只有当前明确选择的枝签会进入目标上下文</span></div>
+        <div>
+          <strong>{sideChatIntent ? '创建 Side Chat' : '从枝签创建新会话'}</strong>
+          <span>只有当前明确选择的枝签会进入目标上下文</span>
+        </div>
         <button type="button" className="dbm-button dbm-icon-button" aria-label="关闭" onClick={() => { controller.closeLauncher() }}><IconCloseOutline16 /></button>
       </div>
       <div className="dbm-launch-scroll">
-        <section className="dbm-launch-section">
-          <h3>新会话上下文</h3>
-          <div className="dbm-mode-grid">
-            <button type="button" className="dbm-mode" data-active={mode === 'full-fork'} disabled={sourceClips.length === 0} onClick={() => { setMode('full-fork') }}>
-              <strong>继承来源上下文</strong><span>从主要枝签所在消息位置分叉；新会话后台恢复此前完整历史。</span>
-            </button>
-            <button type="button" className="dbm-mode" data-active={mode === 'clips-only'} onClick={() => { setMode('clips-only') }}>
-              <strong>全新会话</strong><span>不继承历史；枝签与备注作为只读上下文写入会话，输入框保持空白。</span>
-            </button>
-          </div>
-          {mode === 'full-fork' && sourceClips.length === 0 && <div className="dbm-warning">所选枝签没有可读取的来源消息，请显式选择“全新会话”。</div>}
-          {mode === 'full-fork' && sourceIds.length > 1 && <div className="dbm-warning">枝签来自多个会话，请选择一个主要来源；其余枝签作为附件携带。</div>}
-        </section>
-        {(mode === 'full-fork' || sourceIds.length > 1) && (
+        {!sideChatIntent && (
+          <section className="dbm-launch-section">
+            <h3>新会话上下文</h3>
+            <div className="dbm-mode-grid">
+              <button type="button" className="dbm-mode" data-active={mode === 'full-fork'} disabled={sourceClips.length === 0} onClick={() => { setMode('full-fork') }}>
+                <strong>继承来源上下文</strong><span>从主要枝签所在消息位置分叉；新会话后台恢复此前完整历史。</span>
+              </button>
+              <button type="button" className="dbm-mode" data-active={mode === 'clips-only'} onClick={() => { setMode('clips-only') }}>
+                <strong>全新会话</strong><span>不继承历史；枝签与备注作为只读上下文写入会话，输入框保持空白。</span>
+              </button>
+            </div>
+            {mode === 'full-fork' && sourceClips.length === 0 && <div className="dbm-warning">所选枝签没有可读取的来源消息，请显式选择“全新会话”。</div>}
+            {mode === 'full-fork' && sourceIds.length > 1 && <div className="dbm-warning">枝签来自多个会话，请选择一个主要来源；其余枝签作为附件携带。</div>}
+          </section>
+        )}
+        {((!sideChatIntent && mode === 'full-fork') || sourceIds.length > 1) && (
           <section className="dbm-launch-section">
             <h3>主要来源</h3>
             {sourceClips.map(clip => (
@@ -130,15 +141,22 @@ export function BranchMarkLauncherSheet({ launcher, client, controller }: {
             </div>
           ))}
         </section>
-        <section className="dbm-launch-section">
-          <h3>创建并发送（可选）</h3>
-          <textarea className="dbm-textarea" rows={4} value={question} placeholder="输入问题；留空可先创建会话或打开 Side Chat，再继续输入。" onChange={event => { setQuestion(event.target.value) }} />
-        </section>
+        {!sideChatIntent && (
+          <section className="dbm-launch-section">
+            <h3>创建并发送（可选）</h3>
+            <textarea className="dbm-textarea" rows={4} value={question} placeholder="输入问题；留空则创建并打开，随后在新会话输入框中继续。" onChange={event => { setQuestion(event.target.value) }} />
+          </section>
+        )}
       </div>
       <div className="dbm-launch-actions">
-        <button type="button" className="dbm-button" disabled={busy || sidePrimaryId === undefined} onClick={() => { void launchSideChat() }}>打开 Side Chat</button>
-        <button type="button" className="dbm-button" disabled={busy} onClick={() => { void launchSession(false) }}>创建并打开</button>
-        <button type="button" className="dbm-button dbm-button-primary" disabled={busy || question.trim() === ''} onClick={() => { void launchSession(true) }}>创建并发送</button>
+        {sideChatIntent
+          ? <button type="button" className="dbm-button dbm-button-primary" disabled={busy || sidePrimaryId === undefined} onClick={() => { void launchSideChat() }}>打开 Side Chat</button>
+          : (
+            <>
+              <button type="button" className="dbm-button" disabled={busy} onClick={() => { void launchSession(false) }}>创建并打开</button>
+              <button type="button" className="dbm-button dbm-button-primary" disabled={busy || question.trim() === ''} onClick={() => { void launchSession(true) }}>创建并发送</button>
+            </>
+            )}
       </div>
     </section>
   )

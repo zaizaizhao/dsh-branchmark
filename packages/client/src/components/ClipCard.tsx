@@ -1,13 +1,18 @@
-import { useEffect, useState } from 'react'
+import {
+  useEffect, useRef, useState, type PointerEvent as ReactPointerEvent,
+} from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
 import {
   IconBranchOutline16,
+  IconChevronDownOutline14,
+  IconFullscreenOutline16,
   IconPaperclipOutline16,
   IconSparkle16,
   IconTrashOutline16,
   MarkdownText,
+  Modal,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { Clip, DerivedSessionRelation } from 'dsh-branchmark-host/types'
+import type { Clip, ClipId, DerivedSessionRelation } from 'dsh-branchmark-host/types'
 import type { BranchMarkClient } from '../domain/client.ts'
 import type { BranchMarkUiController } from '../domain/controller.ts'
 import { formatClipSource, formatClipTime } from '../domain/clip-presentation.ts'
@@ -18,6 +23,22 @@ function errorText(error: unknown): string {
 
 function stopClickPropagation(event: { stopPropagation(): void }): void {
   event.stopPropagation()
+}
+
+function PinGlyph() {
+  return (
+    <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+      <path d="M5.2 2.5h5.6l-1 3.1 2.1 2.1v1H8.7V14L8 14.8 7.3 14V8.7H4.1v-1l2.1-2.1-1-3.1Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function DragGlyph() {
+  return (
+    <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+      <path d="M5.25 3.5h.01m0 4.5h.01m-.01 4.5h.01M10.75 3.5h.01m0 4.5h.01m-.01 4.5h.01" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" />
+    </svg>
+  )
 }
 
 function attachClipToComposer(
@@ -38,7 +59,18 @@ function attachClipToComposer(
  * @returns One collection card with actions that never mutate the immutable excerpt.
  */
 export function ClipCard({
-  clip, selected, onSelect, onChanged, client, controller, trash, currentSessionId,
+  clip,
+  selected,
+  onSelect,
+  onChanged,
+  client,
+  controller,
+  trash,
+  currentSessionId,
+  draggable = false,
+  onDragStart,
+  onDragEnd,
+  onDrop,
 }: {
   readonly clip: Clip
   readonly selected: boolean
@@ -48,11 +80,19 @@ export function ClipCard({
   readonly controller: BranchMarkUiController
   readonly trash: boolean
   readonly currentSessionId?: SessionId
+  readonly draggable?: boolean
+  readonly onDragStart?: (clipId: ClipId) => void
+  readonly onDragEnd?: () => void
+  readonly onDrop?: (clipId: ClipId) => void
 }) {
   const [editing, setEditing] = useState<'note' | 'tags' | null>(null)
   const [note, setNote] = useState(clip.note ?? '')
   const [tags, setTags] = useState(clip.tags.join(', '))
   const [busy, setBusy] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const [pointerDragging, setPointerDragging] = useState(false)
+  const dragCleanup = useRef<(() => void) | null>(null)
   const [relations, setRelations] = useState<readonly DerivedSessionRelation[]>([])
   useEffect(() => { setNote(clip.note ?? ''); setTags(clip.tags.join(', ')) }, [clip])
   useEffect(() => {
@@ -63,6 +103,10 @@ export function ClipCard({
     )
     return () => { active = false }
   }, [client, clip.id, clip.workspaceId])
+  useEffect(() => () => {
+    dragCleanup.current?.()
+    delete document.body.dataset.dbmClipDragging
+  }, [])
   const mutate = async (work: () => Promise<unknown>, success: string): Promise<void> => {
     setBusy(true)
     try {
@@ -108,14 +152,92 @@ export function ClipCard({
     const values = tags.split(',').map(value => value.trim()).filter(Boolean)
     void mutate(() => client.update({ workspaceId: clip.workspaceId, clipId: clip.id, tags: values }), '标签已更新')
   }
+  const pointerDragStart = (event: ReactPointerEvent<HTMLButtonElement>): void => {
+    event.stopPropagation()
+    if (!draggable) {
+      event.preventDefault()
+      return
+    }
+    event.preventDefault()
+    dragCleanup.current?.()
+    const handle = event.currentTarget
+    const pointerId = event.pointerId
+    handle.setPointerCapture(pointerId)
+    document.body.dataset.dbmClipDragging = 'true'
+    setPointerDragging(true)
+    onDragStart?.(clip.id)
+    let finished = false
+    const removeListeners = (): void => {
+      window.removeEventListener('pointerup', finish, true)
+      window.removeEventListener('pointercancel', cancel, true)
+      window.removeEventListener('mouseup', finish, true)
+      if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId)
+      dragCleanup.current = null
+    }
+    const reset = (): void => {
+      delete document.body.dataset.dbmClipDragging
+      setPointerDragging(false)
+      onDragEnd?.()
+    }
+    const finish = (endEvent: PointerEvent | MouseEvent): void => {
+      if (finished) return
+      finished = true
+      removeListeners()
+      const target = document.elementFromPoint(endEvent.clientX, endEvent.clientY)
+      const targetCard = target instanceof Element ? target.closest<HTMLElement>('[data-dbm-clip-id]') : null
+      if (targetCard?.dataset.dbmClipId !== undefined) onDrop?.(targetCard.dataset.dbmClipId as ClipId)
+      reset()
+    }
+    const cancel = (): void => {
+      if (finished) return
+      finished = true
+      removeListeners()
+      reset()
+    }
+    dragCleanup.current = cancel
+    window.addEventListener('pointerup', finish, true)
+    window.addEventListener('pointercancel', cancel, true)
+    window.addEventListener('mouseup', finish, true)
+  }
   return (
-    <article className="dbm-card" data-selected={selected} data-scope={clip.scope} onClick={onSelect}>
+    <>
+      <article
+        className="dbm-card"
+        data-selected={selected}
+        data-scope={clip.scope}
+        data-expanded={expanded}
+        data-editing={editing !== null}
+        data-pinned={clip.pinnedAt !== undefined}
+        data-dragging={pointerDragging}
+        data-dbm-clip-id={clip.id}
+        onClick={onSelect}
+      >
       <div className="dbm-card-scope">
         <i />
         <span>{clip.scope === 'project' ? '项目枝签' : '本会话枝签'} · {formatClipTime(clip.createdAt)}</span>
+        {clip.pinnedAt !== undefined && <b className="dbm-pin-badge">置顶</b>}
+        {!trash && (
+          <button
+            type="button"
+            className="dbm-drag-handle"
+            data-enabled={draggable}
+            aria-label="拖动枝签"
+            title={draggable ? '拖动枝签' : '清除搜索和标签筛选后可拖动排序'}
+            onClick={stopClickPropagation}
+            onPointerDown={pointerDragStart}
+          ><DragGlyph /></button>
+        )}
         <input type="checkbox" aria-label="选择枝签" checked={selected} onClick={stopClickPropagation} onChange={onSelect} />
       </div>
-      <div className="dbm-excerpt"><MarkdownText text={clip.excerpt} /></div>
+      <div className="dbm-excerpt-shell"><div className="dbm-excerpt"><MarkdownText text={clip.excerpt} /></div></div>
+      <div className="dbm-reading-actions" onClick={stopClickPropagation}>
+        <button type="button" className="dbm-reading-action" onClick={() => { setExpanded(value => !value) }}>
+          <IconChevronDownOutline14 /> {expanded ? '收起正文' : '展开正文'}
+        </button>
+        <button type="button" className="dbm-reading-action" onClick={() => { setFocused(true) }}>
+          <IconFullscreenOutline16 size={13} /> 聚焦阅读
+        </button>
+      </div>
       {editing === 'note'
         ? (
           <div className="dbm-inline-editor" onClick={stopClickPropagation}>
@@ -166,7 +288,7 @@ export function ClipCard({
           </button>
         )}
         {!trash && (
-          <button type="button" className="dbm-button" onClick={() => { controller.openLauncher(clip.workspaceId, clip.ownerSessionId, [clip]) }}>
+          <button type="button" className="dbm-button" onClick={() => { controller.openLauncher('session', clip.workspaceId, clip.ownerSessionId, [clip]) }}>
             <IconBranchOutline16 size={13} /> 新会话
           </button>
         )}
@@ -177,6 +299,15 @@ export function ClipCard({
         )}
         {!trash && <button type="button" className="dbm-button" onClick={() => { setEditing('note') }}>备注</button>}
         {!trash && <button type="button" className="dbm-button" onClick={() => { setEditing('tags') }}>标签</button>}
+        {!trash && (
+          <button type="button" className="dbm-button" disabled={busy} onClick={() => {
+            void mutate(() => client.update({
+              workspaceId: clip.workspaceId,
+              clipId: clip.id,
+              pinned: clip.pinnedAt === undefined,
+            }), clip.pinnedAt === undefined ? '枝签已置顶' : '已取消置顶')
+          }}><PinGlyph /> {clip.pinnedAt === undefined ? '置顶' : '取消置顶'}</button>
+        )}
         {!trash && clip.scope === 'session' && (
           <button type="button" className="dbm-button" disabled={busy} onClick={() => {
             void mutate(() => client.update({ workspaceId: clip.workspaceId, clipId: clip.id, scope: 'project' }), '已保存到项目枝签')
@@ -199,6 +330,29 @@ export function ClipCard({
           }}>永久删除</button>
         )}
       </div>
-    </article>
+      </article>
+      <Modal
+        open={focused}
+        onClose={() => { setFocused(false) }}
+        title="枝签正文"
+        closeLabel="关闭聚焦阅读"
+        description={formatClipSource(clip)}
+        className="dbm-focus-modal"
+        contentClassName="dbm-focus-modal-content"
+        footer={(
+          <div className="dbm-focus-actions">
+            {currentSessionId !== undefined && (
+              <button type="button" className="dbm-button" onClick={() => { attachClipToComposer(clip, currentSessionId, client, controller) }}>
+                <IconPaperclipOutline16 size={13} /> 引用到输入框
+              </button>
+            )}
+            <button type="button" className="dbm-button dbm-button-primary" onClick={() => { setFocused(false) }}>完成</button>
+          </div>
+        )}
+      >
+        <div className="dbm-focus-copy"><MarkdownText text={clip.excerpt} /></div>
+        {clip.note !== undefined && <div className="dbm-focus-note"><strong>备注</strong><p>{clip.note}</p></div>}
+      </Modal>
+    </>
   )
 }

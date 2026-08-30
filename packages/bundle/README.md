@@ -13,6 +13,8 @@ Excerpt-driven session branching and conversation lineage for DeepSeek Harness.
 - 在已完成的用户或助手消息中选择文本，直接“摘录到会话”“摘录到项目”“Ask in side”或“引用到输入框”。
 - 会话私有枝签与项目全局枝签严格分开展示；备注和多标签可编辑，原文与来源锚点不可改写。
 - 右侧浮动 Dock 提供会话视图、项目卡片/列表、回收站、关系树和多个临时 Side Chat 标签。
+- 多选枝签后通过一个紧凑命令胶囊执行批量引用、Side Chat、新会话、置顶、标签和回收站操作；长正文支持卡片内展开和聚焦阅读。
+- 枝签可在置顶组或普通组内拖动排序；顺序保存在当前会话或项目集合中，搜索和标签筛选期间不允许改变隐藏记录的顺序。
 - 完整分叉恢复主要来源消息所在完整轮次及之前的上下文；仅枝签分支从空白 DSH Session 开始。
 - 主输入框只显示 DSH 原生引用 Chip，用户显式发送时才把枝签正文和保留的备注加入模型上下文。
 - Side Chat 可独立选择模型与思考强度，展示流式思考、只读工具活动和 Markdown 回答；关闭标签立即销毁。
@@ -21,14 +23,14 @@ Excerpt-driven session branching and conversation lineage for DeepSeek Harness.
 
 | BranchMark | DeepSeek Harness | Node.js | DSH surface |
 | --- | --- | --- | --- |
-| `0.2.x` public preview | `0.1.1-rc.2` | `^22.19.0 \|\| >=24.0.0` | Web profile |
+| `0.3.x` public preview | `0.1.1-rc.2` | `^22.19.0 \|\| >=24.0.0` | Web profile |
 
 DSH 仍处于预发布阶段。上表之外的组合没有经过兼容性验证；升级 DSH 前应在独立 profile 中重新完成安装与 UI smoke test。
 
 ## 安装
 
 ```sh
-dsh plugin --profile web add dsh-branchmark@0.2.0
+dsh plugin --profile web add dsh-branchmark@0.3.0
 dsh --profile web --dump-config
 dsh --profile web
 ```
@@ -57,6 +59,7 @@ dsh plugin --profile web remove dsh-branchmark
 2. “Side Chat”在当前 Host 内创建临时标签，由用户输入问题后才发送。
 3. “新会话”可选择完整分叉或仅携带枝签，并可选择打开空白 Composer 或输入问题后后台创建并发送。
 4. “引用到输入框”只加入可移除的引用 Chip，绝不自动发送。
+5. 多选后打开“处理 N 枚枝签”胶囊；批量引用按勾选顺序加入 Composer，拖动排序只在未筛选的同一置顶分组内生效。
 
 ## 配置
 
@@ -79,7 +82,7 @@ Bundle patch 提供以下配置。Profile patch 覆盖该 Loader 条目时会替
 
 ## 数据、网络与权限
 
-- 枝签、备注、标签、回收站状态、衍生关系和使用快照写入 DSH 本地 `storageDomain` 的 `clip_explorer` domain。插件不提供云同步，也不向作者控制的服务上传这些数据。
+- 枝签、备注、标签、置顶与集合顺序、回收站状态、衍生关系和使用快照写入 DSH 本地 `storageDomain` 的 `clip_explorer` domain。插件不提供云同步，也不向作者控制的服务上传这些数据。
 - 保存、搜索和整理枝签不调用模型。Side Chat 或衍生会话发送问题时，用户选中的枝签、启用的备注和恢复出的来源上下文会进入当前 DSH 模型 provider 的请求。
 - Side Chat 的项目文件工具只读；读取结果可能进入模型请求。Web 搜索和抓取使用 DSH 部署当前配置的 Web provider。
 - Side Chat 只存在于 Host 内存；关闭标签、卸载插件或 Host 退出都会中止并销毁它。普通衍生会话仍由 DSH 持久化。
@@ -90,7 +93,7 @@ Bundle patch 提供以下配置。Profile patch 覆盖该 Loader 条目时会替
 - 只支持 DSH Web profile，不向 Headless 或 ACP surface 提供 UI。
 - 插件关系树不会改变 DSH 原生侧边栏的会话层级。
 - Workspace 和 Session 是当前隔离键；Worktree 不是独立隔离边界。
-- 创建衍生 Session 需要分别写入 BranchMark 关系记录与 DSH `recall` 日志，当前没有跨子系统事务。Host 在两次写入之间异常退出可能留下低概率部分提交；`0.2.x` 尚未自动对账修复。
+- 创建衍生 Session 需要分别写入 BranchMark 关系记录与 DSH `recall` 日志，当前没有跨子系统事务。Host 在两次写入之间异常退出可能留下低概率部分提交；`0.3.x` 尚未自动对账修复。
 - Side Chat 摘要或回答仍可能因为当前 provider、模型、网络或配额错误而失败；界面会保留错误信息，关闭标签前仍可重试。
 
 ## 支持与安全

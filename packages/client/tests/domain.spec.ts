@@ -25,11 +25,23 @@ import { SideChatPrimaryAction } from '../src/components/SideChat.tsx'
 import { referenceRemovalDrafts } from '../src/domain/reference-removal.ts'
 import { selectionCreateRequests, selectionToolbarPosition } from '../src/domain/selection-actions.ts'
 import { SelectionActions } from '../src/components/SelectionActions.tsx'
+import { BatchCommandCapsule } from '../src/components/BatchCommandCapsule.tsx'
+import { ClipCard } from '../src/components/ClipCard.tsx'
+import { moveClipInCollection } from '../src/domain/clip-order.ts'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   IconArchiveOutline20: () => null,
   IconBranchOutline16: () => null,
+  IconChevronDownOutline14: () => null,
   IconCloseOutline16: () => null,
+  IconEditOutline16: () => null,
+  IconEllipsisOutline16: () => null,
+  IconFullscreenOutline16: () => null,
+  IconPaperclipOutline16: () => null,
+  IconSparkle16: () => null,
+  IconTrashOutline16: () => null,
+  MarkdownText: () => null,
+  Modal: () => null,
 }))
 
 const workspaceId = 'workspace-1' as WorkspaceId
@@ -166,6 +178,85 @@ describe('BranchMark browser domain', () => {
     const client = new BranchMarkClient(context)
     expect(client.attachClipToComposer(sessionId, clip(), true)).toBe('duplicate')
     expect(insertReference).not.toHaveBeenCalled()
+  })
+
+  it('inserts selected Clip references in the explicit selection order', () => {
+    let draftRev = 1
+    const occurrences: Array<{ source: string; ref: string }> = []
+    const insertReference = vi.fn((reference: { source: string; ref: string }) => {
+      occurrences.unshift({ source: reference.source, ref: reference.ref })
+      draftRev += 1
+      return true
+    })
+    const scoped = {} as ClientContext
+    const context = {
+      sessions: { scope: () => scoped },
+      conversation: {
+        input: {
+          for: () => ({
+            state: { getSnapshot: () => ({ draft: '', draftRev, occurrences }) },
+            insertReference,
+          }),
+        },
+      },
+    } as unknown as ClientContext
+    const clips = ['alpha', 'beta', 'gamma'].map((excerpt, index) => ({
+      ...clip(),
+      id: `clip-${String(index + 1)}` as ClipId,
+      excerpt,
+    }))
+    const client = new BranchMarkClient(context)
+
+    expect(client.attachClipsToComposer(sessionId, clips)).toEqual({
+      inserted: clips.map(item => item.id),
+      duplicates: [],
+      failed: [],
+    })
+    expect(insertReference.mock.calls.map(call => call[0].label)).toEqual([
+      '枝签 · gamma',
+      '枝签 · beta',
+      '枝签 · alpha',
+    ])
+    expect(occurrences.map(item => parseClipReference(item.ref).clipId)).toEqual(clips.map(item => item.id))
+  })
+
+  it('rehydrates persisted BranchMark clipboard tokens without replacing unrelated draft text', async () => {
+    const token = `@branchmark:${clipId}`
+    let draft = `Question before ${token} and after.`
+    let draftRev = 4
+    const insertReference = vi.fn((reference: { label: string }, span: { start: number; end: number; draftRev: number }) => {
+      draft = `${draft.slice(0, span.start)}@${reference.label}${draft.slice(span.end)}`
+      draftRev += 1
+      return true
+    })
+    const scoped = {} as ClientContext
+    const context = {
+      sessions: { scope: () => scoped },
+      conversation: {
+        input: {
+          for: () => ({
+            state: { getSnapshot: () => ({ draft, draftRev, occurrences: [] }) },
+            insertReference,
+          }),
+        },
+      },
+    } as unknown as ClientContext
+    const client = new BranchMarkClient(context)
+    vi.spyOn(client, 'list').mockImplementation(async request => ({
+      clips: request.visibility === 'session-drawer' ? [clip()] : [],
+      tags: [],
+    }))
+
+    await expect(client.rehydrateComposerReferences(sessionId, workspaceId)).resolves.toEqual({
+      inserted: [clipId],
+      missing: [],
+      failed: [],
+    })
+    expect(insertReference).toHaveBeenCalledWith(
+      expect.objectContaining({ label: '枝签 · alpha' }),
+      { start: 'Question before '.length, end: 'Question before '.length + token.length, draftRev: 4 },
+    )
+    expect(draft).toBe('Question before @枝签 · alpha and after.')
   })
 
   it('serializes a native reference to the current Clip and optional note only at submit time', async () => {
@@ -333,6 +424,68 @@ describe('BranchMark browser domain', () => {
     expect(html.indexOf('摘录到项目')).toBeLessThan(html.indexOf('Ask in side'))
     expect(html.indexOf('Ask in side')).toBeLessThan(html.indexOf('引用到输入框'))
     expect(html).not.toContain('<svg')
+  })
+
+  it('renders Scheme B as one compact batch command capsule with six explicit commands', () => {
+    const html = renderToStaticMarkup(createElement(BatchCommandCapsule, {
+      count: 3,
+      open: true,
+      tagEditorOpen: false,
+      allPinned: false,
+      canQuote: true,
+      onOpenChange: vi.fn(),
+      onQuote: vi.fn(),
+      onSideChat: vi.fn(),
+      onNewSession: vi.fn(),
+      onTogglePinned: vi.fn(),
+      onOpenTagEditor: vi.fn(),
+      onTrash: vi.fn(),
+    }))
+    expect(html).toContain('处理 3 枚枝签')
+    expect(html).toContain('引用到输入框')
+    expect(html).toContain('Side Chat')
+    expect(html).toContain('新会话')
+    expect(html).toContain('置顶')
+    expect(html).toContain('加标签')
+    expect(html).toContain('移入回收站')
+    expect(html).not.toContain('继续探索')
+    expect(html).not.toContain('placeholder="追加标签"')
+  })
+
+  it('keeps drag reordering inside one pin group and returns the complete collection order', () => {
+    const pinned = { ...clip(), id: 'clip-pinned' as ClipId, pinnedAt: '2026-01-02T00:00:00.000Z' }
+    const first = { ...clip(), id: 'clip-first' as ClipId }
+    const second = { ...clip(), id: 'clip-second' as ClipId }
+    expect(moveClipInCollection([pinned, first, second], second.id, first.id)).toEqual({
+      ok: true,
+      clipIds: [pinned.id, second.id, first.id],
+    })
+    expect(moveClipInCollection([pinned, first, second], first.id, pinned.id)).toEqual({
+      ok: false,
+      reason: 'pin-group-mismatch',
+    })
+  })
+
+  it('renders fixed-card reading, pin, and drag controls without replacing the excerpt', () => {
+    const html = renderToStaticMarkup(createElement(ClipCard, {
+      clip: { ...clip(), excerpt: 'A very long immutable excerpt.' },
+      selected: false,
+      onSelect: vi.fn(),
+      onChanged: vi.fn(),
+      client: { relations: async () => ({ relations: [], usages: [] }) },
+      controller: new BranchMarkUiController(),
+      trash: false,
+      currentSessionId: sessionId,
+      draggable: true,
+      onDragStart: vi.fn(),
+      onDragOver: vi.fn(),
+      onDrop: vi.fn(),
+    } as never))
+    expect(html).toContain('展开正文')
+    expect(html).toContain('聚焦阅读')
+    expect(html).toContain('置顶')
+    expect(html).toContain('拖动枝签')
+    expect(html).toContain('data-expanded="false"')
   })
 
   it('renders Side Chat send and stop as DSH Composer-style icon-only primary actions', () => {

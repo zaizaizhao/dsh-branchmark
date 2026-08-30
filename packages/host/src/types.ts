@@ -58,6 +58,10 @@ export interface Clip {
   readonly excerpt: string
   readonly note?: string
   readonly tags: readonly string[]
+  /** Time at which this Clip entered the pinned group. */
+  readonly pinnedAt?: string
+  /** Zero-based position inside its current active session or project collection. */
+  readonly sortIndex?: number
   readonly status: 'active' | 'trashed'
   readonly createdAt: string
   readonly updatedAt: string
@@ -121,6 +125,7 @@ export interface UpdateClipRequest {
   readonly note?: string | null
   readonly tags?: readonly string[]
   readonly scope?: 'session' | 'project'
+  readonly pinned?: boolean
 }
 
 /** Move one Clip between active storage and the recoverable trash. */
@@ -141,6 +146,12 @@ export type BatchClipMutation =
   | { readonly kind: 'add-tags'; readonly tags: readonly string[] }
   | { readonly kind: 'set-scope'; readonly scope: 'session' | 'project' }
   | { readonly kind: 'set-status'; readonly status: 'active' | 'trashed' }
+  | { readonly kind: 'set-pinned'; readonly pinned: boolean }
+  | {
+    readonly kind: 'reorder'
+    readonly scope: 'session' | 'project'
+    readonly ownerSessionId?: SessionId
+  }
 
 /** Batch metadata operation used by the project library selection bar. */
 export interface BatchUpdateClipsRequest {

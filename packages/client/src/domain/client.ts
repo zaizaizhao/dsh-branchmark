@@ -30,6 +30,22 @@ function remoteError(code: string, message: string): BranchMarkClientError {
   return new BranchMarkClientError(code, message)
 }
 
+/** Result of one explicit multi-Clip Composer attachment request. */
+export interface BatchComposerAttachmentResult {
+  readonly inserted: readonly ClipId[]
+  readonly duplicates: readonly ClipId[]
+  readonly failed: readonly { readonly clipId: ClipId; readonly reason: 'unavailable' | 'busy' }[]
+}
+
+/** Result of rebuilding persisted clipboard projections into live Composer occurrences. */
+export interface ComposerReferenceRecoveryResult {
+  readonly inserted: readonly ClipId[]
+  readonly missing: readonly ClipId[]
+  readonly failed: readonly ClipId[]
+}
+
+const BRANCHMARK_CLIPBOARD_TOKEN = /@branchmark:([A-Za-z0-9-]+)/gu
+
 /** Browser port that keeps transport errors, DSH Session APIs, and draft admission out of components. */
 export class BranchMarkClient {
   constructor(private readonly ctx: ClientContext) {}
@@ -78,6 +94,143 @@ export class BranchMarkClient {
       { start: 0, end: 0, draftRev: snapshot.draftRev },
     )
     return inserted ? 'inserted' : 'busy'
+  }
+
+  /**
+   * Insert selected Clips at the draft start while preserving their selection order.
+   * @param sessionId - Composer-owning DSH Session.
+   * @param clips - Clips in the user's explicit selection order.
+   * @returns Per-Clip insertion, duplicate, and admission outcomes.
+   */
+  attachClipsToComposer(sessionId: SessionId, clips: readonly Clip[]): BatchComposerAttachmentResult {
+    const inserted: ClipId[] = []
+    const duplicates: ClipId[] = []
+    const failed: Array<{ clipId: ClipId; reason: 'unavailable' | 'busy' }> = []
+    for (const clip of [...clips].reverse()) {
+      const outcome = this.attachClipToComposer(sessionId, clip, clip.note !== undefined)
+      if (outcome === 'inserted') inserted.unshift(clip.id)
+      else if (outcome === 'duplicate') duplicates.unshift(clip.id)
+      else failed.unshift({ clipId: clip.id, reason: outcome })
+    }
+    return Object.freeze({
+      inserted: Object.freeze(inserted),
+      duplicates: Object.freeze(duplicates),
+      failed: Object.freeze(failed),
+    })
+  }
+
+  /**
+   * Rebuild clipboard projections restored by DSH's draft mirror into native references.
+   * @param sessionId - Composer-owning Session.
+   * @param workspaceId - Workspace whose private and project Clips may resolve tokens.
+   * @returns Token outcomes in draft order.
+   */
+  async rehydrateComposerReferences(
+    sessionId: SessionId,
+    workspaceId: WorkspaceId,
+  ): Promise<ComposerReferenceRecoveryResult> {
+    const scoped = this.ctx.sessions.scope(sessionId)
+    if (scoped === undefined) return { inserted: [], missing: [], failed: [] }
+    const input = this.ctx.conversation.input.for(scoped)
+    const initial = input.state.getSnapshot()
+    const tokens = [...initial.draft.matchAll(BRANCHMARK_CLIPBOARD_TOKEN)].flatMap((match) => {
+      const value = match[0]
+      const id = match[1]
+      return match.index === undefined || id === undefined
+        ? []
+        : [{ id: id as ClipId, token: value, start: match.index, end: match.index + value.length }]
+    })
+    if (tokens.length === 0) return { inserted: [], missing: [], failed: [] }
+    const lists = await Promise.allSettled([
+      this.list({ workspaceId, ownerSessionId: sessionId, visibility: 'session-drawer' }),
+      this.list({ workspaceId, visibility: 'project-library' }),
+    ])
+    if (lists.every(result => result.status === 'rejected')) {
+      const first = lists[0]
+      throw first.status === 'rejected' ? first.reason : new Error('枝签引用恢复失败。')
+    }
+    const clips = new Map(lists.flatMap(result => (
+      result.status === 'fulfilled' ? result.value.clips : []
+    )).map(clip => [clip.id, clip]))
+    const inserted: ClipId[] = []
+    const missing: ClipId[] = []
+    const failed: ClipId[] = []
+    for (const token of [...tokens].reverse()) {
+      const clip = clips.get(token.id)
+      if (clip === undefined) {
+        missing.unshift(token.id)
+        continue
+      }
+      const snapshot = input.state.getSnapshot()
+      if (snapshot.draft.slice(token.start, token.end) !== token.token) {
+        failed.unshift(token.id)
+        continue
+      }
+      const accepted = input.insertReference(
+        clipReferenceInsert(clip, clip.note !== undefined),
+        { start: token.start, end: token.end, draftRev: snapshot.draftRev },
+      )
+      if (accepted) inserted.unshift(token.id)
+      else failed.unshift(token.id)
+    }
+    return Object.freeze({
+      inserted: Object.freeze(inserted),
+      missing: Object.freeze(missing),
+      failed: Object.freeze(failed),
+    })
+  }
+
+  /**
+   * Recover persisted BranchMark tokens when a Session Composer is first bound or later restored.
+   * @param sessionId - Composer-owning Session.
+   * @param workspaceId - Workspace used to resolve Clip ids.
+   * @param onRecovered - Called after at least one native reference is rebuilt.
+   * @param onError - Called when neither visible Clip collection can be read.
+   * @returns Subscription disposer.
+   */
+  watchComposerReferenceRecovery(
+    sessionId: SessionId,
+    workspaceId: WorkspaceId,
+    onRecovered: (result: ComposerReferenceRecoveryResult) => void,
+    onError: (error: unknown) => void,
+  ): () => void {
+    const scoped = this.ctx.sessions.scope(sessionId)
+    if (scoped === undefined) return () => {}
+    const input = this.ctx.conversation.input.for(scoped)
+    let disposed = false
+    let running = false
+    let pending = false
+    let attemptedDraft: string | undefined
+    const recover = (): void => {
+      if (disposed) return
+      const draft = input.state.getSnapshot().draft
+      if (!draft.includes('@branchmark:') || draft === attemptedDraft) return
+      if (running) {
+        pending = true
+        return
+      }
+      running = true
+      attemptedDraft = draft
+      void this.rehydrateComposerReferences(sessionId, workspaceId).then((result) => {
+        if (disposed) return
+        if (result.inserted.length > 0) onRecovered(result)
+        if (result.failed.length > 0) attemptedDraft = undefined
+      }, (error: unknown) => {
+        if (!disposed) onError(error)
+      }).finally(() => {
+        running = false
+        if (pending) {
+          pending = false
+          recover()
+        }
+      })
+    }
+    const unsubscribe = input.state.subscribe(recover)
+    recover()
+    return () => {
+      disposed = true
+      unsubscribe()
+    }
   }
 
   async create(request: CreateClipRequest): Promise<Clip> {

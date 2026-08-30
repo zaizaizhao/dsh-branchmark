@@ -332,6 +332,76 @@ describe('BranchMarkService', () => {
     expect(trashed.value.clips.every(clip => clip.status === 'trashed')).toBe(true)
   })
 
+  it('persists pin state and one complete order per visible Clip collection', async () => {
+    const h = await harness()
+    const source = transcript('ordered-library', h.projectRoot)
+    await attach(h, source)
+    const first = expectClip(await h.ctx.branchmark.create(request(h, source)))
+    const second = expectClip(await h.ctx.branchmark.create(request(h, source)))
+    const third = expectClip(await h.ctx.branchmark.create(request(h, source)))
+
+    const pinned = await h.ctx.branchmark.batchUpdate({
+      workspaceId: h.workspace.id,
+      clipIds: [second.id],
+      mutation: { kind: 'set-pinned', pinned: true },
+    })
+    if (!pinned.ok) throw new Error(pinned.error.code)
+    expect(pinned.value.clips[0]?.pinnedAt).toBeDefined()
+
+    const reordered = await h.ctx.branchmark.batchUpdate({
+      workspaceId: h.workspace.id,
+      clipIds: [second.id, third.id, first.id],
+      mutation: {
+        kind: 'reorder',
+        scope: 'session',
+        ownerSessionId: source.session.id,
+      },
+    })
+    if (!reordered.ok) throw new Error(reordered.error.code)
+    expect(reordered.value.clips.map(clip => clip.sortIndex)).toEqual([0, 1, 2])
+
+    const listed = h.ctx.branchmark.list({
+      workspaceId: h.workspace.id,
+      visibility: 'session-drawer',
+      ownerSessionId: source.session.id,
+    })
+    if (!listed.ok) throw new Error(listed.error.code)
+    expect(listed.value.clips.map(clip => clip.id)).toEqual([second.id, third.id, first.id])
+
+    await expect(h.ctx.branchmark.batchUpdate({
+      workspaceId: h.workspace.id,
+      clipIds: [second.id, first.id],
+      mutation: {
+        kind: 'reorder',
+        scope: 'session',
+        ownerSessionId: source.session.id,
+      },
+    })).resolves.toEqual({
+      ok: false,
+      error: { code: 'invalid-request', message: 'reorder requires the complete active Clip collection' },
+    })
+    await expect(h.ctx.branchmark.batchUpdate({
+      workspaceId: h.workspace.id,
+      clipIds: [first.id, second.id, third.id],
+      mutation: {
+        kind: 'reorder',
+        scope: 'session',
+        ownerSessionId: source.session.id,
+      },
+    })).resolves.toEqual({
+      ok: false,
+      error: { code: 'invalid-request', message: 'pinned Clips must remain before unpinned Clips' },
+    })
+
+    const unchanged = h.ctx.branchmark.list({
+      workspaceId: h.workspace.id,
+      visibility: 'session-drawer',
+      ownerSessionId: source.session.id,
+    })
+    if (!unchanged.ok) throw new Error(unchanged.error.code)
+    expect(unchanged.value.clips.map(clip => clip.id)).toEqual([second.id, third.id, first.id])
+  })
+
   it('retains immutable Clip usage after the Clip is permanently deleted', async () => {
     const h = await harness()
     const source = transcript('fork-source', h.projectRoot)

@@ -23,6 +23,7 @@ export interface ClipSelectionCandidate {
 
 /** Inline launch flow rendered inside the expanded Dock. */
 export interface BranchMarkLauncher {
+  readonly intent: 'side-chat' | 'session'
   readonly workspaceId: WorkspaceId
   readonly sourceSessionId: SessionId
   readonly clips: readonly Clip[]
@@ -162,11 +163,16 @@ export class BranchMarkUiController {
     this.setDock({ ...this.current.dock, width: next })
   }
 
-  openLauncher(workspaceId: WorkspaceId, sourceSessionId: SessionId, clips: readonly Clip[]): void {
+  openLauncher(
+    intent: BranchMarkLauncher['intent'],
+    workspaceId: WorkspaceId,
+    sourceSessionId: SessionId,
+    clips: readonly Clip[],
+  ): void {
     this.setDock({
       ...this.current.dock,
       mode: 'expanded',
-      launcher: Object.freeze({ workspaceId, sourceSessionId, clips: Object.freeze([...clips]) }),
+      launcher: Object.freeze({ intent, workspaceId, sourceSessionId, clips: Object.freeze([...clips]) }),
     })
   }
 

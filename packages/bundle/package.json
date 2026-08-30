@@ -1,6 +1,6 @@
 {
   "name": "dsh-branchmark",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Excerpt-driven session branching and conversation lineage for DeepSeek Harness",
   "keywords": [
     "deepseek-harness",

@@ -6,6 +6,21 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 
 尚无公开变化。
 
+## [0.3.0] - 2026-08-30
+
+### Added
+
+- 新增窄宽度优先的多选命令胶囊，集中提供批量引用、Side Chat、新会话、置顶、标签和回收站操作。
+- 新增固定高度枝签卡片、卡片内正文展开与居中聚焦阅读。
+- 新增会话集合和项目集合的置顶与同组拖拽排序，并把顺序持久化到既有本地 storage domain。
+
+### Changed
+
+- 批量引用现在严格保持用户勾选顺序，并继续使用 DSH 原生 Reference Chip，不修改或自动发送 Composer 正文。
+- Side Chat 与新会话批量入口分别打开对应流程；同一来源的 Side Chat 直接创建，多来源时才要求选择主要来源。
+- 搜索或标签筛选期间禁用拖拽；Host 拒绝不完整集合与跨置顶组的排序请求，避免隐藏枝签被意外重排。
+- DSH 重载 Composer 后，Client 会把 draft mirror 中的 `@branchmark:<id>` 持久化投影重新构造成原生 Reference Chip，并保留其余草稿文字。
+
 ## [0.2.0] - 2026-08-30
 
 ### Added
@@ -27,5 +42,6 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 
 - 衍生 Session 的 BranchMark 关系记录与 DSH `recall` 日志当前没有跨子系统事务。Host 在两次持久写入之间异常退出可能留下部分提交；`0.2.x` public preview 尚未提供自动对账修复。
 
-[Unreleased]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/zaizaizhao/dsh-branchmark/releases/tag/v0.2.0

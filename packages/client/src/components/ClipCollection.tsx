@@ -1,5 +1,5 @@
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react'
 import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-client-runtime/client'
 import {
@@ -12,6 +12,8 @@ import type { Clip, ClipId, ListClipsRequest } from 'dsh-branchmark-host/types'
 import type { BranchMarkClient } from '../domain/client.ts'
 import type { BranchMarkUiController } from '../domain/controller.ts'
 import { useBranchMarkUi } from '../domain/controller.ts'
+import { moveClipInCollection } from '../domain/clip-order.ts'
+import { BatchCommandCapsule } from './BatchCommandCapsule.tsx'
 import { ClipCard } from './ClipCard.tsx'
 
 type CollectionMode = 'session' | 'project'
@@ -70,6 +72,11 @@ export function ClipCollection({ mode, workspaceId, sessionId, client, controlle
   const [trash, setTrash] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [batchTags, setBatchTags] = useState('')
+  const [batchOpen, setBatchOpen] = useState(false)
+  const [tagEditorOpen, setTagEditorOpen] = useState(false)
+  const [batchBusy, setBatchBusy] = useState(false)
+  const draggingId = useRef<ClipId | null>(null)
+  const [orderOverride, setOrderOverride] = useState<readonly ClipId[] | null>(null)
   const state = useBranchMarkUi(controller)
   const request = useMemo<ListClipsRequest | undefined>(() => {
     if (workspaceId === undefined || (mode === 'session' && sessionId === undefined)) return undefined
@@ -88,50 +95,178 @@ export function ClipCollection({ mode, workspaceId, sessionId, client, controlle
     if (mode === 'project') return clip.scope === 'project'
     return clip.scope === 'session' && clip.ownerSessionId === sessionId
   }), [loaded.clips, mode, sessionId])
-  const selected = useMemo(() => clips.filter(clip => selectedIds.includes(clip.id)), [clips, selectedIds])
+  const displayedClips = useMemo(() => {
+    if (orderOverride === null) return clips
+    const byId = new Map(clips.map(clip => [clip.id, clip]))
+    if (orderOverride.length !== clips.length || orderOverride.some(id => !byId.has(id))) return clips
+    return orderOverride.map(id => byId.get(id)!)
+  }, [clips, orderOverride])
+  const selected = useMemo(() => {
+    const byId = new Map(clips.map(clip => [clip.id, clip]))
+    return selectedIds.flatMap(id => {
+      const clip = byId.get(id)
+      return clip === undefined ? [] : [clip]
+    })
+  }, [clips, selectedIds])
+  const pinnedClips = useMemo(() => displayedClips.filter(clip => clip.pinnedAt !== undefined), [displayedClips])
+  const regularClips = useMemo(() => displayedClips.filter(clip => clip.pinnedAt === undefined), [displayedClips])
+  const allPinned = selected.length > 0 && selected.every(clip => clip.pinnedAt !== undefined)
+  const canReorder = !trash && !loaded.loading && search.trim() === '' && selectedTags.length === 0
   const refresh = useCallback(() => { setRefreshKey(value => value + 1) }, [])
   useEffect(() => { setSelectedIds(ids => ids.filter(id => clips.some(clip => clip.id === id))) }, [clips])
+  useEffect(() => {
+    if (orderOverride === null) return
+    const loadedIds = clips.map(clip => clip.id)
+    if (loadedIds.join('\0') === orderOverride.join('\0')
+      || loadedIds.some(id => !orderOverride.includes(id))
+      || loadedIds.length !== orderOverride.length) setOrderOverride(null)
+  }, [clips, orderOverride])
   const toggle = (id: ClipId): void => {
     setSelectedIds(ids => ids.includes(id) ? ids.filter(item => item !== id) : [...ids, id])
   }
-  const batch = async (kind: 'project' | 'trash' | 'tags'): Promise<void> => {
+  const batch = async (kind: 'trash' | 'tags' | 'pin'): Promise<void> => {
     if (workspaceId === undefined) return
+    setBatchBusy(true)
     try {
-      if (kind === 'project') {
-        await client.batchUpdate({
-          workspaceId,
-          clipIds: selected.map(clip => clip.id),
-          mutation: { kind: 'set-scope', scope: 'project' },
-        })
-      } else if (kind === 'trash') {
+      if (kind === 'trash') {
         await client.batchUpdate({
           workspaceId,
           clipIds: selected.map(clip => clip.id),
           mutation: { kind: 'set-status', status: 'trashed' },
         })
-      } else {
+      } else if (kind === 'tags') {
         const extra = batchTags.split(',').map(value => value.trim()).filter(Boolean)
         await client.batchUpdate({
           workspaceId,
           clipIds: selected.map(clip => clip.id),
           mutation: { kind: 'add-tags', tags: extra },
         })
+      } else {
+        await client.batchUpdate({
+          workspaceId,
+          clipIds: selected.map(clip => clip.id),
+          mutation: { kind: 'set-pinned', pinned: !allPinned },
+        })
       }
       controller.clipsChanged()
       controller.notify('success', `已批量更新 ${String(selected.length)} 枚枝签`)
       setSelectedIds([])
       setBatchTags('')
+      setBatchOpen(false)
+      setTagEditorOpen(false)
       refresh()
     } catch (error) {
       controller.notify('error', errorText(error))
+    } finally {
+      setBatchBusy(false)
     }
   }
   const selectedSource = selected.find(clip => clip.source.kind === 'session-message')
   const launcherSource = sessionId
     ?? (selectedSource?.source.kind === 'session-message' ? selectedSource.source.sessionId : undefined)
+  const quoteSelected = (): void => {
+    if (sessionId === undefined) {
+      controller.notify('error', '请先打开一个会话，再把枝签引用到输入框。')
+      return
+    }
+    const result = client.attachClipsToComposer(sessionId, selected)
+    if (result.failed.length > 0) {
+      controller.notify('error', `已有 ${String(result.inserted.length)} 枚引用成功，${String(result.failed.length)} 枚未能写入输入框。`)
+      return
+    }
+    const detail = result.duplicates.length > 0
+      ? `；${String(result.duplicates.length)} 枚已存在`
+      : ''
+    controller.notify('success', `已引用 ${String(result.inserted.length)} 枚枝签到主输入框${detail}，不会自动发送`)
+    setSelectedIds([])
+    setBatchOpen(false)
+  }
+  const openSelectedSideChat = async (): Promise<void> => {
+    if (workspaceId === undefined) return
+    const candidates = selected.filter(clip => clip.source.kind === 'session-message' && clip.source.forkable)
+    if (candidates.length === 0) {
+      controller.notify('error', '所选枝签没有可恢复的来源消息，不能创建 Side Chat。')
+      return
+    }
+    const sourceSessions = new Set(candidates.map(clip => clip.source.kind === 'session-message' ? clip.source.sessionId : undefined))
+    if (sourceSessions.size > 1) {
+      if (launcherSource !== undefined) controller.openLauncher('side-chat', workspaceId, launcherSource, selected)
+      setBatchOpen(false)
+      return
+    }
+    const primary = candidates.toSorted((left, right) => {
+      const leftSeq = left.source.kind === 'session-message' ? left.source.eventSeq : -1
+      const rightSeq = right.source.kind === 'session-message' ? right.source.eventSeq : -1
+      return rightSeq - leftSeq
+    })[0]!
+    if (primary.source.kind !== 'session-message') return
+    setBatchBusy(true)
+    try {
+      const snapshot = await client.createSideChat({
+        workspaceId,
+        ownerSessionId: primary.source.sessionId,
+        primaryClipId: primary.id,
+        clips: selected.map(clip => ({ clipId: clip.id, includeNote: clip.note !== undefined })),
+      })
+      controller.upsertSideChat(snapshot, true)
+      setSelectedIds([])
+      setBatchOpen(false)
+    } catch (error) {
+      controller.notify('error', errorText(error))
+    } finally {
+      setBatchBusy(false)
+    }
+  }
+  const dropOn = async (targetId: ClipId): Promise<void> => {
+    const sourceId = draggingId.current
+    if (workspaceId === undefined || !canReorder || sourceId === null) return
+    draggingId.current = null
+    const moved = moveClipInCollection(displayedClips, sourceId, targetId)
+    if (!moved.ok) {
+      controller.notify('error', moved.reason === 'pin-group-mismatch'
+        ? '置顶与未置顶枝签不能直接跨组拖动，请先切换置顶状态。'
+        : '拖动的枝签已经不在当前集合中。')
+      return
+    }
+    if (moved.clipIds.join('\0') === displayedClips.map(clip => clip.id).join('\0')) return
+    setOrderOverride(moved.clipIds)
+    try {
+      await client.batchUpdate({
+        workspaceId,
+        clipIds: moved.clipIds,
+        mutation: {
+          kind: 'reorder',
+          scope: mode,
+          ...(mode === 'session' && sessionId !== undefined ? { ownerSessionId: sessionId } : {}),
+        },
+      })
+      controller.clipsChanged()
+      controller.notify('success', '枝签顺序已保存')
+    } catch (error) {
+      setOrderOverride(null)
+      controller.notify('error', errorText(error))
+    }
+  }
   if (workspaceId === undefined || (mode === 'session' && sessionId === undefined)) {
     return <div className="dbm-empty"><div><strong>没有可用的会话</strong><p>打开一个项目会话后即可使用枝签 Dock。</p></div></div>
   }
+  const renderClip = (clip: Clip) => (
+    <ClipCard
+      key={clip.id}
+      clip={clip}
+      selected={selectedIds.includes(clip.id)}
+      onSelect={() => { toggle(clip.id) }}
+      onChanged={refresh}
+      client={client}
+      controller={controller}
+      trash={trash}
+      draggable={canReorder}
+      onDragStart={(clipId) => { draggingId.current = clipId }}
+      onDragEnd={() => { draggingId.current = null }}
+      onDrop={(targetId) => { void dropOn(targetId) }}
+      {...(sessionId === undefined ? {} : { currentSessionId: sessionId })}
+    />
+  )
   return (
     <div className="dbm-collection">
       <div className="dbm-toolbar">
@@ -172,38 +307,41 @@ export function ClipCollection({ mode, workspaceId, sessionId, client, controlle
         <div className="dbm-empty"><div><div className="dbm-empty-orb"><IconArchiveOutline20 /></div><strong>{trash ? '回收站为空' : '还没有枝签'}</strong><p>在消息中选择一段文字即可生成枝签。</p></div></div>
       )}
       <div className="dbm-card-grid" data-view={mode === 'project' ? view : 'list'}>
-        {clips.map(clip => (
-          <ClipCard
-            key={clip.id}
-            clip={clip}
-            selected={selectedIds.includes(clip.id)}
-            onSelect={() => { toggle(clip.id) }}
-            onChanged={refresh}
-            client={client}
-            controller={controller}
-            trash={trash}
-            {...(sessionId === undefined ? {} : { currentSessionId: sessionId })}
-          />
-        ))}
+        {pinnedClips.length > 0 && <div className="dbm-collection-divider"><span>置顶</span><i /></div>}
+        {pinnedClips.map(renderClip)}
+        {pinnedClips.length > 0 && regularClips.length > 0 && <div className="dbm-collection-divider"><span>全部枝签</span><i /></div>}
+        {regularClips.map(renderClip)}
       </div>
       {selected.length > 0 && !trash && (
-        <div className="dbm-batchbar">
-          <span>已选 {String(selected.length)} 枚</span>
-          <div className="dbm-batch-actions">
-            <input className="dbm-input" value={batchTags} placeholder="追加标签" onChange={event => { setBatchTags(event.target.value) }} />
-            <button type="button" className="dbm-button" disabled={batchTags.trim() === ''} onClick={() => { void batch('tags') }}>加标签</button>
-            {selected.some(clip => clip.scope === 'session') && <button type="button" className="dbm-button" onClick={() => { void batch('project') }}>保存到项目</button>}
-            <button type="button" className="dbm-button dbm-button-danger" onClick={() => { void batch('trash') }}>删除</button>
-            <button
-              type="button"
-              className="dbm-button dbm-button-primary"
-              disabled={launcherSource === undefined}
-              onClick={() => {
-                if (launcherSource !== undefined) controller.openLauncher(workspaceId, launcherSource, selected)
-              }}
-            >继续探索</button>
-          </div>
-        </div>
+        <BatchCommandCapsule
+          count={selected.length}
+          open={batchOpen}
+          tagEditorOpen={tagEditorOpen}
+          tagValue={batchTags}
+          allPinned={allPinned}
+          canQuote={sessionId !== undefined}
+          busy={batchBusy}
+          onOpenChange={(open) => {
+            setBatchOpen(open)
+            if (!open) setTagEditorOpen(false)
+          }}
+          onTagValueChange={setBatchTags}
+          onCloseTagEditor={() => { setTagEditorOpen(false) }}
+          onApplyTags={() => { void batch('tags') }}
+          onQuote={quoteSelected}
+          onSideChat={() => { void openSelectedSideChat() }}
+          onNewSession={() => {
+            if (launcherSource === undefined) {
+              controller.notify('error', '所选枝签没有可用的来源会话。')
+              return
+            }
+            setBatchOpen(false)
+            controller.openLauncher('session', workspaceId, launcherSource, selected)
+          }}
+          onTogglePinned={() => { void batch('pin') }}
+          onOpenTagEditor={() => { setTagEditorOpen(true) }}
+          onTrash={() => { void batch('trash') }}
+        />
       )}
     </div>
   )
