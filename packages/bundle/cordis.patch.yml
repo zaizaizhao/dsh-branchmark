@@ -1,0 +1,17 @@
+- insert:
+    - id: branchmark-host
+      name: dsh-branchmark
+      config:
+        maxExcerptBytes: 65536
+        maxNoteBytes: 16384
+        maxTagsPerClip: 32
+        maxTagBytes: 128
+        recentContextMessages: 10
+        summaryProvider: ''
+        summaryModel: ''
+        summaryMaxTokens: 2048
+        answerMaxTokens: 8192
+        maxToolRounds: 6
+        maxToolOutputChars: 24000
+        maxReadChars: 60000
+        maxSearchFiles: 300

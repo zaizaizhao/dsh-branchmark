@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@deepseek-ai/dsh-typert-protocol": ["./typert-protocol.d.ts"],
+      "@deepseek-ai/dsh-typert-protocol-actual": [
+        "./node_modules/@deepseek-ai/dsh-typert-protocol/lib/types/index.d.ts"
+      ]
+    }
+  },
+  "files": [],
+  "references": [
+    { "path": "./packages/host" },
+    { "path": "./packages/bundle" }
+  ]
+}
