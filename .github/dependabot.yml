@@ -3,11 +3,18 @@ updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    open-pull-requests-limit: 5
     groups:
       development-tooling:
         dependency-type: development
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+      - dependency-name: "@deepseek-ai/*"
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    open-pull-requests-limit: 5

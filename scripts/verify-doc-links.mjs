@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { access, readdir, readFile } from 'node:fs/promises'
-import { dirname, extname, relative, resolve } from 'node:path'
+import { dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
@@ -49,6 +49,22 @@ for (const path of await collect(root)) {
       const destination = localDestination(raw)
       if (destination === undefined) continue
       const target = destination.startsWith('/') ? resolve(root, `.${destination}`) : resolve(dirname(path), destination)
+      const repositoryRelativeTarget = relative(root, target)
+      if (
+        repositoryRelativeTarget === '..'
+        || repositoryRelativeTarget.startsWith(`..${sep}`)
+        || isAbsolute(repositoryRelativeTarget)
+      ) {
+        failures.push(`${relative(root, path)}:${String(index + 1)} -> ${destination} (escapes repository)`)
+        continue
+      }
+      const ignoredTargetDirectory = repositoryRelativeTarget
+        .split(sep)
+        .find(segment => ignoredDirectories.has(segment))
+      if (ignoredTargetDirectory !== undefined) {
+        failures.push(`${relative(root, path)}:${String(index + 1)} -> ${destination} (targets ignored directory ${ignoredTargetDirectory})`)
+        continue
+      }
       try {
         await access(target)
       } catch {
