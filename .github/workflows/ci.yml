@@ -60,7 +60,7 @@ jobs:
       - run: pnpm audit --prod --audit-level high
       - run: pnpm --dir packages/bundle publish --dry-run --access public --no-git-checks
       - run: pnpm run pack:bundle
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dsh-branchmark-package
           path: dist/*.tgz
