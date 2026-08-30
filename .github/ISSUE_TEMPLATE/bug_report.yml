@@ -12,7 +12,7 @@ body:
     id: branchmark_version
     attributes:
       label: BranchMark version
-      placeholder: 0.2.0
+      placeholder: 0.3.0
     validations:
       required: true
   - type: input
@@ -58,6 +58,7 @@ body:
         - Message selection
         - Session clips
         - Project clips
+        - Batch actions or ordering
         - Composer references
         - Derived sessions
         - Side Chat

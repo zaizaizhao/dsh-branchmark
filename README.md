@@ -12,6 +12,13 @@ BranchMark 是一个独立的 DeepSeek Harness 插件 Bundle。每一枚“枝�
 
 源码仓库：[`zaizaizhao/dsh-branchmark`](https://github.com/zaizaizhao/dsh-branchmark)；公开安装包：[`dsh-branchmark`](https://www.npmjs.com/package/dsh-branchmark)。
 
+## 文档与复现课程
+
+- [`course/README.md`](course/README.md) 是从 DSH 插件基础到可安装 BranchMark 的顺序课程入口，教程、实验和查阅型参考分层组织。
+- [`docs/PRD.md`](docs/PRD.md) 记录产品语义、冻结规则和验收范围。
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) 记录 Host、Client、存储、Composer、衍生 Session 与 Side Chat 的当前架构。
+- [`docs/adr/`](docs/adr/) 保存需要长期解释的产品与架构决策。
+
 ## 当前能力
 
 - 在一条已完成的用户或助手消息中选择连续文本，会出现紧凑的“摘录到会话 / 摘录到项目 / Ask in side / 引用到输入框”浮动操作条；前两个动作显式选择保存范围，后两个动作先保存为本会话枝签，且引用动作绝不自动发送。
@@ -27,7 +34,7 @@ BranchMark 是一个独立的 DeepSeek Harness 插件 Bundle。每一枚“枝�
 - “仅携带枝签”调用 DSH 已导出的 `SessionRuntime.create`，保证创建一个不同于任何既有空白会话的新 Session。
 - “创建并打开”把枝签内容以只读 `recall` 上下文写入新会话日志，保持 Composer 空白且不发送；“创建并发送”在来源页收集问题，并通过 DSH Session `prompt()` 让新会话后台运行。
 - 衍生会话显示继承分隔线和来源入口；枝签卡片列出“完整分叉 / 仅枝签”衍生会话并可反向打开；双方保留双向关系和不可变使用快照。
-- 每张枝签卡片可直接启动 Side Chat、打开新会话流程或引用到当前主输入框。Composer 只显示 DSH 原生引用 Chip，完整摘录在用户显式发送时序列化；逐条移除不会把相邻引用降级为普通文本，页面重载后也会把 DSH draft mirror 中的 `@branchmark:<id>` 持久化投影恢复为 Chip。
+- 每张枝签卡片可直接启动 Side Chat、打开新会话流程或引用到当前主输入框。Composer 只显示 DSH 原生引用 Chip，完整摘录在用户显式发送时序列化；逐条移除不会把相邻引用降级为普通文本，页面重载后也会把 DSH draft mirror 中可解析的 `@branchmark:<id>` 持久化投影恢复为 Chip，无法解析的 token 保持可见。
 - Side Chat 使用 Host 进程内存，不创建普通 Session，不写入 Session 日志，支持多个标签页、独立模型与思考强度切换、思考过程、只读工具活动、Markdown 回答、停止和关闭即销毁。
 - Side Chat 在首次发送时将较早历史转换为单条纯文本 transcript 后交给 AI 摘要；最近历史向前扩展到安全的用户消息边界，避免拆开工具调用与结果。摘要默认使用此时选定的 Side Chat 模型，也可配置专用摘要模型；摘要失败时保留最近原始消息与完整摘录继续回答，并显示 provider 错误。
 - Side Chat 只提供固定的只读工具：项目文件读取、目录列举、项目文本搜索、Web 搜索与由部署配置 provider 执行的 Web 抓取。

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const ignoredDirectories = new Set(['.git', '.playwright-mcp', 'dist', 'lib', 'node_modules'])
-const localOnlyRootEntries = new Set(['CONTEXT.md', 'course', 'docs', 'prototype', 'prototypes'])
+const localOnlyRootEntries = new Set(['CONTEXT.md', 'prototype', 'prototypes'])
 
 async function collect(directory) {
   const entries = await readdir(directory, { withFileTypes: true })
