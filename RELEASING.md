@@ -35,7 +35,7 @@ pnpm run pack:bundle
 检查 tarball 只包含公开运行所需文件：
 
 ```sh
-tar -tf dist/dsh-branchmark-0.3.0.tgz
+tar -tf dist/dsh-branchmark-0.1.1-rc.2.tgz
 pnpm --dir packages/bundle publish --dry-run --access public --no-git-checks
 ```
 
@@ -47,7 +47,7 @@ pnpm --dir packages/bundle publish --dry-run --access public --no-git-checks
 
 ```sh
 BRANCHMARK_SMOKE_HOME="$(mktemp -d)"
-DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh plugin --profile web add "$(pwd)/dist/dsh-branchmark-0.3.0.tgz"
+DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh plugin --profile web add "$(pwd)/dist/dsh-branchmark-0.1.1-rc.2.tgz"
 DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh --profile web --dump-config
 DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh --profile web
 ```
@@ -71,14 +71,14 @@ DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh --profile web
 
 ```sh
 pnpm --dir packages/bundle publish --access public --no-git-checks
-npm view dsh-branchmark@0.3.0 name version dist.tarball engines peerDependencies
+npm view dsh-branchmark@0.1.1-rc.2 name version dist.tarball engines peerDependencies
 ```
 
 随后从 npm 在新的临时 profile 中重复最小安装 smoke test，再创建签名 tag 与 GitHub Release：
 
 ```sh
-git tag -s v0.3.0 -m "BranchMark 0.3.0"
-git push origin v0.3.0
+git tag -s v0.1.1-rc.2 -m "BranchMark 0.1.1-rc.2"
+git push origin v0.1.1-rc.2
 ```
 
 GitHub Release 说明应从对应 `CHANGELOG.md` 版本节整理，并附上兼容 DSH 版本、安装命令、数据迁移说明和已知限制。

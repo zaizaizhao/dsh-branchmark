@@ -23,14 +23,14 @@ Excerpt-driven session branching and conversation lineage for DeepSeek Harness.
 
 | BranchMark | DeepSeek Harness | Node.js | DSH surface |
 | --- | --- | --- | --- |
-| `0.3.x` public preview | `0.1.1-rc.2` | `^22.19.0 \|\| >=24.0.0` | Web profile |
+| `0.1.1-rc.2` (`latest`) | `0.1.1-rc.2` | `^22.19.0 \|\| >=24.0.0` | Web profile |
 
 DSH 仍处于预发布阶段。上表之外的组合没有经过兼容性验证；升级 DSH 前应在独立 profile 中重新完成安装与 UI smoke test。
 
 ## 安装
 
 ```sh
-dsh plugin --profile web add dsh-branchmark@0.3.0
+dsh plugin --profile web add dsh-branchmark@0.1.1-rc.2
 dsh --profile web --dump-config
 dsh --profile web
 ```
@@ -93,7 +93,7 @@ Bundle patch 提供以下配置。Profile patch 覆盖该 Loader 条目时会替
 - 只支持 DSH Web profile，不向 Headless 或 ACP surface 提供 UI。
 - 插件关系树不会改变 DSH 原生侧边栏的会话层级。
 - Workspace 和 Session 是当前隔离键；Worktree 不是独立隔离边界。
-- 创建衍生 Session 需要分别写入 BranchMark 关系记录与 DSH `recall` 日志，当前没有跨子系统事务。Host 在两次写入之间异常退出可能留下低概率部分提交；`0.3.x` 尚未自动对账修复。
+- 创建衍生 Session 需要分别写入 BranchMark 关系记录与 DSH `recall` 日志，当前没有跨子系统事务。Host 在两次写入之间异常退出可能留下低概率部分提交；插件不提供自动对账修复。
 - Side Chat 摘要或回答仍可能因为当前 provider、模型、网络或配额错误而失败；界面会保留错误信息，关闭标签前仍可重试。
 
 ## 支持与安全

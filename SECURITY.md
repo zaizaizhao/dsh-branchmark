@@ -6,8 +6,8 @@ BranchMark 与 DeepSeek Harness 的预发布扩展点直接集成，因此只维
 
 | BranchMark | DeepSeek Harness | Security fixes |
 | --- | --- | --- |
-| `0.3.x` | `0.1.1-rc.2` | Supported |
-| `<0.3.0` | 未声明 | Not supported |
+| `0.1.1-rc.2` | `0.1.1-rc.2` | Supported |
+| `<0.1.1-rc.2` | 未声明 | Not supported |
 
 ## Reporting a vulnerability
 

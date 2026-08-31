@@ -10,7 +10,7 @@
 | --- | --- |
 | DeepSeek Harness | `0.1.1-rc.2` |
 | DSH Git commit | `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e` |
-| BranchMark | `0.3.0` |
+| BranchMark | `0.1.1-rc.2` |
 | Node.js | `^22.19.0 || >=24.0.0` |
 | pnpm | `11.7.0` |
 | TypeScript | `^6.0.3` |

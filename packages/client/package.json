@@ -1,6 +1,6 @@
 {
   "name": "dsh-branchmark-client",
-  "version": "0.3.0",
+  "version": "0.1.1-rc.2",
   "private": true,
   "description": "BranchMark selection, dock, project collection, session branching, and temporary Side Chat UI for DeepSeek Harness",
   "type": "module",

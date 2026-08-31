@@ -6,7 +6,7 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 
 尚无公开变化。
 
-## [0.3.0] - 2026-08-30
+## [0.1.1-rc.2] - 2026-09-01
 
 ### Added
 
@@ -42,6 +42,6 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 
 - 衍生 Session 的 BranchMark 关系记录与 DSH `recall` 日志当前没有跨子系统事务。Host 在两次持久写入之间异常退出可能留下部分提交；`0.2.x` public preview 尚未提供自动对账修复。
 
-[Unreleased]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.2.0...v0.3.0
+[Unreleased]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.1.1-rc.2...HEAD
+[0.1.1-rc.2]: https://github.com/zaizaizhao/dsh-branchmark/tree/v0.1.1-rc.2
 [0.2.0]: https://github.com/zaizaizhao/dsh-branchmark/releases/tag/v0.2.0

@@ -122,7 +122,7 @@ pnpm --dir packages/bundle pack --pack-destination ../../dist
 不要根据旧文档硬编码 tarball 名；从 `dist/` 选择本次命令刚生成且版本与 `packages/bundle/package.json` 一致的文件。检查发布内容：
 
 ```sh
-tar -tf /absolute/path/to/dsh-branchmark-0.3.0.tgz
+tar -tf /absolute/path/to/dsh-branchmark-0.1.1-rc.2.tgz
 ```
 
 应包含 `package/lib/index.js`、`client.js`、Typert Host/Remote、声明、source maps、`cordis.patch.yml`、README、LICENSE 与 package.json；不应包含开发测试、整个 monorepo 或 `node_modules`。
@@ -134,7 +134,7 @@ tar -tf /absolute/path/to/dsh-branchmark-0.3.0.tgz
 ```sh
 CLIP_COURSE_HOME="$(mktemp -d)"
 export DSH_HOME="$CLIP_COURSE_HOME"
-dsh plugin --profile clip-course add /absolute/path/to/dsh-branchmark-0.3.0.tgz
+dsh plugin --profile clip-course add /absolute/path/to/dsh-branchmark-0.1.1-rc.2.tgz
 dsh --profile clip-course --dump-config
 ```
 

@@ -39,7 +39,7 @@
 - [BranchMark architecture](../docs/ARCHITECTURE.md)
   当前插件的架构参考。课程会展开其机制，但不复制整篇事实清单。
 - [紧凑批量命令与枝签排序 Agent Note](../.agents/notes/implemented/feature/2026-08-30-compact-batch-commands-and-clip-ordering.zh.md)
-  0.3.0 对批量命令胶囊、固定高度卡片、置顶分组、完整集合重排和 Composer draft mirror 恢复的设计决策与验证证据。
+  0.1.1-rc.2 对批量命令胶囊、固定高度卡片、置顶分组、完整集合重排和 Composer draft mirror 恢复的设计决策与验证证据。
 - [BranchMark source tree](../packages)
   可运行实现的最终依据。教程中的片段用于解释，完整行为以这里的源文件和测试为准。
 - [Official DeepSeek Harness repository at the course source anchor](https://github.com/deepseek-ai/deepseek-harness/tree/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e)

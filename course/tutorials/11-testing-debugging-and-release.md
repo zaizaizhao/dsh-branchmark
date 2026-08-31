@@ -135,7 +135,7 @@ pnpm run check
 - 没有大数据性能基准；Clip list 是扫描，project search 是有界遍历。
 - 没有 schema migration、导入导出、跨设备或跨 Host 恢复测试，因为产品当前不承诺这些能力。
 
-复现课程时至少为前两项补测试；稳定版发布前应设计 relation/recall reconciliation，并为真实 Browser flow 增加可重复的集成录制。`0.3.x` 以 public preview 发布时，必须在根 README、npm README 与 release notes 同时披露这个持久化窗口。
+复现课程时至少为前两项补测试；稳定版发布前应设计 relation/recall reconciliation，并为真实 Browser flow 增加可重复的集成录制。`0.1.1-rc.2` 以 public preview 发布时，必须在根 README、npm README 与 release notes 同时披露这个持久化窗口。
 
 ## 11. 发布前判定
 

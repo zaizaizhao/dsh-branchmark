@@ -64,7 +64,7 @@ assert.deepEqual(manifests.map(manifest => manifest.name), [
   'dsh-branchmark-client',
   'dsh-branchmark',
 ])
-assert.deepEqual(manifests.map(manifest => manifest.version), Array(4).fill('0.3.0'))
+assert.deepEqual(manifests.map(manifest => manifest.version), Array(4).fill('0.1.1-rc.2'))
 
 const readme = await readFile(`${root}/README.md`, 'utf8')
 assert.ok(readme.startsWith(`# 枝签 · BranchMark\n\n> 摘一段，生一枝。\n\nExcerpt-driven session branching and conversation lineage for DeepSeek Harness.\n`))

@@ -46,7 +46,7 @@ BranchMark 是一个独立的 DeepSeek Harness 插件 Bundle。每一枚“枝�
 
 | BranchMark | DeepSeek Harness | Node.js | DSH surface |
 | --- | --- | --- | --- |
-| `0.3.x` public preview | `0.1.1-rc.2` | `^22.19.0 \|\| >=24.0.0` | Web profile |
+| `0.1.1-rc.2` (`latest`) | `0.1.1-rc.2` | `^22.19.0 \|\| >=24.0.0` | Web profile |
 
 DeepSeek Harness 仍处于预发布阶段，插件直接使用其 Host、Remote 与 Client 扩展点。升级 DSH 前应先运行 BranchMark 的发布检查并在独立 profile 中验收；上表之外的组合不属于当前支持范围。
 
@@ -54,10 +54,10 @@ DeepSeek Harness 仍处于预发布阶段，插件直接使用其 Host、Remote 
 
 ## 安装
 
-安装前确认 `dsh --version` 为 `0.1.1-rc.2`，Node.js 满足上表要求。正式版本发布到 npm 后，可直接加入 Web profile：
+安装前确认 `dsh --version` 为 `0.1.1-rc.2`，Node.js 满足上表要求。BranchMark 与 DSH 使用相同版本号，可直接从 npm 加入 Web profile：
 
 ```sh
-dsh plugin --profile web add dsh-branchmark@0.3.0
+dsh plugin --profile web add dsh-branchmark@0.1.1-rc.2
 dsh --profile web --dump-config
 dsh --profile web
 ```
@@ -85,7 +85,7 @@ corepack enable
 pnpm install --frozen-lockfile
 pnpm run release:check
 pnpm run pack:bundle
-dsh plugin --profile web add ./dist/dsh-branchmark-0.3.0.tgz
+dsh plugin --profile web add ./dist/dsh-branchmark-0.1.1-rc.2.tgz
 ```
 
 不要使用 `github:zaizaizhao/dsh-branchmark`、Git URL 或 GitHub source specifier 直接安装。源码仓库不提交构建后的 `lib/`，并且有意不设置安装生命周期脚本；npm tarball 和本地 `pnpm run pack:bundle` 产物才是可安装介质。
@@ -135,7 +135,7 @@ Bundle 的默认配置在 [`packages/bundle/cordis.patch.yml`](packages/bundle/c
 - Side Chat 是 Host 内存中的临时上下文。关闭标签、卸载插件或退出 Host 后不可恢复。
 - BranchMark 的关系树只存在于插件 Dock 中；它不能把 DSH 原生侧边栏改造成嵌套会话树。
 - 枝签按 Workspace 与 Session 绑定，不把 Worktree 作为隔离边界。
-- 创建衍生 Session 时，BranchMark 关系记录与 DSH `recall` 日志分属两个持久化子系统，当前没有跨子系统事务。Host 在两次写入之间异常退出可能留下已记录关系但缺少 `recall` 的低概率部分提交；`0.3.x` 尚未提供自动对账修复。
+- 创建衍生 Session 时，BranchMark 关系记录与 DSH `recall` 日志分属两个持久化子系统，当前没有跨子系统事务。Host 在两次写入之间异常退出可能留下已记录关系但缺少 `recall` 的低概率部分提交；插件不提供自动对账修复。
 - DSH 的 provider、Session 与 Client API 仍可能在后续预发布版本中变化，因此兼容性按明确版本验证，而不是声明宽泛范围。
 
 ## 类型策略

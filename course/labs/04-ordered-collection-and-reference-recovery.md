@@ -1,6 +1,6 @@
 # 实验 4：有序集合与 Composer 引用恢复
 
-本实验要求你在既有 Clip CRUD 上完成两个 0.3.0 纵向切片：由 Host 持有不变量的置顶与完整集合排序，以及由 DSH draft mirror token 恢复原生 Composer occurrence。重点不是复制 UI，而是证明刷新、筛选、并发 draft 变化和缺失 Clip 都不会让插件悄悄改变用户语义。
+本实验要求你在既有 Clip CRUD 上完成两个 0.1.1-rc.2 纵向切片：由 Host 持有不变量的置顶与完整集合排序，以及由 DSH draft mirror token 恢复原生 Composer occurrence。重点不是复制 UI，而是证明刷新、筛选、并发 draft 变化和缺失 Clip 都不会让插件悄悄改变用户语义。
 
 ## 学习目标
 
