@@ -1,7 +1,7 @@
 import {
   useEffect, useLayoutEffect, useRef, useState,
 } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { Clip } from 'dsh-branchmark-host/types'
 import type { BranchMarkClient } from '../domain/client.ts'
 import type { BranchMarkUiController, ClipSelectionCandidate } from '../domain/controller.ts'

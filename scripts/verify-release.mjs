@@ -86,7 +86,7 @@ const packageReadme = await readFile(new URL('packages/bundle/README.md', root),
 for (const text of [
   'dsh plugin --profile web add dsh-branchmark',
   'dsh plugin --profile web remove dsh-branchmark',
-  '0.1.1-rc.2',
+  '0.1.2-alpha.2',
   'clip_explorer',
   'SECURITY.md',
   'GitHub source specifier',

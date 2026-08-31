@@ -6,7 +6,20 @@ describe('installable BranchMark bundle', () => {
   it('declares one resolvable Host row and its own browser face', async () => {
     expect(manifest.dsh.bundle.patch).toBe('./cordis.patch.yml')
     expect(manifest.dsh.client.platform).toBe('web')
-    expect(manifest.dsh.client.inject).toContain('@deepseek-ai/dsh-client-ui-input-trigger')
+    expect(manifest.dsh.client.inject).toEqual([
+      '@deepseek-ai/dsh-api-gateway',
+      '@deepseek-ai/dsh-api-session-controller',
+      '@deepseek-ai/dsh-api-workspace-controller',
+      '@deepseek-ai/dsh-client-locale',
+      '@deepseek-ai/dsh-client-ui-layout',
+      '@deepseek-ai/dsh-client-ui-sidebar',
+      '@deepseek-ai/dsh-client-ui-renderer',
+      '@deepseek-ai/dsh-client-ui-session',
+      '@deepseek-ai/dsh-client-ui-workspace',
+      '@deepseek-ai/dsh-client-ui-conversation',
+      '@deepseek-ai/dsh-client-ui-chat',
+      '@deepseek-ai/dsh-client-ui-input-trigger',
+    ])
     for (const dependency of manifest.dsh.client.inject) {
       expect(manifest.peerDependencies).toHaveProperty(dependency)
       expect(manifest.devDependencies).toHaveProperty(dependency)

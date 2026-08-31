@@ -1,6 +1,6 @@
 # DSH 既有插件与依赖矩阵
 
-本插件没有重新实现模型适配器、Session Store、持久化、Workspace、文件系统、Web provider、RPC carrier 或 UI shell。它是这些 DSH 能力的 Consumer，并新增 Clip 领域逻辑与 Side Chat 产品层。
+本插件没有重新实现模型适配器、Session Store、持久化、Workspace、文件系统、Web provider、RPC carrier 或 UI shell。它是这些 DSH 能力的 Consumer，并新增 Clip 领域逻辑与 Side Chat 产品层。本页回答“依赖谁”；为什么 DSH 把 Client 能力拆给这些所有者，见 [DSH Client 架构设计解读](dsh-client-architecture-rationale.md)。
 
 ## Host 运行依赖
 
@@ -34,16 +34,23 @@ Remote 是 unary RPC，不是流式通道。Side Chat 的流被 Host 消费并�
 
 ## Browser 运行依赖
 
-Bundle `package.json#dsh.client.inject` 声明浏览器代码到达顺序，Client 模块自身的 `export const inject` 声明 Cordis 服务激活依赖。两者名字相似，但解决的问题不同。
+Bundle `package.json#dsh.client.inject` 声明浏览器 factory arrival 依赖和插件组合元数据，但不规定 Cordis apply 顺序；Client 模块自身的 `export const inject` 声明 Cordis 服务激活依赖。两者名字相似，但解决的问题不同。
+
+列表比旧聚合入口更长是有意结果：API Controller 拥有 React-free 领域状态，UI adapter 提供标准 source，UI Conversation 负责 target-neutral assembly，UI Chat 负责具体 Chat projection，UI Renderer 只绑定通用 Slot。显式 roster 让缺失依赖在组合或激活阶段暴露，而不是由一个 Runtime facade 隐藏。
 
 | DSH Client 包 | 提供能力 | 本插件使用点 |
 | --- | --- | --- |
 | `@deepseek-ai/dsh-api-gateway/client` | `ctx.remote` 与 `remote.<namespace>` Service | `$mount(branchmarkRemote)`，随后调用 `remote.branchmark.*` |
-| `@deepseek-ai/dsh-client-runtime/client` | Session/Workspace stores、scope、binding、Conversation registry | `SessionRuntime.fork/create/open`、Session input、`SessionFace.prompt`、lineage summaries |
+| `@deepseek-ai/dsh-api-session-controller/client` | `ctx.sessions`、Session list、scope 与 binding | `create/fork/open`、`Session.prompt`、lineage summaries |
+| `@deepseek-ai/dsh-api-workspace-controller/client` | `ctx.workspaces` 与纯 Workspace snapshot | Session→Workspace 映射和最近活跃项目选择 |
+| `@deepseek-ai/dsh-client-ui-renderer/client` | `ctx.slots` registry | 注册五个 BranchMark Slot entry |
+| `@deepseek-ai/dsh-client-ui-session/client` | 标准 `useSessions` Slot prop | Shell、Sidebar 与 Header 的响应式 Session 投影 |
+| `@deepseek-ai/dsh-client-ui-workspace/client` | 标准 `useWorkspaces` Slot prop | Workspace snapshot 变化驱动 BranchMark 入口重渲染 |
 | `@deepseek-ai/dsh-client-ui-slots` | 类型化 Slot registry | `PropsRuntime`、五个 Slot 注册 |
 | `@deepseek-ai/dsh-client-ui-layout/client` | `shell.overlay` | 内嵌 Dock、最小化把手、Toast 与选区工具条 |
 | `@deepseek-ai/dsh-client-ui-sidebar/client` | `sidebar.footer.action` | 项目枝签入口 |
-| `@deepseek-ai/dsh-client-ui-conversation/client` | Composer/Header/Chat slots、Session input state 与 Chat node 类型 | 输入区入口、`insertReference()`、draft mirror 观察、lineage badge、fork divider、选区 anchor |
+| `@deepseek-ai/dsh-client-ui-conversation/client` | Composer/Header/Chat slots、Session input state、Conversation binding 与事件定义 | 输入区入口、`insertReference()`、draft mirror 观察、lineage badge、fork divider 与 Conversation snapshot |
+| `@deepseek-ai/dsh-client-ui-chat/client` | Chat View 节点和 `ChatNodeDataMap` | 从 `snapshot.views.get('chat')` 读取消息节点并映射选区 anchor |
 | `@deepseek-ai/dsh-client-ui-input-trigger/client` | `ReferenceInsert`、source registry、clipboard projection 与提交 codec | 短引用 Chip、可解析恢复 token、提交时 Clip 上下文序列化 |
 | `@deepseek-ai/dsh-client-ui-primitives` | 图标、`MarkdownText`、Popover 与 Modal | 主题一致的命令、Markdown/reasoning、引用列表和专注阅读 |
 | `@deepseek-ai/dsh-client-locale` | Client 模块依赖图的 locale 基础 | 当前 UI 文案是插件内中文常量，但模块图仍在 Web UI 依赖之后装载 |
@@ -60,7 +67,7 @@ Bundle `package.json#dsh.client.inject` 声明浏览器代码到达顺序，Clie
 | `conversation.session.header.actions` | session list | 衍生关系 badge | 在标题旁增加动作，不替换 header |
 | `conversation.chat.node` | session keyed | `session/end-seed` 分隔线 | 可回放的业务节点，和 Session event 对齐 |
 
-Slot 的声明、owner props 与 inject face 以 DSH 源码为准：[`ui-layout` shell contract](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/packages/client/ui-layout/src/client/index.ts)、[`ui-sidebar` contract](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/packages/client/ui-sidebar/src/client/contract/slots.ts) 和 [`ui-conversation` contract](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/packages/client/ui-conversation/src/client/contract/slots.ts)。
+Slot 的声明、owner props 与 inject face 以 DSH 源码为准：[`ui-layout` shell contract](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/client/ui-layout/src/client/index.ts)、[`ui-sidebar` contract](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/client/ui-sidebar/src/client/contract/slots.ts) 和 [`ui-conversation` contract](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/client/ui-conversation/src/client/contract/slots.ts)。
 
 ## 本插件没有使用的 DSH 能力
 
@@ -75,6 +82,6 @@ Slot 的声明、owner props 与 inject face 以 DSH 源码为准：[`ui-layout`
 
 ## Profile 前提
 
-标准 Web profile 已装载绝大多数依赖，具体行见 DSH [`dsh-base` patch](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/packages/bundle/base/cordis.patch.yml) 与 [`dsh-web-app` patch](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/packages/bundle/web-app/cordis.patch.yml)。如果用户移除任一 required Service，Cordis 会让 BranchMark 保持 pending，而不是在缺少能力时以降级逻辑运行。
+标准 Web profile 已装载绝大多数依赖，具体行见 DSH [`dsh-base` patch](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/bundle/base/cordis.patch.yml) 与 [`dsh-web-app` patch](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/bundle/web-app/cordis.patch.yml)。如果用户移除任一 required Service，Cordis 会让 BranchMark 保持 pending，而不是在缺少能力时以降级逻辑运行。
 
 `ctx.web` 存在不代表 search 与 fetch 都可用。Provider 是运行时选择的独立层；默认 Web profile 有 DeepSeek search provider，但没有 fetch provider。插件会把该错误作为工具结果交给模型和 UI，部署者若需要 fetch 必须显式安装/配置一个 provider。

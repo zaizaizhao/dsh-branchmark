@@ -1,82 +1,185 @@
-# 枝签 · BranchMark
+<p align="center">
+  <img src="assets/brand/branchmark-logo-threadbook-v4.svg" width="112" alt="枝签 BranchMark 标志">
+</p>
 
-> 摘一段，生一枝。
+<h1 align="center">枝签 · BranchMark</h1>
 
-Excerpt-driven session branching and conversation lineage for DeepSeek Harness.
+<p align="center"><strong>摘一段，生一枝。</strong></p>
 
-把选中文本和会话摘录变成可复用的分支起点，让主会话保持专注，也让每一次发散探索都有迹可循。
+<p align="center">为开发者提供重点知识摘录、可追溯 Session 树和注意力分叉，让主 Session 始终专注于当前目标，让每条支线都能找回来源，让 Vibe Coding 告别注意力丢失。</p>
 
-BranchMark 是一个独立的 DeepSeek Harness 插件 Bundle。每一枚“枝签”都由不可改写的摘录正文、来源锚点、可编辑备注和标签组成，可以作为临时 Side Chat、继承来源上下文的新会话或全新会话的分支起点。
+<p align="center">
+  <a href="#branchmark-解决的是开发者的注意力丢失">为什么需要</a> ·
+  <a href="#session-树与会话管理">Session 树</a> ·
+  <a href="#快速开始">快速开始</a> ·
+  <a href="#dsh-插件发布与生态要求">发布要求</a>
+</p>
 
-插件不修改 DeepSeek Harness 源码。它只使用现有的 Cordis 插件、Typed Remote、`storageDomain`、Session/Workspace、Client Slot、`ctx.llm.stream`、文件系统和 Web capability。
+<p align="center">
+  <a href="https://www.npmjs.com/package/dsh-branchmark"><img alt="npm alpha 0.1.2-alpha.2" src="https://img.shields.io/badge/npm-0.1.2--alpha.2-BD5745"></a>
+  <img alt="DeepSeek Harness 0.1.2-alpha.2" src="https://img.shields.io/badge/DSH-0.1.2--alpha.2-405F52">
+  <img alt="Node.js 22.19 or 24+" src="https://img.shields.io/badge/Node.js-%5E22.19_%7C_%3E%3D24-5C7A69">
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-776D5E"></a>
+</p>
 
-源码仓库：[`zaizaizhao/dsh-branchmark`](https://github.com/zaizaizhao/dsh-branchmark)；公开安装包：[`dsh-branchmark`](https://www.npmjs.com/package/dsh-branchmark)。
+> [!IMPORTANT]
+> BranchMark 的发布版本与目标 DSH 完全同号。`dsh-branchmark@0.1.1-rc.2` 对应 npm `latest` 的 DSH `0.1.1-rc.2`；`dsh-branchmark@0.1.2-alpha.2` 对应 npm `alpha` 的 DSH `0.1.2-alpha.2`。两个通道使用不同的 DSH Client API，不要交叉安装。
 
-## 文档与复现课程
+BranchMark 是一个不修改 DSH 源码的插件 Bundle。它把会话消息中的关键片段保存为“枝签”，再以枝签所在消息为注意力分叉点，创建继承原上下文的子 Session，或只携带重点知识的独立 Session。枝签原文与来源锚点保持不可变，备注和标签可以编辑。
 
-- [`course/README.md`](course/README.md) 是从 DSH 插件基础到可安装 BranchMark 的顺序课程入口，教程、实验和查阅型参考分层组织。
-- [`docs/PRD.md`](docs/PRD.md) 记录产品语义、冻结规则和验收范围。
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) 记录 Host、Client、存储、Composer、衍生 Session 与 Side Chat 的当前架构。
-- [`docs/adr/`](docs/adr/) 保存需要长期解释的产品与架构决策。
+## 目录
 
-## 当前能力
+- [BranchMark 解决的是开发者的注意力丢失](#branchmark-解决的是开发者的注意力丢失)
+- [核心工作流：摘录、分叉、回到主线](#核心工作流摘录分叉回到主线)
+- [Session 树与会话管理](#session-树与会话管理)
+- [快速开始](#快速开始)
+- [操作速查](#操作速查)
+- [数据与权限](#数据与权限)
+- [DSH 插件发布与生态要求](#dsh-插件发布与生态要求)
+- [文档](#文档)
+- [开发与贡献](#开发与贡献)
 
-- 在一条已完成的用户或助手消息中选择连续文本，会出现紧凑的“摘录到会话 / 摘录到项目 / Ask in side / 引用到输入框”浮动操作条；前两个动作显式选择保存范围，后两个动作先保存为本会话枝签，且引用动作绝不自动发送。
-- 跨消息选择会拆成多枚枝签；每枚枝签保留自己的 DSH `MessageId`、事件序号、轮次和原文范围。
-- 枝签的摘录正文与来源不可编辑；备注和多标签可编辑。
-- 右侧 Dock 默认最小化为一个中部把手；展开后作为不改变 DSH 布局尺寸的浮层避开 Session Header 与 Composer。Dock 可拖动调整宽度、再次最小化或完全隐藏，只持久化显示模式、当前视图和宽度。
-- 本会话枝签、项目枝签、会话关系和 Side Chat 共用一个 Dock。关闭 Dock 不关闭 Side Chat，关闭 Side Chat 标签才会立即销毁对应临时上下文。
-- Dock 的本会话视图只读取当前会话私有枝签；项目视图只读取显式提升为项目级的枝签。
-- 项目枝签视图提供卡片/列表、全文搜索和多标签交集筛选。多选后只显示一个“处理 N 枚枝签”命令胶囊，展开后可按选择顺序引用到输入框、创建 Side Chat 或新会话、切换置顶、追加标签和移入回收站；窄宽度下命令自动收敛为图标。
-- 卡片保持统一阅读高度，长正文可在卡片内展开或进入居中的聚焦阅读视图。无搜索和标签筛选时，可在置顶组或普通组内拖动并持久化顺序；跨组移动必须先显式切换置顶状态。
-- 回收站可恢复或永久删除枝签；已创建的衍生会话与使用快照不受影响。
-- “完整分叉”调用 DSH 原生 `SessionRuntime.fork({ atSeq })`，继承主要来源消息所在完整轮次及其之前的上下文。
-- “仅携带枝签”调用 DSH 已导出的 `SessionRuntime.create`，保证创建一个不同于任何既有空白会话的新 Session。
-- “创建并打开”把枝签内容以只读 `recall` 上下文写入新会话日志，保持 Composer 空白且不发送；“创建并发送”在来源页收集问题，并通过 DSH Session `prompt()` 让新会话后台运行。
-- 衍生会话显示继承分隔线和来源入口；枝签卡片列出“完整分叉 / 仅枝签”衍生会话并可反向打开；双方保留双向关系和不可变使用快照。
-- 每张枝签卡片可直接启动 Side Chat、打开新会话流程或引用到当前主输入框。Composer 只显示 DSH 原生引用 Chip，完整摘录在用户显式发送时序列化；逐条移除不会把相邻引用降级为普通文本，页面重载后也会把 DSH draft mirror 中可解析的 `@branchmark:<id>` 持久化投影恢复为 Chip，无法解析的 token 保持可见。
-- Side Chat 使用 Host 进程内存，不创建普通 Session，不写入 Session 日志，支持多个标签页、独立模型与思考强度切换、思考过程、只读工具活动、Markdown 回答、停止和关闭即销毁。
-- Side Chat 在首次发送时将较早历史转换为单条纯文本 transcript 后交给 AI 摘要；最近历史向前扩展到安全的用户消息边界，避免拆开工具调用与结果。摘要默认使用此时选定的 Side Chat 模型，也可配置专用摘要模型；摘要失败时保留最近原始消息与完整摘录继续回答，并显示 provider 错误。
-- Side Chat 只提供固定的只读工具：项目文件读取、目录列举、项目文本搜索、Web 搜索与由部署配置 provider 执行的 Web 抓取。
-- Side Chat 回答可整段保存，也可选择其中一段再保存为会话或项目枝签。
-- 会话关系视图使用 DSH `parentId` 显示当前会话所在的完整已知树，并以稳定分支色辅助区分；它不修改 DSH 原生侧边栏。
-- 所有颜色来自 DSH 语义主题 token，亮色与深色模式使用同一套组件结构。
+## BranchMark 解决的是开发者的注意力丢失
 
-## 兼容性与发布边界
+长时间开发不是一次连续的问答。你会在实现主任务时遇到值得保存的结论、需要验证的假设和可以并行推进的支线。如果所有追问都留在一个 Session，主线会逐渐被旁支淹没；如果直接创建空白 Session，新会话又不知道问题从何而来；如果只复制文字，知识与产生它的决策过程会断开。
 
-| BranchMark | DeepSeek Harness | Node.js | DSH surface |
+| 开发中的时刻 | 常见处理方式 | 容易丢失的东西 |
+| --- | --- | --- |
+| 一段回答很重要，但当前还要继续主任务 | 先记在脑中，稍后再找 | 重点知识和来源位置 |
+| 一个想法值得深入验证 | 继续在主 Session 追问 | 当前任务的注意力主线 |
+| 直接打开新 Session | 重新解释一遍背景 | 父会话上下文和分叉原因 |
+| 同时推进多个方向 | 创建多个无关联会话 | Session 之间的父子关系和回到主线的路径 |
+
+BranchMark 将“知识锚点”和“会话分叉”绑定在一起：枝签保存值得复用的内容，Session 关系保存注意力从哪里分开。开发者可以沿主线继续工作，把支线交给新的 Session，并通过关系树或来源入口随时回到原位置。
+
+## 核心工作流：摘录、分叉、回到主线
+
+BranchMark 的核心对象不是额外的聊天窗口，而是从重点知识生长出来的可追溯 Session。
+
+```text
+主 Session：继续当前开发目标
+        │
+        ├── 选择关键文字 → 保存枝签 → 添加备注与标签
+        │                              │
+        │                              ├── 引用到当前 Composer：留在主线
+        │                              ├── 完整分叉：带父会话历史进入子 Session
+        │                              └── 仅携带枝签：用重点知识开启独立 Session
+        │
+        └── 主 Session 不需要承载每一次发散探索
+```
+
+### 1. 摘录重点知识
+
+在一条已完成的用户或助手消息中选择文字，然后保存到本会话或当前项目。会话枝签默认只属于来源 Session；项目枝签可以跨 Session 搜索和复用，但只有显式选择“摘录到项目”才会进入项目枝签库。当前 Session 不会看到其他 Session 的私有枝签。
+
+枝签正文和来源消息不可编辑，确保以后引用的仍是当时真正得到的结论。备注和多标签可以编辑，用来记录“为什么重要”“下一步要验证什么”以及它属于哪个技术主题。
+
+### 2. 从知识点分叉注意力
+
+创建新 Session 时，先决定新任务需要多少父会话背景：
+
+| 分叉方式 | 新 Session 获得什么 | 注意力策略 |
+| --- | --- | --- |
+| 完整分叉 | 主要枝签的来源 Session 从开头到来源消息完整轮次的历史，以及全部所选枝签和备注 | 带着原推理过程继续深入 |
+| 仅携带枝签 | 一个没有 DSH parent 的全新 Session，以及全部所选枝签和备注 | 只带重点知识，隔离父会话噪声 |
+
+多枚枝签来自不同 Session 时，你需要选择一个主要来源。主要来源只决定完整分叉继承哪条父会话链；其余枝签仍作为完整知识材料进入新 Session。
+
+### 3. 推进支线，再回到来源
+
+“创建并打开”会立即进入新 Session，并保持 Composer 空白；“创建并发送”会先收集问题，再在后台创建和运行新 Session。衍生 Session 显示来源入口和分叉信息，枝签卡片也会列出使用它的衍生 Session。
+
+新 Session 创建后拥有独立生命周期。回收或永久删除枝签不会删除、重写或中止已经创建的衍生 Session。
+
+### 快问快答
+
+Side Chat 是注意力管理中的临时出口，不是 BranchMark 的主数据结构。它适合围绕一枚或多枚枝签快速提问，不向来源 Session 写入消息，也不进入 Session 树；关闭标签或退出 Host 后立即销毁。值得保留的结果可以再保存为枝签或转成正式 Session。
+
+## Session 树与会话管理
+
+完整分叉直接使用 DSH 原生 Session fork。DSH `parentSession` 是父子关系的权威来源，BranchMark 的“关系”视图通过 `parentId` 投影当前 Session 所在的已知树。
+
+```text
+Session A：实现认证主流程
+├── Session B：从“权限模型”完整分叉
+│   └── Session D：从“缓存失效”再次完整分叉
+└── Session C：从“数据库迁移”完整分叉
+
+Session E：仅携带枝签创建
+└── 没有 DSH parent；通过 BranchMark 枝签使用关系连接来源知识
+```
+
+BranchMark 保留两种关系，并且不把它们混为一棵伪造的树：
+
+| 关系 | 权威数据 | 在界面中的作用 |
+| --- | --- | --- |
+| DSH Session lineage | `SessionHeader.parentSession` / Client `parentId` | 构成完整分叉的父子 Session 树 |
+| BranchMark 使用关系 | 衍生 Session、主要枝签、附加枝签和不可变使用快照 | 从枝签找到衍生 Session，从衍生 Session 跳回来源 |
+| Side Chat | 无持久关系 | 只作为临时快问快答标签 |
+
+这种区分让会话管理保持真实：完整分叉表达“这个 Session 从父会话的某个完成轮次继续”；仅枝签表达“这个独立 Session 使用过这些知识”。两者都可追溯，但只有前者进入 DSH Session 树。
+
+## 快速开始
+
+BranchMark 通过 npm Bundle 安装到 DSH Web Profile。保存枝签、查看关系树和“创建并打开”不需要模型；向正式 Session 发送问题或使用 Side Chat 时，仍需要在 DSH 中配置可用模型。
+
+### 要求
+
+| npm 通道 | BranchMark | DeepSeek Harness | 用途 |
 | --- | --- | --- | --- |
-| `0.3.x` public preview | `0.1.1-rc.2` | `^22.19.0 \|\| >=24.0.0` | Web profile |
+| `latest` | `0.1.1-rc.2` | `0.1.1-rc.2` | 默认安装；使用 DSH npm `latest` |
+| `alpha` | `0.1.2-alpha.2` | `0.1.2-alpha.2` | 当前 `main`；使用新版 DSH Client API |
 
-DeepSeek Harness 仍处于预发布阶段，插件直接使用其 Host、Remote 与 Client 扩展点。升级 DSH 前应先运行 BranchMark 的发布检查并在独立 profile 中验收；上表之外的组合不属于当前支持范围。
+两个通道都要求 Node.js `^22.19.0` 或 `>=24.0.0`，并且只支持 DSH Web Profile。BranchMark 版本必须和 `dsh --version` 完全一致。
 
-只有 `dsh-branchmark` Bundle 面向 npm 发布。`dsh-branchmark-host` 与 `dsh-branchmark-client` 是私有实现工作区，不是可独立安装的插件。Bundle 自带预编译的 Host、Typert、Remote 与浏览器入口，运行时复用 DSH profile 已提供的 Cordis 和 DSH package，避免加载重复的框架实例。
+### 1. 选择并安装同号版本
 
-## 安装
-
-安装前确认 `dsh --version` 为 `0.1.1-rc.2`，Node.js 满足上表要求。正式版本发布到 npm 后，可直接加入 Web profile：
+使用默认 `latest` 通道：
 
 ```sh
-dsh plugin --profile web add dsh-branchmark@0.3.0
+npm install --global @deepseek-ai/dsh@0.1.1-rc.2
+dsh plugin --profile web add dsh-branchmark@0.1.1-rc.2
+```
+
+使用与当前 `main` 对应的 `alpha` 通道：
+
+```sh
+npm install --global @deepseek-ai/dsh@0.1.2-alpha.2
+dsh plugin --profile web add dsh-branchmark@0.1.2-alpha.2
+```
+
+如果需要与日常 Profile 隔离，可以在安装前创建专用 DSH home：
+
+```sh
+export BRANCHMARK_DSH_HOME="$(mktemp -d)"
+DSH_HOME="$BRANCHMARK_DSH_HOME" \
+  dsh plugin --profile web add dsh-branchmark@0.1.2-alpha.2
+```
+
+采用隔离 home 时，后续每条 `dsh` 命令也必须带上 `DSH_HOME="$BRANCHMARK_DSH_HOME"`；否则命令会读取默认 Profile。
+
+### 2. 验证 Profile
+
+```sh
+dsh --version
 dsh --profile web --dump-config
-dsh --profile web
 ```
 
-升级同一兼容系列：
+`dsh --version` 必须与安装的 BranchMark 版本相同；配置输出中应出现 `dsh-branchmark` 和 `branchmark-host`。版本不同或缺少这两个条目时，先删除错误版本，再按同一通道重新安装。
+
+### 3. 从目标项目启动 DSH
+
+DSH 默认把启动命令所在目录作为 Workspace，因此先进入你真正要处理的项目：
 
 ```sh
-dsh plugin --profile web up dsh-branchmark
+cd /absolute/path/to/your/project
+
+dsh web
 ```
 
-卸载：
+打开一个 Session，等待一条用户或助手消息完成，然后选择其中的文字。看到四项选区操作和右侧枝签浮签，即表示插件已经加载。
 
-```sh
-dsh plugin --profile web remove dsh-branchmark
-```
-
-`dsh plugin` 将其后的命令交给 profile 内的 pnpm。安装、升级或卸载后需要重启对应 DSH profile。卸载插件不会主动删除 `clip_explorer` 本地 storage domain；需要清理数据时，应先备份，再由用户显式删除对应 DSH storage backend 记录。
-
-从源码验收时先构建 tarball，再安装该 tarball：
+### 从源码构建当前 alpha
 
 ```sh
 git clone https://github.com/zaizaizhao/dsh-branchmark.git
@@ -85,82 +188,97 @@ corepack enable
 pnpm install --frozen-lockfile
 pnpm run release:check
 pnpm run pack:bundle
-dsh plugin --profile web add ./dist/dsh-branchmark-0.3.0.tgz
+dsh plugin --profile web add ./dist/dsh-branchmark-0.1.2-alpha.2.tgz
 ```
 
-不要使用 `github:zaizaizhao/dsh-branchmark`、Git URL 或 GitHub source specifier 直接安装。源码仓库不提交构建后的 `lib/`，并且有意不设置安装生命周期脚本；npm tarball 和本地 `pnpm run pack:bundle` 产物才是可安装介质。
+不要通过 Git URL、GitHub source specifier 或 `plugin add .` 安装。源码仓库不提交构建后的 `lib/`；npm 包和本地构建的 tarball 才是完整安装介质。
 
-## 配置
+## 操作速查
 
-Bundle 的默认配置在 [`packages/bundle/cordis.patch.yml`](packages/bundle/cordis.patch.yml)。Profile patch 覆盖某个条目时会替换该条目的整个 `config`，因此修改任一字段时需要重述全部字段。
+所有入口都要求用户显式选择或发送。BranchMark 不会因为选中文字就自动向模型发起请求。
 
-| 字段 | 默认值 | 作用 |
-| --- | ---: | --- |
-| `maxExcerptBytes` | 65536 | 单条摘录 UTF-8 字节上限 |
-| `maxNoteBytes` | 16384 | 单条备注 UTF-8 字节上限 |
-| `maxTagsPerClip` | 32 | 单条摘录标签数上限 |
-| `maxTagBytes` | 128 | 单个标签 UTF-8 字节上限 |
-| `recentContextMessages` | 10 | Side Chat 至少保留的最近原始消息数；实际起点向前扩展到安全的用户消息边界 |
-| `summaryProvider` / `summaryModel` | 空 | 两者都为空时跟随首次发送时选定的 Side Chat 模型；否则必须成对配置 |
-| `summaryMaxTokens` | 2048 | 来源摘要输出上限 |
-| `answerMaxTokens` | 8192 | Side Chat 单轮回答输出上限 |
-| `maxToolRounds` | 6 | Side Chat 单轮最大只读工具迭代数 |
-| `maxToolOutputChars` | 24000 | 单次只读工具返回给模型的字符上限 |
-| `maxReadChars` | 60000 | 单文件读取/搜索的字符上限 |
-| `maxSearchFiles` | 300 | 单次项目文本搜索扫描文件数上限 |
+| 你的注意力需求 | 使用的操作 | 结果 |
+| --- | --- | --- |
+| 记住当前任务中的关键结论 | 摘录到会话 | 枝签持久化，只在来源 Session 显示 |
+| 把重点知识提供给其他 Session | 摘录到项目 | 枝签持久化，在当前 Workspace 的项目库显示 |
+| 保留当前主线，继续组织问题 | 引用到输入框 | 插入可移除的原生引用 Chip，绝不自动发送 |
+| 沿原讨论位置展开正式支线 | 完整分叉 | 创建有 DSH parent 的持久化子 Session |
+| 用重点知识开始隔离任务 | 仅携带枝签 | 创建无 DSH parent 的持久化根 Session |
+| 管理并行开发支线 | 关系视图与枝签卡片 | 查看 Session 树、来源和双向使用关系 |
+| 临时确认一个小问题 | Ask in side | 创建不入树、不持久化的快问快答标签 |
 
-## 数据与隐私
+右侧 Dock 提供“本会话”“项目”“关系”和“Side Chat”视图。项目枝签库支持全文搜索、多标签筛选、卡片/列表切换、置顶、同组排序、多选操作和回收站。
 
-- 枝签、标签、备注、置顶与集合顺序、回收站状态、衍生关系和使用快照只写入 DSH 本地 `storageDomain` 的 `clip_explorer` domain；`Clip` 是枝签摘录数据在源码中的类型名。
-- 枝签绑定 Workspace 与 owner Session，不绑定 Worktree。
-- Session 私有枝签永远不会通过项目集合或项目回收站 Remote 返回给其他会话。
-- 项目枝签只在项目标签中全局可见，并且只有用户显式选择后才进入 Side Chat、衍生 Session 或当前 Composer。
-- 普通衍生 Session 不把枝签正文写入可编辑 Composer。Host 在校验衍生关系后把摘录正文与启用的备注记录为可折叠的 `recall` 上下文；该上下文与用户后续问题一起进入模型历史，并由 DSH Session 日志恢复。
-- 卡片上的“引用到输入框”是显式的当前会话操作。插件通过 DSH `ReferenceInsert` 只把紧凑 Chip 放入 Composer；`codec.serialize()` 在提交事务中重新读取当前枝签，并把原文与用户保留的备注转换为模型上下文。引用不存在、已删除或在回收站中时，DSH 阻止发送并保留输入内容。
-- Side Chat 的上下文、消息、流式文本和工具结果仅存在于 Host 进程内存；关闭标签、插件卸载或 Host 退出都会中止并销毁它们。
-- 普通衍生 Session 是 DSH 原生持久会话。删除枝签只删除枝签本身，不回写或重写已经创建的 Session。
+## 数据与权限
 
-## 网络、模型与工具权限
+BranchMark 把长期知识与关系留在 DSH 本地，把临时探索限制在当前 Host 进程中。
 
-- 保存、搜索、标记和回收枝签不调用模型，也不需要外部网络。
-- 用户在 Side Chat 中发送问题时，选定枝签、启用的备注以及恢复出的来源上下文会交给当前选择的 DSH 模型 provider。较早历史需要摘要时，也会发送给跟随模型或显式配置的摘要 provider。
-- Side Chat 可调用项目文件读取、目录列举和文本搜索；这些工具只读，但其结果可能随后进入模型请求。Web 搜索与抓取使用 DSH 当前配置的 Web provider，并会把查询词或目标 URL 发送给该 provider。
-- 插件不自行收集遥测、不接收凭据，也不把枝签同步到 BranchMark 作者控制的服务。模型和 Web provider 的数据处理规则仍由用户的 DSH 部署与 provider 配置决定。
+- 枝签、备注、标签、排序、回收站、使用快照和衍生关系写入 DSH 本地 `storageDomain` 的 `clip_explorer` domain；插件不提供云同步，也不向作者控制的服务上传数据。
+- 完整分叉和仅枝签 Session 都使用 DSH 原生持久化；BranchMark 不复制或替代 DSH Session 日志。
+- 保存、搜索、组织枝签和查看关系不调用模型。只有用户发送问题后，所选枝签、启用的备注和恢复出的上下文才会进入当前 DSH provider 的请求。
+- Side Chat 的项目文件工具只读，但工具结果可能进入模型请求；Web 搜索和抓取遵循当前 DSH 部署的 provider 配置。
+- Workspace 和 Session 是当前的数据隔离键；Worktree 不是独立隔离边界。BranchMark 只支持 DSH Web Profile，也不会改变 DSH 原生侧边栏的会话层级。
 
-安全问题请按 [`SECURITY.md`](SECURITY.md) 私下报告。不要在公开 issue、日志或截图中提交 API key、完整凭据文件或其他秘密。
+完整配置、网络行为和限制见 [Bundle 使用参考](packages/bundle/README.md) 与 [兼容性和限制](course/reference/compatibility-and-limitations.md)。安全问题请按 [SECURITY.md](SECURITY.md) 私下报告，不要在公开 issue、日志或截图中提交凭据。
 
-## 已知限制
+## DSH 插件发布与生态要求
 
-- 当前只支持 DSH Web profile；Headless、ACP 和其他 surface 不加载 BranchMark UI。
-- Side Chat 是 Host 内存中的临时上下文。关闭标签、卸载插件或退出 Host 后不可恢复。
-- BranchMark 的关系树只存在于插件 Dock 中；它不能把 DSH 原生侧边栏改造成嵌套会话树。
-- 枝签按 Workspace 与 Session 绑定，不把 Worktree 作为隔离边界。
-- 创建衍生 Session 时，BranchMark 关系记录与 DSH `recall` 日志分属两个持久化子系统，当前没有跨子系统事务。Host 在两次写入之间异常退出可能留下已记录关系但缺少 `recall` 的低概率部分提交；`0.3.x` 尚未提供自动对账修复。
-- DSH 的 provider、Session 与 Client API 仍可能在后续预发布版本中变化，因此兼容性按明确版本验证，而不是声明宽泛范围。
+BranchMark 按目标版本 DSH 的官方 Bundle 机制分发。DSH 的[插件打包与安装文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/user/develop/basic/publish.md)定义 Profile Bundle，[Client module 文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/client/modules/README.md)定义 Web 浏览器入口。
 
-## 类型策略
+在 BranchMark 支持的 DSH 版本中，官方资料没有提供第三方插件市场提交接口，官方仓库也暂不接受外部代码 PR。DSH 的[贡献说明](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/CONTRIBUTING.md)建议作者在自己的仓库维护插件，并添加 GitHub [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic 供生态发现。社区目录可以作为额外分发渠道，但不代表 DSH 官方审核、兼容性保证或安全认证。
 
-插件直接复用 DSH 的 `WorkspaceId`、`SessionId`、`MessageId`、`SessionEvent`、`SessionInspection`、`Message`、`LlmCallConfig`、`ToolSchema`、`KvTable`、Client Runtime 和 Slot 类型。只有 DSH 没有定义的 Clip、Side Chat 身份、Clip 来源、衍生关系和专用 Remote DTO 由插件定义。
+<details>
+<summary>查看可安装条件与 BranchMark 发布准备状态</summary>
 
-Side Chat 的浏览器消息是一个有意缩窄的 wire projection：它继续使用 DSH `MessageId`，不传 provider replay state 或任意扩展 block；只读工具活动只投影名称、参数、受 Host 上限约束的输出和状态，以便 UI 呈现与主对话相近的执行过程。这是传输投影，不是重新发明一套 LLM 消息模型。
+### 可安装 Bundle 的技术条件
 
-## 开发与验证
+| DSH 条件 | BranchMark 的实现 |
+| --- | --- |
+| 包必须有非空 `name` 和 `version`，并提供可解析的运行入口 | `dsh-branchmark@0.1.2-alpha.2` 发布预编译 Host、Typert、Remote 和浏览器入口 |
+| `package.json` 必须声明 `dsh.bundle.patch`，否则 `dsh plugin add` 只安装普通依赖，不激活 Profile 层 | `packages/bundle/package.json` 指向 `./cordis.patch.yml` |
+| `cordis.patch.yml` 必须插入或覆盖实际 Loader 行，并使用安装后可解析的包名 | Bundle patch 插入 `branchmark-host`，模块名为 `dsh-branchmark` |
+| Web 插件必须导出 `./client`，并以 `dsh.client.platform: "web"` 声明浏览器入口 | Bundle 导出自包含 `lib/client.js`，并声明所需 Client 注入项 |
+| npm 包或 tarball 必须包含编译产物；Git 源码安装若需要构建，必须提供自包含 `prepare`，并由用户在 pnpm 中显式授权 | BranchMark 不执行安装期脚本，只支持包含 `lib/` 的本地 tarball；当前禁止 Git 源码直装 |
+| 安装后应通过 `--dump-config` 验证 Bundle 层，再重启目标 Profile | README 和发布流程都在隔离 `DSH_HOME` 中检查 `dsh-branchmark` 与 `branchmark-host` |
+
+BranchMark 当前的发布准备状态：
+
+| 项目 | 状态 |
+| --- | --- |
+| 独立公开仓库、MIT License、Issues 与安全报告入口 | 已具备 |
+| `dsh.bundle.patch`、`cordis.patch.yml`、Web `./client` 与 `dsh.client` 声明 | 已具备 |
+| Node `22.19` / `24` CI、keyless 测试、Bundle 自包含检查和 npm dry-run | 已具备 |
+| 独立 Profile tarball 安装与 `--dump-config` 验证 | 已具备 |
+| npm `latest` 与 `alpha` 同号发布 | 已完成 |
+| GitHub `dsh-plugin` topic | 尚未添加 |
+
+</details>
+
+正式发布步骤、文件清单、npm 校验和真实 Profile smoke test 见 [RELEASING.md](RELEASING.md)。
+
+## 文档
+
+README 负责解释注意力问题、Session 管理、安装路径和发布状态。完整产品规则、实现原理和复现课程分别由下面的文档维护。
+
+| 你想了解 | 文档 |
+| --- | --- |
+| 从基础到复现整个插件 | [课程入口](course/README.md) |
+| 产品规则与验收范围 | [PRD](docs/PRD.md) |
+| Host、Client、存储、Session 分叉与关系架构 | [架构说明](docs/ARCHITECTURE.md) |
+| DSH Session lineage 与 BranchMark 使用关系 | [架构地图](course/reference/architecture-map.md) |
+| DSH Client 为什么采用当前扩展设计 | [DSH Client 架构取舍](course/reference/dsh-client-architecture-rationale.md) |
+| 配置字段、数据规则和限制 | [Bundle 使用参考](packages/bundle/README.md) |
+| 发布与真实 Profile 验收 | [发布流程](RELEASING.md) |
+
+## 开发与贡献
+
+提交代码前运行：
 
 ```sh
-corepack enable
-pnpm install --frozen-lockfile
-pnpm run typecheck
-pnpm run test
-pnpm run build
 pnpm run check
 pnpm run release:check
-pnpm run pack:bundle
 ```
 
-当前宿主源码声明的 Node 最低版本是 22.19。低于该版本时 pnpm 会警告；即使本机偶然通过构建，也不构成受支持运行时。
+`check` 覆盖类型检查、keyless 测试、构建和 Bundle 自包含检查；`release:check` 继续检查文档、公开包元数据、publint 和 npm dry-run。真实 provider 请求不进入 keyless 检查，发布候选仍需按 [RELEASING.md](RELEASING.md) 在独立 Web Profile 中完成 smoke test。
 
-自包含包已安装到真实 DSH Web profile，并完成常驻 Dock、本会话与项目枝签隔离、多选命令胶囊、340px Dock 图标化、固定卡片、卡片内展开、聚焦阅读、置顶分组、批量 Composer 引用顺序、内嵌新会话流程、临时 Side Chat 创建、模型目录与思考强度菜单以及亮色/深色主题的浏览器验收。验收没有发送模型请求，因此 Side Chat 的真实摘要、工具调用和回答质量仍应使用配置好的 provider 单独做 API e2e；自动化测试覆盖完整排序请求、模型路由切换、上下文组装、工具活动投影和生命周期。
-
-`release:check` 在常规构建测试之外校验公开包元数据、私有工作区边界、DSH peer 声明、npm 文件清单和 dry-run 发布结果。真实 provider 请求不进入 keyless CI；发布候选仍需按 [`RELEASING.md`](RELEASING.md) 完成独立 profile smoke test。
-
-参与开发前请阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md)；版本变化记录在 [`CHANGELOG.md`](CHANGELOG.md)。
+参与开发请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。普通缺陷和功能建议提交到 [GitHub Issues](https://github.com/zaizaizhao/dsh-branchmark/issues)；版本变化记录在 [CHANGELOG.md](CHANGELOG.md)。BranchMark 使用 [MIT License](LICENSE)。

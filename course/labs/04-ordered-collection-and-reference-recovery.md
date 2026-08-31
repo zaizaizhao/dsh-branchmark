@@ -1,6 +1,6 @@
 # 实验 4：有序集合与 Composer 引用恢复
 
-本实验要求你在既有 Clip CRUD 上完成两个 0.3.0 纵向切片：由 Host 持有不变量的置顶与完整集合排序，以及由 DSH draft mirror token 恢复原生 Composer occurrence。重点不是复制 UI，而是证明刷新、筛选、并发 draft 变化和缺失 Clip 都不会让插件悄悄改变用户语义。
+本实验要求你在既有 Clip CRUD 上完成两个纵向切片：由 Host 持有不变量的置顶与完整集合排序，以及由 DSH draft mirror token 恢复原生 Composer occurrence。重点不是复制 UI，而是证明刷新、筛选、并发 draft 变化和缺失 Clip 都不会让插件悄悄改变用户语义。
 
 ## 学习目标
 
@@ -15,7 +15,7 @@
 
 先完成实验 1，并让 Browser 能调用 `create/list/update/batchUpdate`。准备同一 Workspace 下两个普通 Session：Session A 至少有四条 session Clip，项目集合至少有三条 project Clip；两组中各置顶至少一条。另准备一条可删除或移入回收站的 Clip，用于恢复失败场景。
 
-复核目标 DSH 版本的 [UI Input Trigger 文档](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/packages/client/ui-input-trigger/README.md)和 `SessionInput.insertReference()` 类型。若该版本的 occurrence、clipboard projection 或 CAS 参数不同，应先更新设计，不能用完整原文草稿冒充原生引用。
+复核目标 DSH 版本的 [UI Input Trigger 文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/client/ui-input-trigger/README.md)和 `SessionInput.insertReference()` 类型。若该版本的 occurrence、clipboard projection 或 CAS 参数不同，应先更新设计，不能用完整原文草稿冒充原生引用。
 
 ## 任务 1：扩展兼容旧记录的 Clip schema
 

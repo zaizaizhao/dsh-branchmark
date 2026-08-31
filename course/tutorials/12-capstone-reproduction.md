@@ -20,9 +20,9 @@
 
 ## 2. 建立版本证据
 
-先记录目标 DSH package version、Git commit、Node、pnpm 与公开导出。不要先写代码再用类型错误猜 API。核对资源清单位于 [`RESOURCES.md`](../RESOURCES.md)，重点阅读 DSH architecture、Cordis primer、API Gateway、Session、Storage、Client Modules、FS、Web 与 Workspace 文档。
+先记录目标 DSH package version、Git commit、Node、pnpm 与公开导出。不要先写代码再用类型错误猜 API。核对资源清单位于 [`RESOURCES.md`](../RESOURCES.md)，重点阅读 DSH architecture、Cordis primer、API Gateway、Session、Storage、Client Modules、FS、Web、Workspace，以及本课程的 [DSH Client 架构设计解读](../reference/dsh-client-architecture-rationale.md)。
 
-建立一张适配表，至少记录 `SessionRuntime.create/fork`、Host fork boundary、SessionHeader、`session/end-seed`、五个 Slot、Input Trigger reference contract、Chat row anchor、Typert artifacts 和 `dsh.client` format。若目标版本与本课程锚点不同，先更新设计，不照搬实现。
+建立一张适配表，至少记录 API Controller/UI adapter/target/Renderer 的 owner 映射、`ISessions.create/fork`、Host fork boundary、SessionHeader、`session/end-seed`、五个 Slot、Input Trigger reference contract、Conversation/Chat View、Chat row anchor、Remote failure contract、Typert artifacts 和 `dsh.client` format。若目标版本与本课程锚点不同，先更新设计，不照搬实现，也不要用另一个聚合 facade 掩盖 owner 变化。
 
 检查点：你能用源码位置回答“full-fork 最终截止哪个事件”和“Browser client.js 由谁发现与加载”。
 
@@ -76,7 +76,7 @@ Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 No
 
 ## 8. 完成两类普通 Session
 
-先实现 clips-only `SessionRuntime.create`，验证无 parent/seed，再实现 full-fork `sessions.fork({atSeq})`。Host `recordDerivedSession` 必须 inspect child header，并按当前 DSH 算法核对 full-fork seed。
+先实现 clips-only `sessions.create({ workspaceId })`，验证无 parent/seed，再实现 full-fork `sessions.fork({ atSeq })`。Host `recordDerivedSession` 必须 inspect child header，并按当前 DSH 算法核对 full-fork seed。
 
 写入 relation/usages 后 append `form=recall` user message；创建模式 open child，创建并发送模式调用 child binding `SessionFace.prompt(..., 'queue')`。实现 `listRelations`、Header marker、DSH parentId lineage tree 与 `session/end-seed` divider。
 
@@ -119,6 +119,7 @@ Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 No
 完成前逐项补齐：
 
 - Remote roster 与 error mapping。
+- Client inject roster、Controller/UI/target owner 映射，以及禁止混入旧 Runtime package 的依赖图检查。
 - schema version 和未来 migration 决策。
 - storage→Session append 跨系统失败的 reconciliation 方案。
 - Browser selection/Slot 的版本适配说明。

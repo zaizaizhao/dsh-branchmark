@@ -10,7 +10,7 @@ dsh-branchmark (Bundle)
 │   └── TemporarySideChatRuntime
 └── dsh-branchmark-client
     ├── DSH Slot entries
-    ├── BranchMarkClient（Remote + Session 编排）
+    ├── BranchMarkClient（Remote + DSH Client Services）
     └── BranchMarkUiController（仅浏览器临时 UI 状态）
 ```
 
@@ -27,10 +27,10 @@ dsh-branchmark (Bundle)
 | Composer 枝签入口 | `conversation.input.left` |
 | 未发送 Clip 引用 | `ReferenceInsert` + `InputTriggerSource.codec` |
 | 衍生关系入口 | `conversation.session.header.actions` |
-| Clip 反向打开衍生会话 | `listRelations` Remote + `SessionRuntime.open` |
+| Clip 反向打开衍生会话 | `listRelations` Remote + `ctx.sessions.open` |
 | Fork seed 分隔线 | `conversation.chat.node` + 现有 `session/end-seed` 事件 |
-| 完整分叉 | `SessionRuntime.fork` |
-| 全新普通 Session | DSH 导出的 `SessionRuntime.create` |
+| 完整分叉 | Session Controller 的 `ctx.sessions.fork` |
+| 全新普通 Session | Session Controller 的 `ctx.sessions.create` |
 | 衍生 Session 的只读 Clip 上下文 | `Session.append('user/message', recall, { surfaceOp: 'append' })` |
 | 后台创建并发送 | `SessionFace.prompt` |
 | 远程 API | `bindTypertRemote` + 生成的 Remote contribution |
@@ -128,9 +128,9 @@ Side Chat 的工具 schema 是固定常量，不从父 Session 的工具目录�
 
 ## 客户端状态与 Dock
 
-`BranchMarkUiController` 保存 Dock 的三种显示模式（`hidden`、`rail`、`expanded`）、当前视图、宽度、内嵌启动流程、DOM 选区、Toast 和 Side Chat 浏览器镜像。`rail` 只渲染右侧中部把手，不占据全高；`expanded` 通过宿主稳定的 `data-conversation-scroll` 与 `data-composer-seat` 锚点计算上下安全区，并始终作为 `shell.overlay` 中的浮层显示。插件不设置宿主会话根节点的宽度、属性或 CSS 变量。Dock 没有 backdrop，宽度限制为 340–620px；Escape 先关闭内嵌启动流程，再最小化为把手。
+`BranchMarkUiController` 保存 Dock 的三种显示模式（`hidden`、`rail`、`expanded`）、当前视图、宽度、内嵌启动流程、DOM 选区、Toast 和 Side Chat 浏览器镜像。`rail` 只渲染右侧中部随 DSH 明暗主题切换的单色线装本 Logo 浮签、数量角标与运行状态点，不占据全高；`expanded` 在标题区继续使用同一品牌标志，并通过宿主稳定的 `data-conversation-scroll` 与 `data-composer-seat` 锚点计算上下安全区，始终作为 `shell.overlay` 中的浮层显示。插件不设置宿主会话根节点的宽度、属性或 CSS 变量。Dock 没有 backdrop，宽度限制为 340–620px；Escape 先关闭内嵌启动流程，再最小化为把手。
 
-Client 组件按交互职责分开：`SelectionToolbar` 观察 DOM 选区并编排四个显式动作，`ClipCollection` 拥有查询、筛选、选择顺序和拖拽编排，`BatchCommandCapsule` 提供窄宽度优先的六项批量命令，`ClipCard` 拥有单枚枝签的元数据、固定高度阅读、卡片内展开、聚焦阅读和衍生关系，`BranchMarkLauncherSheet` 分别呈现 Side Chat 或普通 Session 启动流程，`BranchMarkShell` 只组合 Dock、关系树、选区工具条和 Toast。会话或项目范围的请求映射与工具条定位由 `domain/selection-actions.ts` 纯函数决定，`domain/clip-order.ts` 负责拒绝跨置顶组拖动，避免把持久化规则藏在视图事件中。
+Client 组件按交互职责分开：`SelectionToolbar` 观察 DOM 选区并编排四个显式动作，`ClipCollection` 拥有查询、筛选、选择顺序和拖拽编排，`BatchCommandCapsule` 提供窄宽度优先的六项批量命令，`ClipCard` 拥有单枚枝签的元数据、固定高度阅读、卡片内展开、聚焦阅读和衍生关系，`BranchMarkLauncherSheet` 分别呈现 Side Chat 或普通 Session 启动流程，`BranchMarkShell` 只组合 Dock、关系树、选区工具条和 Toast。`BranchMarkClient` 是浏览器侧唯一的 DSH 集成模块，集中处理 API Session/Workspace Controller、UI Conversation binding、Composer admission 和 Typed Remote；视图组件不读取这些服务的内部投影。会话或项目范围的请求映射与工具条定位由 `domain/selection-actions.ts` 纯函数决定，`domain/clip-order.ts` 负责拒绝跨置顶组拖动，避免把持久化规则藏在视图事件中。
 
 浏览器 `localStorage` 只保存 Dock 显示模式、视图和宽度。Clip、备注、标签、关系、Side Chat 消息和 Composer 内容不会写入该存储。durable Clip 与普通衍生 Session 仍分别由 Host storage domain 和 DSH Session 恢复。
 
@@ -154,7 +154,7 @@ DSH 的公开 `InputActions.setDraft()` 只接受完整新 draft，并通过公�
 
 ## 已知兼容性边界
 
-- 插件以 DSH `0.1.1-rc.2` 的已导出 API 和 Slot contract 为目标。
+- 插件以 DSH `0.1.2-alpha.2` 的已导出 API 和 Slot contract 为目标。
 - Composer 引用依赖 `@deepseek-ai/dsh-client-ui-input-trigger` 的 `ReferenceInsert`、`InputTriggerSource.codec` 和 `SessionInput.insertReference()`；任一能力缺失都会让 Client 插件在装载或构建阶段失败，不会回退为可见全文草稿。
-- `ISessions` 的窄接口没有 `create`，但 DSH 包公开导出了 concrete `SessionRuntime.create`。插件使用该现有导出保证“仅枝签”严格创建新 Session；如果未来 DSH 收紧该导出，Client 会明确报 `session-create-unavailable`，不会回退为空白 Session 复用。
+- API Session Controller 的 `ISessions` 公开 `create`、`fork`、`open`、`binding` 与 `scope`。插件直接调用这些接口，并且不会通过可能复用既有空白 Session 的 Workspace 导航动作实现“仅枝签”。
 - `storageDomain` 不提供二级索引 API；当前全文搜索在 Workspace 可见 Clip 集合上执行有界本地扫描。若大规模数据需要倒排索引，应在后续 schema version 中增加插件自有索引记录，而不是绕过 storage domain。

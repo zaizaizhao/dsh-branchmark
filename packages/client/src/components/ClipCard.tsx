@@ -1,7 +1,7 @@
 import {
   useEffect, useRef, useState, type PointerEvent as ReactPointerEvent,
 } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import {
   IconBranchOutline16,
   IconChevronDownOutline14,
@@ -16,6 +16,7 @@ import type { Clip, ClipId, DerivedSessionRelation } from 'dsh-branchmark-host/t
 import type { BranchMarkClient } from '../domain/client.ts'
 import type { BranchMarkUiController } from '../domain/controller.ts'
 import { formatClipSource, formatClipTime } from '../domain/clip-presentation.ts'
+import { BRANCHMARK_MARKDOWN_LABELS } from './markdown.ts'
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -229,7 +230,7 @@ export function ClipCard({
         )}
         <input type="checkbox" aria-label="选择枝签" checked={selected} onClick={stopClickPropagation} onChange={onSelect} />
       </div>
-      <div className="dbm-excerpt-shell"><div className="dbm-excerpt"><MarkdownText text={clip.excerpt} /></div></div>
+      <div className="dbm-excerpt-shell"><div className="dbm-excerpt"><MarkdownText text={clip.excerpt} labels={BRANCHMARK_MARKDOWN_LABELS} /></div></div>
       <div className="dbm-reading-actions" onClick={stopClickPropagation}>
         <button type="button" className="dbm-reading-action" onClick={() => { setExpanded(value => !value) }}>
           <IconChevronDownOutline14 /> {expanded ? '收起正文' : '展开正文'}
@@ -350,7 +351,7 @@ export function ClipCard({
           </div>
         )}
       >
-        <div className="dbm-focus-copy"><MarkdownText text={clip.excerpt} /></div>
+        <div className="dbm-focus-copy"><MarkdownText text={clip.excerpt} labels={BRANCHMARK_MARKDOWN_LABELS} /></div>
         {clip.note !== undefined && <div className="dbm-focus-note"><strong>备注</strong><p>{clip.note}</p></div>}
       </Modal>
     </>

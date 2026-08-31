@@ -110,7 +110,7 @@ list({ workspaceId, ownerSessionId }) -> business result<Clip[]>
 
 ## 提示与对照源码
 
-卡在事件到 message 的映射时，只查看 [`resolvePersistedSource`](../../packages/host/src/index.ts)；卡在 schema 时查看 [`spec.ts`](../../packages/host/src/spec.ts)；卡在生成链时查看 [`host tsdown config`](../../packages/host/tsdown.config.ts)与 DSH [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/docs/api-gateway.md)。
+卡在事件到 message 的映射时，只查看 [`resolvePersistedSource`](../../packages/host/src/index.ts)；卡在 schema 时查看 [`spec.ts`](../../packages/host/src/spec.ts)；卡在生成链时查看 [`host tsdown config`](../../packages/host/tsdown.config.ts)与 DSH [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/api-gateway.md)。
 
 不要直接复制全部 `types.ts`，否则会把本实验尚未理解的 Side Chat/derived relation 类型一起带入。
 

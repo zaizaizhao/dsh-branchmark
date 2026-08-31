@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import {
-  CallId, createAssistantMessage, createToolResultMessage, createUserMessage, LlmAdapter,
+  ToolCallId, createAssistantMessage, createToolResultMessage, createUserMessage, LlmAdapter,
 } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, LlmModelInfo, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { remoteMethods } from '@deepseek-ai/dsh-typert-protocol'
@@ -520,7 +520,7 @@ describe('BranchMarkService', () => {
         content: [{ type: 'text', text: `Question ${String(turn)}` }],
       }), { surfaceOp: 'append' })
       if (turn === 3) {
-        const callId = CallId('summary-boundary-call')
+        const callId = ToolCallId('summary-boundary-call')
         const argumentsJson = '{"query":"context"}'
         source.session.append('assistant/message', {
           turn,

@@ -1,10 +1,10 @@
 /** Stable selection mapping from DSH Chat nodes to persisted message anchors. */
 
-import type {
-  ChatConversationViewNode, ConversationSnapshot, SessionId, WorkspaceId,
-} from '@deepseek-ai/dsh-client-runtime/client'
+import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
-import type { ChatNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { ChatConversationViewNode, ChatNode } from '@deepseek-ai/dsh-client-ui-chat/client'
 import { fromMarkdown } from 'mdast-util-from-markdown'
 import { gfmFromMarkdown } from 'mdast-util-gfm'
 import { gfm } from 'micromark-extension-gfm'
@@ -24,7 +24,7 @@ function textOf(node: ChatNode): string | undefined {
 
 /** Canonical DSH text represented by one visible Chat node. */
 export function chatNodeText(snapshot: ConversationSnapshot, nodeKey: string): string | undefined {
-  const raw = snapshot.chat.nodes.get(nodeKey)
+  const raw = snapshot.views.get('chat')?.nodes.get(nodeKey)
   const node = raw as ChatConversationViewNode as ChatNode | undefined
   return node === undefined ? undefined : textOf(node)
 }
@@ -228,7 +228,7 @@ export function selectionCandidate(input: {
   readonly approximateOffset: number
   readonly rect: ClipSelectionCandidate['rect']
 }): ClipSelectionCandidate | undefined {
-  const raw = input.snapshot.chat.nodes.get(input.nodeKey)
+  const raw = input.snapshot.views.get('chat')?.nodes.get(input.nodeKey)
   const node = raw as ChatConversationViewNode as ChatNode | undefined
   if (node === undefined || node.visibility !== 'visible') return undefined
   const text = textOf(node)

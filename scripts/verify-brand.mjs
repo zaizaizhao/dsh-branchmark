@@ -64,9 +64,13 @@ assert.deepEqual(manifests.map(manifest => manifest.name), [
   'dsh-branchmark-client',
   'dsh-branchmark',
 ])
-assert.deepEqual(manifests.map(manifest => manifest.version), Array(4).fill('0.3.0'))
+assert.deepEqual(manifests.map(manifest => manifest.version), Array(4).fill('0.1.2-alpha.2'))
 
 const readme = await readFile(`${root}/README.md`, 'utf8')
-assert.ok(readme.startsWith(`# 枝签 · BranchMark\n\n> 摘一段，生一枝。\n\nExcerpt-driven session branching and conversation lineage for DeepSeek Harness.\n`))
+const readmeHero = readme.slice(0, 1600)
+assert.match(readmeHero, /assets\/brand\/branchmark-logo-threadbook-v4\.svg/)
+assert.match(readmeHero, /<h1 align="center">枝签 · BranchMark<\/h1>/)
+assert.match(readmeHero, /摘一段，生一枝。/)
+assert.match(readmeHero, /重点知识摘录、可追溯 Session 树和注意力分叉/)
 
 console.log('Verified BranchMark package identity, source namespaces, and product wording.')

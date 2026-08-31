@@ -2,16 +2,19 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
-  SessionId, SessionSummary, WorkspaceId,
-} from '@deepseek-ai/dsh-client-runtime/client'
+  SessionListState, SessionSummary,
+} from '@deepseek-ai/dsh-api-session-controller/client'
+import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import {
-  IconArchiveOutline20,
   IconBranchOutline16,
   IconChevronRightOutline14,
   IconCloseOutline16,
   IconFolderOpenOutline16,
-  IconSparkle16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { BranchMarkClient } from '../domain/client.ts'
 import type {
@@ -24,6 +27,7 @@ import {
 } from '../domain/controller.ts'
 import { deriveCurrentLineage } from '../domain/lineage.ts'
 import { BranchMarkLauncherSheet } from './BranchMarkLauncher.tsx'
+import { BranchMarkLogo } from './BranchMarkLogo.tsx'
 import { ClipCollection } from './ClipCollection.tsx'
 import { SelectionToolbar, useChatSelection } from './SelectionToolbar.tsx'
 import { SideChatView } from './SideChat.tsx'
@@ -145,8 +149,8 @@ function DockHandle({ count, running, disabled, controller }: {
       disabled={disabled}
       onClick={() => { controller.reopenDock() }}
     >
-      <IconArchiveOutline20 size={16} />
-      <span>枝签{count > 0 ? ` ${String(count)}` : ''}</span>
+      <BranchMarkLogo compact size={26} />
+      {count > 0 && <span className="dbm-dock-handle-count" aria-hidden="true">{count}</span>}
       {running && <i />}
     </button>
   )
@@ -264,7 +268,7 @@ function DockPanel({
       <div className="dbm-dock-layout">
         <header className="dbm-dock-header">
           <span className="dbm-dock-brand">
-            {view === 'lineage' ? <IconBranchOutline16 /> : view === 'side-chat' ? <IconSparkle16 /> : <IconArchiveOutline20 />}
+            <BranchMarkLogo size={26} />
           </span>
           <span className="dbm-dock-heading"><strong>{title}</strong><small>{current?.displayTitle ?? subtitle}</small></span>
           <button type="button" className="dbm-button dbm-icon-button" title="最小化为右侧把手" onClick={() => { controller.collapseDock() }}><IconChevronRightOutline14 /></button>
@@ -315,10 +319,10 @@ function Toast({ controller }: { readonly controller: BranchMarkUiController }) 
  * @returns The additive BranchMark overlay without resizing the DSH conversation layout.
  */
 export function BranchMarkShell({ useSessions, useWorkspaces, controller, client }: ShellProps) {
-  const currentSessionId = useSessions(snapshot => snapshot.current)
-  const sessionIds = useSessions(snapshot => snapshot.ids)
-  const sessionsById = useSessions(snapshot => snapshot.byId)
-  useWorkspaces(snapshot => snapshot.recentWorkspaceId)
+  const currentSessionId = useSessions((snapshot: SessionListState) => snapshot.current)
+  const sessionIds = useSessions((snapshot: SessionListState) => snapshot.ids)
+  const sessionsById = useSessions((snapshot: SessionListState) => snapshot.byId)
+  useWorkspaces((snapshot: WorkspaceSnapshot) => snapshot.items)
   const state = useBranchMarkUi(controller)
   const workspaceId = client.currentWorkspace()
   const counts = useDockCounts(client, workspaceId, currentSessionId, state.clipsRevision)

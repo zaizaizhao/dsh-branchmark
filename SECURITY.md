@@ -2,12 +2,13 @@
 
 ## Supported versions
 
-BranchMark 与 DeepSeek Harness 的预发布扩展点直接集成，因此只维护当前兼容系列。
+BranchMark 与 DeepSeek Harness 的预发布扩展点直接集成，因此只维护 npm 已发布的精确同号组合。
 
 | BranchMark | DeepSeek Harness | Security fixes |
 | --- | --- | --- |
-| `0.3.x` | `0.1.1-rc.2` | Supported |
-| `<0.3.0` | 未声明 | Not supported |
+| `0.1.2-alpha.2` | `0.1.2-alpha.2` | Supported (`alpha`) |
+| `0.1.1-rc.2` | `0.1.1-rc.2` | Supported (`latest`) |
+| 其他或交叉组合 | 不同号 | Not supported |
 
 ## Reporting a vulnerability
 

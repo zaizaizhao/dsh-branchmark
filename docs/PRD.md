@@ -16,7 +16,7 @@
 
 ## 纯插件可行性与边界
 
-目标版本 DSH 已导出 `SessionRuntime.fork` 和 concrete `SessionRuntime.create`，所以本插件不要求 DSH 新增 Fork API，也不修改 DSH 源码。完整分叉的 `sessionId` 是主要枝签的来源 Session；即使来源锚点位于父会话中间，分叉结果也会继承该父会话从开头到来源消息所在完整轮次为止的历史，而不是只复制摘录正文。
+目标版本 DSH 的 API Session Controller 在 `ctx.sessions` 上公开 `fork` 和 `create`，所以本插件不要求 DSH 新增 Fork API，也不修改 DSH 源码。完整分叉的 `sessionId` 是主要枝签的来源 Session；即使来源锚点位于父会话中间，分叉结果也会继承该父会话从开头到来源消息所在完整轮次为止的历史，而不是只复制摘录正文。
 
 DSH 把 Fork 的历史前缀记录为新 Session 的 seed，并在新 Session 中按普通历史显示。插件只增加继承横幅、来源跳转和边界分隔线，不需要把一批伪造消息写入新 Session，也不需要宿主提供额外的“隐藏历史渲染”接口。若未来目标 DSH 版本不再导出 Fork/create 或不再投影 seed，纯插件无法等价重建这一能力，并且必须明确报错，不能退化为复制文本后伪称完整分叉。
 
@@ -70,8 +70,8 @@ Side Chat 是不同机制：较早历史摘要、最近原始消息、完整枝�
 
 ### 普通衍生 Session
 
-1. **完整分叉**：`SessionRuntime.fork({ sessionId: sourceSessionId, atSeq: sourceEventSeq })`。DSH Host 选择第一个 `seq >= atSeq` 的 `turn/end`，并包含下一轮开始前的独立尾随事件。
-2. **仅携带枝签**：`SessionRuntime.create({ workspaceId })`，不设置父会话或 seed。
+1. **完整分叉**：`ctx.sessions.fork({ sessionId: sourceSessionId, atSeq: sourceEventSeq })`。DSH Host 选择第一个 `seq >= atSeq` 的 `turn/end`，并包含下一轮开始前的独立尾随事件。
+2. **仅携带枝签**：`ctx.sessions.create({ workspaceId })`，不设置父会话或 seed。
 3. Host 校验新 Session header：完整分叉的 `parentSession` 与精确 `seedLength` 必须匹配来源边界；仅枝签不得有 parent/seed。
 4. Host 写入一条衍生关系和全部 Clip 使用快照，并向新 Session 追加一条可折叠、可恢复的 `recall` 上下文消息。
 5. 创建模式打开空白 Composer；发送模式只通过 Session `prompt()` 提交用户问题，已记录的枝签上下文由 DSH 模型历史一并读取。

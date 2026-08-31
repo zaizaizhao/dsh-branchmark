@@ -29,9 +29,9 @@ dsh-branchmark/
 
 ## 2. 固定工具链和 DSH 版本
 
-根 [`package.json`](../../package.json) 固定 pnpm 11.7、Node engine、TypeScript、tsdown、Vitest 与 Typert generator。[`pnpm-workspace.yaml`](../../pnpm-workspace.yaml) 用 catalog 把所有 DSH package 固定为同一 `0.1.1-rc.2`。
+根 [`package.json`](../../package.json) 固定 pnpm 11.7、Node engine、TypeScript、tsdown、Vitest 与 Typert generator。[`pnpm-workspace.yaml`](../../pnpm-workspace.yaml) 用 catalog 把所有 DSH package 固定为同一 `0.1.2-alpha.2`。
 
-不要只升级一个 DSH package。Remote generator、protocol、Gateway、Client Runtime 和 Slot types 共同组成跨 package contract，混用预发布版本可能在编译或运行阶段产生不一致。
+不要只升级一个 DSH package。Remote generator、protocol、Gateway、API Session/Workspace Controller、UI Conversation/Chat 和 Slot types 共同组成跨 package contract，混用预发布版本可能在编译或运行阶段产生不一致。
 
 当前主要技术栈：
 
@@ -39,7 +39,7 @@ dsh-branchmark/
 | --- | --- |
 | TypeScript 6 strict | Host/Client DTO、declaration merging、构建检查 |
 | React 18 | DSH Slot components |
-| Cordis 4.0.1 | Service/Context/effect/inject 生命周期 |
+| Cordis 4.0.2 | Service/Context/effect/inject 生命周期 |
 | Zod 4 | durable domain record validation |
 | Schemastery | Cordis 插件 config validation |
 | tsdown | Node ESM、Browser CJS ModuleLoader 与 declaration bundle |
@@ -51,7 +51,7 @@ dsh-branchmark/
 
 根 [`tsconfig.base.json`](../../tsconfig.base.json) 开启 `strict`、`noUncheckedIndexedAccess`、`exactOptionalPropertyTypes`、ES2024 和 React JSX。Host 与 Client 分别由 [`tsconfig.host.json`](../../tsconfig.host.json) 和 [`tsconfig.client.json`](../../tsconfig.client.json) 建立 project-reference aggregate。
 
-分开 face 的直接原因是 Host 和 Client 都会 declaration-merge Cordis `Context`，但同名 key 可能对应不同运行类型。把两者压进一个 TypeScript program 会制造 merge collision；DSH 自身也使用独立 Host/Client aggregate，见官方 [`development.md`](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/docs/development.md#typescript-project-layout)。
+分开 face 的直接原因是 Host 和 Client 都会 declaration-merge Cordis `Context`，但同名 key 可能对应不同运行类型。把两者压进一个 TypeScript program 会制造 merge collision；DSH 自身也使用独立 Host/Client aggregate，见官方 [`development.md`](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/development.md#typescript-project-layout)。
 
 每个 package 自己的 `tsconfig.json` 指定 `rootDir=src`、`outDir=lib/types`。Client reference Host，是为了消费 Host public DTO 与生成 Remote declaration；Host 不 reference Client。
 
@@ -89,7 +89,7 @@ lib/typert.remote-client.d.ts
 
 这个文件的源码注释把它定义为“out-of-tree Typert analyzer 的 build-only identity bridge”。它保留 generator 需要的 `Remote`、`bindTypertRemote` 和 merge-extensible map 名称，同时把实现类型转交给实际安装包。它不是运行时代码，也不应被 Browser 或 Bundle import。
 
-这是当前 DSH/TypeScript 组合的项目级适配点。复现 `0.1.1-rc.2` 时按源文件保留；升级时先在无 bridge 的最小分支运行 generator，只有真实 diagnostics 证明不再需要时才能删除，不能凭感觉简化。
+这是当前 DSH/TypeScript 组合的项目级适配点。复现 `0.1.2-alpha.2` 时按源文件保留；升级时先在无 bridge 的最小分支运行 generator，只有真实 diagnostics 证明不再需要时才能删除，不能凭感觉简化。
 
 ## 6. 建立 Client package
 
@@ -107,7 +107,9 @@ banner: `window.__ModuleLoader__.load({ id: ..., factory: (require) => {`
 footer: 'return module.exports; } });'
 ```
 
-React、Cordis、Client Runtime、Slots 与 Primitives 被标记为 external，由 DSH module table 提供；其余依赖打入 browser artifact。
+React、Cordis、API Session/Workspace Controller、UI Conversation/Chat、Slots 与 Primitives 被标记为 external，由 DSH module table 提供；其余依赖打入 browser artifact。
+
+这些 external 不是一个大 Runtime 的机械拆包。每个包拥有不同状态或生命周期，Bundle 的显式 inject roster 使 Client Modules 先提供 factory，Cordis 再按 Service 依赖激活插件；漏掉 owner 会在构建、组合或激活阶段显式失败。为什么这种更长的依赖表反而降低耦合，见 [DSH Client 架构设计解读](../reference/dsh-client-architecture-rationale.md#9-为什么-bundle-inject-列表变长反而更健康)。
 
 ## 7. 建立单包 Bundle
 

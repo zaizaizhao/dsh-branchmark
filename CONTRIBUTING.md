@@ -6,7 +6,7 @@
 
 - Node.js `^22.19.0 || >=24.0.0`
 - Corepack 与 pnpm `11.7.0`
-- 用于运行时验收的 DeepSeek Harness `0.1.1-rc.2`
+- 用于运行时验收的 DeepSeek Harness `0.1.2-alpha.2`
 
 ```sh
 git clone https://github.com/zaizaizhao/dsh-branchmark.git

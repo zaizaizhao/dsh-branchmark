@@ -1,6 +1,7 @@
 /** Native DSH Composer references for BranchMark attachments. */
 
-import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { InputTriggerSource, ReferenceInsert } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type { Clip, ClipId } from 'dsh-branchmark-host/types'
 import type { BranchMarkClient } from './client.ts'

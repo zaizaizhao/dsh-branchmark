@@ -103,7 +103,7 @@ this.derivedSessions = domain.table('derived_sessions')
 
 `Domain.close()` 会先拒绝新写入，排空已经排队的写入，再释放 backend unit。Disposer 必须跟随 BranchMark Service，而不是只依赖 storage facility 在进程退出时兜底。
 
-官方 storage 语义见 [`docs/subsystems/storage.md`](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/docs/subsystems/storage.md)：reads 来自 authoritative in-memory state；write 先 durable、再更新内存、再发 change event；失败写入不会污染读取状态。
+官方 storage 语义见 [`docs/subsystems/storage.md`](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/subsystems/storage.md)：reads 来自 authoritative in-memory state；write 先 durable、再更新内存、再发 change event；失败写入不会污染读取状态。
 
 ## 7. KV 记录应当替换而不是原地修改
 
@@ -143,7 +143,7 @@ AND optional filters
 
 ## 10. Schema 版本策略
 
-当前 domain version 是 1，插件没有 migration。0.3.0 新增的 `pinnedAt` 与 `sortIndex` 都是可选字段，旧记录可解释为“未置顶、尚未手动排序”，因此不需要提升 version。修改 record layout 时必须决定：
+当前 domain version 是 1，插件没有 migration。`pinnedAt` 与 `sortIndex` 都是可选字段，缺少这些字段的记录可解释为“未置顶、尚未手动排序”，因此不需要提升 version。修改 record layout 时必须决定：
 
 - 向后兼容且 schema 仍接受旧记录：可保持 version，但必须保证缺省语义明确。
 - 旧介质不能正确解释：提升 version，并设计显式迁移/导出导入；当前 backend 会对不匹配 fail loud。

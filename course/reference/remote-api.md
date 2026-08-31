@@ -15,6 +15,8 @@ return transport.value.value
 
 外层失败表示连接、取消、codec、namespace 卸载或 Gateway 分发失败；内层失败表示 Workspace、Clip、来源、衍生 Session 或 Side Chat 的稳定业务拒绝。不要把两者折成一个不可区分的字符串后再做业务分支。
 
+DSH 当前 Remote 设计本身只要求外层 `RemoteResult<T>`，并用一个 merge-extensible `RemoteErrorDetailsMap`、领域前缀 code 与跨 realm 结构标记统一 failure。BranchMark 额外返回内层 success/rejection union 是本插件现有协议，不是 Gateway 必须提供的第二层；[`BranchMarkClient.unwrap()`](../../packages/client/src/domain/client.ts)把两层集中在浏览器集成边界。若新建一个只面向当前 DSH 的 namespace，可直接采用 DSH `RemoteError` 让 Host failure 进入外层，设计依据和取舍见 [DSH Client 架构设计解读](dsh-client-architecture-rationale.md#7-为什么-dsh-统一-remote-failure)。
+
 ## Clip 与集合
 
 | Remote | 请求 | 成功值 | 写入 |

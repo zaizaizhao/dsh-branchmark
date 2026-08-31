@@ -22,7 +22,7 @@ Side Chat
 
 ## 2. full-fork 从主要 Clip 的来源开始
 
-多选 Clip 时，用户必须选择一个 primary；其余只是附件。primary 必须是 `session-message` 且 `forkable=true`。Browser 调用当前 DSH Client Runtime：
+多选 Clip 时，用户必须选择一个 primary；其余只是附件。primary 必须是 `session-message` 且 `forkable=true`。Browser 调用 API Session Controller：
 
 ```typescript
 sessionId = await ctx.sessions.fork({
@@ -34,9 +34,11 @@ sessionId = await ctx.sessions.fork({
 
 实现见 [`BranchMarkClient.launch`](../../packages/client/src/domain/client.ts)。这里传的是摘录所在 message 的 event seq，而不是当前父会话末尾，因此用户在父会话中间第 N 轮摘录时，child 只继承到包含该消息的完整第 N 轮。
 
+`fork` 属于 API Session Controller 而不是 Workspace UI 或具体 Runtime class，因为完整 turn 截断、child binding 可寻址、父子 header 与错误语义都属于 Session domain。插件只提交来源 identity 和 `atSeq`，不会复制 Session manager 或 transport 实现；这个所有权选择的收益见[架构设计解读](../reference/dsh-client-architecture-rationale.md#8-为什么-session-创建和分叉属于-api-session-controller)。
+
 ## 3. DSH 如何把 message seq 对齐到完整 turn
 
-Client `SessionRuntime.fork` 最终调用 Host API Proxy。当前 Host 的算法在来源事件中找到第一个 `seq >= atSeq` 的 `turn/end`，以它作为 seed boundary；随后还包含下一次 `turn/start` 之前的独立尾随事件。源码锚点见 [DSH 源码导航](../reference/source-map.md)与 [`docs/subsystems/session.md`](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/docs/subsystems/session.md)。
+Client `ISessions.fork` 最终调用 Host API Session Controller。当前 Host 的算法在来源事件中找到第一个 `seq >= atSeq` 的 `turn/end`，以它作为 seed boundary；随后还包含下一次 `turn/start` 之前的独立尾随事件。源码锚点见 [DSH 源码导航](../reference/source-map.md)与 [`docs/subsystems/session.md`](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/subsystems/session.md)。
 
 低层 `SessionStore.fork` 只接受可平衡的边界，创建 child 时写入：
 
@@ -57,21 +59,19 @@ Browser 完成 fork 后调用 `recordDerivedSession`。Host 不能因为调用�
 4. 检查 child `parentSession === source.sessionId` 且 `seedLength === expected`。
 5. 只有一致才写插件 relation 和 recall。
 
-这防止调用者创建任意 Session 后伪造“继承来源上下文”标记。插件的 `expectedForkSeedLength()` 还会把 boundary 后、下一轮开始前的 standalone events 算入，以匹配当前 API Proxy 行为。
+这防止调用者创建任意 Session 后伪造“继承来源上下文”标记。插件的 `expectedForkSeedLength()` 还会把 boundary 后、下一轮开始前的 standalone events 算入，以匹配当前 Session Controller 行为。
 
 ## 5. clips-only 创建真正的新 Session
 
-仅携带枝签不能调用 `connectWorkspace` 一类可能复用空白会话的入口，否则“新会话”可能实际修改已有 Session。当前插件使用公开导出的 concrete runtime：
+仅携带枝签不能调用 `connectWorkspace` 一类可能复用空白会话的入口，否则“新会话”可能实际修改已有 Session。API Session Controller 的 `ISessions` 直接提供严格的新建接口：
 
 ```typescript
-const sessions = ctx.sessions as SessionRuntime
-if (typeof sessions.create !== 'function') {
-  throw remoteError('session-create-unavailable', '...')
-}
-sessionId = await sessions.create({ workspaceId })
+sessionId = await ctx.sessions.create({ workspaceId })
 ```
 
-DSH 的窄 `ISessions` 当前没有 `create`，所以这是明确记录的预发布适配点。Host 随后验证 clips-only child 的 header 同时没有 `parentSession` 和 `seedLength`。升级策略见[兼容性限制](../reference/compatibility-and-limitations.md)。
+该接口总是创建一个新 Session；Workspace UI 的 `connectWorkspace` 则可以复用 blank Session，两者不能互换。Host 随后验证 clips-only child 的 header 同时没有 `parentSession` 和 `seedLength`。升级策略见[兼容性限制](../reference/compatibility-and-limitations.md)。
+
+DSH 把“严格创建领域实体”和“为导航寻找或复用可显示 Session”分给不同所有者，可以避免一个方便的 UI helper 同时承担两个矛盾语义。BranchMark 选择 `ISessions.create`，因此测试可以直接证明返回的是新 Session，而不是从 UI 状态反推是否发生了复用。
 
 ## 6. Relation、usage 与 recall 各自解决什么
 

@@ -14,7 +14,7 @@ ctx.inject(['remote.branchmark'], (scope) => {
 })
 ```
 
-这里有两个不同的依赖层次：`dsh.client.inject` manifest 告诉 Client Modules 先让哪些浏览器模块代码可用；导出的 Cordis `inject` 与运行时 `ctx.inject(['remote.branchmark'])` 等待实际 service/namespace 就绪。前者解决代码装载，后者解决运行时依赖，不能相互替代。
+这里有两个不同的依赖层次：`dsh.client.inject` manifest 告诉 Client Modules 当前 factory 到达时需要哪些浏览器模块，并不规定 apply 顺序；导出的 Cordis `inject` 与运行时 `ctx.inject(['remote.branchmark'])` 等待实际 service/namespace 就绪。前者解决代码装载，后者解决运行时依赖，不能相互替代。
 
 ## 2. 五个 Slot 与一个 Input Trigger source，不替换宿主页面
 
@@ -53,7 +53,7 @@ DOM selector 是当前 DSH UI 的适配点，不是稳定协议。升级时必�
 
 ## 5. 从 Chat node 恢复持久化锚点
 
-DOM 只告诉我们可见文字与节点位置；`selectionCandidate()` 还要查 DSH `ConversationSnapshot.chat.nodes`：
+DOM 只告诉我们可见文字与节点位置。`BranchMarkClient` 先通过 `ctx.uiConversation.binding(sessionBinding)` 取得 `ConversationSnapshot`，`selectionCandidate()` 再从 `snapshot.views.get('chat')?.nodes` 读取 UI Chat View：
 
 - `user`/`steering` node 提供 append event seq、message id、turn 与 user role。
 - settled `assistant-step` 的 `finalNode` 提供最终 assistant message id 与 seq。
@@ -61,6 +61,8 @@ DOM 只告诉我们可见文字与节点位置；`selectionCandidate()` 还要�
 - hidden node、tool-only node 和无法解析 location 的 node 被跳过。
 
 实现位于 [`domain/selection.ts`](../../packages/client/src/domain/selection.ts)。这一步得到的是候选锚点，不是信任证明；Host 仍会 inspect 持久日志。
+
+这里同时依赖 UI Conversation 和 UI Chat 是有意分层，不是重复取数。UI Conversation 只拥有 Session event window 到 target snapshot 的通用组装与 binding；UI Chat 拥有 Chat node 的具体类型、keyed store、顺序和 selection 语义。DSH 这样做能让 Chat、Trajectory 等 target 共享稳定 id、分页和增量回放机制，又不要求彼此共享最终 projection；新增 BranchMark node 也不需要修改 Session Controller 的中央 switch。算法动机与 keyed snapshot 收益见[架构设计解读](../reference/dsh-client-architecture-rationale.md#4-为什么-conversation-与-chat-分开)。
 
 ## 6. Markdown 渲染文本如何映回原文 range
 

@@ -11,6 +11,7 @@ import type {
 import type { BranchMarkClient } from '../domain/client.ts'
 import type { BranchMarkUiController } from '../domain/controller.ts'
 import { useBranchMarkUi } from '../domain/controller.ts'
+import { BRANCHMARK_MARKDOWN_LABELS } from './markdown.ts'
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -250,11 +251,11 @@ function SideChatMessage({ tab, message, client, controller }: {
       {message.reasoning !== undefined && message.reasoning !== '' && (
         <details className="dbm-side-reasoning">
           <summary><IconSparkle16 size={13} /><strong>Think</strong><i aria-hidden /><span>{message.reasoning.split('\n')[0]}</span></summary>
-          <div><MarkdownText text={message.reasoning} /></div>
+          <div><MarkdownText text={message.reasoning} labels={BRANCHMARK_MARKDOWN_LABELS} /></div>
         </details>
       )}
       {message.role === 'assistant'
-        ? <MarkdownText text={message.text} />
+        ? <MarkdownText text={message.text} labels={BRANCHMARK_MARKDOWN_LABELS} />
         : <p className="dbm-side-user-text">{message.text}</p>}
       {message.tools?.map(tool => <ToolActivity tool={tool} key={tool.callId} />)}
       {message.role === 'assistant' && message.text !== '' && (
@@ -390,10 +391,10 @@ export function SideChatView({ client, controller }: {
             {active.partialReasoning !== '' && (
               <details className="dbm-side-reasoning" open>
                 <summary><IconSparkle16 size={13} /><strong>Think</strong><i aria-hidden /><span>正在思考…</span></summary>
-                <div><MarkdownText text={active.partialReasoning} streaming /></div>
+                <div><MarkdownText text={active.partialReasoning} streaming labels={BRANCHMARK_MARKDOWN_LABELS} /></div>
               </details>
             )}
-            {active.partialText !== '' && <MarkdownText text={active.partialText} streaming />}
+            {active.partialText !== '' && <MarkdownText text={active.partialText} streaming labels={BRANCHMARK_MARKDOWN_LABELS} />}
             <span className="dbm-caret">▍</span>
           </div>
         )}

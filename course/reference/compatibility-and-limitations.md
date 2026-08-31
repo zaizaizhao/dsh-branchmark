@@ -6,23 +6,26 @@
 
 | 事实 | 当前证据 | 失效后的处理 |
 | --- | --- | --- |
-| concrete `SessionRuntime.create` 是公开导出且创建后立即可 binding | DSH Client Runtime `SessionRuntime.create` | 明确报 `session-create-unavailable`；不能用可能复用空白 Session 的其他入口冒充 |
-| `SessionRuntime.fork({ atSeq })` 存在 | DSH Client contract/runtime | 禁用 full-fork；不能复制文本后标记为继承上下文 |
-| Host API 把消息 seq 对齐到第一个 `seq >= atSeq` 的 `turn/end` | `host/apiproxy` 的 `session.fork` | 重新实现边界验证或调整交互；不得假设仍按完整 turn |
-| fork child header 持久化 `parentSession` 与 `seedLength` | Session header + API Proxy | 无法证明 lineage 时拒绝记录插件关系 |
+| `ISessions.create({ workspaceId })` 是公开接口且创建后可 binding | API Session Controller 的 `ISessions` | 无此接口时禁用 clips-only；不能用可能复用空白 Session 的导航入口冒充 |
+| `ISessions.fork({ atSeq })` 存在 | API Session Controller 的 `ISessions` | 禁用 full-fork；不能复制文本后标记为继承上下文 |
+| Session/Workspace 领域状态由 API Controller 拥有，标准 Hook 由对应 UI adapter 提供 | Client ownership Agent Note、Controller/UI package README | 重新映射 owner 和 inject roster；不要恢复一个复制各类 snapshot 的聚合 Runtime |
+| Conversation binding 只负责 target-neutral snapshot，Chat node 由 UI Chat target 拥有 | UI Conversation/Chat README 与 Conversation subsystem | 同时核对 binding 与 target API；不能把 Chat projection 写回 Session snapshot |
+| DSH Remote failure 使用统一 `RemoteResult` 与 code/details vocabulary | API Gateway 与 ctx.remote failure Agent Note | 更新外层错误 discrimination；BranchMark 内层业务结果仍按插件协议单独处理 |
+| Host API 把消息 seq 对齐到第一个 `seq >= atSeq` 的 `turn/end` | API Session Controller 的 fork command | 重新实现边界验证或调整交互；不得假设仍按完整 turn |
+| fork child header 持久化 `parentSession` 与 `seedLength` | Session header + API Session Controller | 无法证明 lineage 时拒绝记录插件关系 |
 | seeded Session 写 `session/end-seed` | `Session` constructor | fork divider 需要改用宿主提供的新边界事件；不能猜 seq |
-| Browser list 投影 `parentSessionId → SessionSummary.parentId` | Client Runtime `projectList` | 关系树改读新的官方字段，不扫描标题或插件关系猜父子 |
-| Chat 行有 `[data-chat-flow-key]` 且 snapshot 暴露 Chat nodes | `ChatNodeSeat` + Client Runtime | 选区捕获必须迁移到新的官方 selection/slot API；DOM 猜测需要重新验收 |
+| Browser list 投影 `parentSessionId → SessionSummary.parentId` | API Session Controller 的 Session list | 关系树改读新的官方字段，不扫描标题或插件关系猜父子 |
+| Chat 行有 `[data-chat-flow-key]` 且 Conversation snapshot 暴露 Chat View nodes | `ChatNodeSeat` + UI Conversation/Chat | 选区捕获必须迁移到新的官方 selection/slot API；DOM 猜测需要重新验收 |
 | 五个 Slot 名和 props contract 存在 | layout/sidebar/conversation SlotMap | 编译并逐席位验收；不要注册到 `root` 替换整页 |
 | `ReferenceInsert`、`InputTriggerSource.codec`、`SessionInput.insertReference()` 与 draft persistence mirror 存在 | ui-input-trigger + ui-conversation input contract | 缺失时拒绝装载；不得回退为完整摘录正文草稿；重新设计 token 恢复而不能猜 occurrence 内部格式 |
 | Browser module接受 `window.__ModuleLoader__.load` 包装 | Client Modules | 按新的官方 bundle format 重新构建 client.js |
 | Typert package mode生成 Host 与 Remote artifacts | generator + API Gateway | 调整 build order/exports；不提交手写 codec 作为长期替代 |
 
-## `SessionRuntime.create` 是当前 concrete API
+## Session 创建与分叉属于 API Session Controller
 
-DSH 的窄接口 `ISessions` 暴露 `fork`，但没有 `create`。当前包仍导出 concrete `SessionRuntime`，插件在 [`BranchMarkClient.launch`](../../packages/client/src/domain/client.ts) 中显式收窄并检查 `typeof sessions.create === 'function'`。这是有意的兼容性边界，不应藏在 `as any` 中。
+API Session Controller 的 `ISessions` 公开 `create`、`fork`、`open`、`binding` 与 `scope`。[`BranchMarkClient.launch`](../../packages/client/src/domain/client.ts) 直接调用该接口，因此 clips-only 必定创建新的普通 Session，full-fork 则把主要枝签的来源 Session 与 `atSeq` 交给宿主。
 
-如果后续 DSH 把 create 加入稳定接口，只需移除 concrete cast；如果移除导出，需要官方新建 Session API。不要回退到会复用现有 blank Session 的入口，因为这会让“仅枝签新会话”修改一个已有对象。
+Workspace UI 的 `connectWorkspace` 可以复用既有 blank Session，它只适合导航流程，不满足 BranchMark 的 clips-only 语义。若目标版本缺少 `ISessions.create`，插件必须在构建或装载阶段失败，不能回退到 Workspace 导航动作。
 
 ## full-fork 不是复制消息
 
@@ -77,15 +80,15 @@ DSH `dsh-base` 默认配置 search provider，并明确没有挂载 fetch provid
 ## 升级 DSH 的检查顺序
 
 1. 把 [`pnpm-workspace.yaml`](../../pnpm-workspace.yaml) 中全部 `@deepseek-ai/dsh-*` catalog 版本作为一组更新，不混用两个预发布版本。
-2. 在目标 DSH 源码中重新搜索 `SessionRuntime.create`、`SessionRuntime.fork`、Host `session.fork`、`SessionHeader` 与 `session/end-seed`。
-3. 对五个 Slot 名逐一核对 `SlotMap` 类型、scope、kind、owner props 与 render site，并核对 Input Trigger source/codec、`SessionInput.insertReference()`、draft mirror projection 和 input state 订阅语义。
-4. 核对 `dsh.client` manifest、`exports["./client"]`、ModuleLoader wrapper 和 Client Modules 扫描规则。
-5. 核对 Typert generator 的 package mode、Remote 方法限制、四个生成文件名和 Gateway `$mount()`。
-6. 核对 `storageDomain`、Workspace、FS 与 Web Service 方法签名及 provider 默认组合。
-7. 删除 `lib/` 后执行 `pnpm run check`，确认生成链不依赖旧产物。
-8. 打新 tarball并安装到全新的 DSH home/profile，检查 `--dump-config` 中只有一个 `dsh-branchmark` Loader 行。
-9. 完成无 key 的 Clip/Fork/UI 验收和有 key 的摘要/流式/tool/cancel 验收。
-10. 只有运行事实一致后才更新本课程版本锚点和兼容性结论。
+2. 从目标版本的 Client ownership/architecture 记录与 package README 重新确定 API Controller、UI adapter、Conversation target、Renderer 和 Slot 的所有者，不以旧 package 名寻找 facade。
+3. 在目标 DSH 源码中重新核对 `ISessions.create/fork`、Host `session.fork`、`SessionHeader` 与 `session/end-seed`。
+4. 对 `uiConversation.binding`、Chat target snapshot、Conversation definition registry 和五个 Slot 逐一核对类型、scope、kind、owner props 与 render site，并核对 Input Trigger source/codec、`SessionInput.insertReference()`、draft mirror projection 和 input state 订阅语义。
+5. 核对 `dsh.client` manifest、`exports["./client"]`、ModuleLoader wrapper 和 Client Modules 扫描规则。
+6. 核对 Typert generator 的 package mode、Remote 方法限制、Gateway `$mount()` 和当前 `RemoteResult`/failure code contract。
+7. 核对 `storageDomain`、Workspace、FS 与 Web Service 方法签名及 provider 默认组合。
+8. 删除 `lib/` 后执行 `pnpm run check`，确认生成链不依赖旧产物。
+9. 打新 tarball并安装到全新的 DSH home/profile，检查 `--dump-config` 中只有一个 `dsh-branchmark` Loader 行。
+10. 完成无 key 的 Clip/Fork/UI 验收和有 key 的摘要/流式/tool/cancel 验收；只有运行事实一致后才更新本课程版本锚点和兼容性结论。
 
 ## 升级验证命令
 

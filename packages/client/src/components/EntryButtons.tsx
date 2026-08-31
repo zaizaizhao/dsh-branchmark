@@ -1,16 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  IconArchiveOutline20, IconBranchOutline16, IconCloseOutline16,
+  IconBranchOutline16, IconCloseOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
+import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { DerivedSessionRelation } from 'dsh-branchmark-host/types'
 import type { BranchMarkClient } from '../domain/client.ts'
 import type { BranchMarkUiController } from '../domain/controller.ts'
 import { useBranchMarkUi } from '../domain/controller.ts'
 import { BRANCHMARK_REFERENCE_SOURCE } from '../domain/composer-reference.ts'
 import { referenceRemovalDrafts } from '../domain/reference-removal.ts'
+import { BranchMarkLogo } from './BranchMarkLogo.tsx'
 
 interface EntryFace {
   readonly controller: BranchMarkUiController
@@ -21,8 +26,8 @@ type SidebarProps = PropsRuntime<'sidebar.footer.action'> & EntryFace
 
 /** Project-level entry beside the DSH sidebar Settings action. */
 export function BranchMarkSidebarButton({ wide, useSessions, useWorkspaces, controller, client }: SidebarProps) {
-  useSessions(snapshot => snapshot.current)
-  useWorkspaces(snapshot => snapshot.recentWorkspaceId)
+  useSessions((snapshot: SessionListState) => snapshot.current)
+  useWorkspaces((snapshot: WorkspaceSnapshot) => snapshot.items)
   const state = useBranchMarkUi(controller)
   const workspaceId = client.currentWorkspace()
   const [count, setCount] = useState<number | undefined>()
@@ -49,7 +54,7 @@ export function BranchMarkSidebarButton({ wide, useSessions, useWorkspaces, cont
       disabled={workspaceId === undefined}
       onClick={() => { if (workspaceId !== undefined) controller.openDock('project') }}
     >
-      <span className="dbm-sidebar-nav-icon"><IconArchiveOutline20 size={wide ? 16 : 18} /></span>
+      <span className="dbm-sidebar-nav-icon"><BranchMarkLogo compact size={wide ? 15 : 16} /></span>
       {wide && <span className="dbm-sidebar-nav-label">枝签</span>}
       {count !== undefined && count > 0 && <span className="dbm-sidebar-nav-count">{count > 99 ? '99+' : String(count)}</span>}
     </button>
@@ -102,7 +107,7 @@ export function BranchMarkDrawerButton({ sessionId, input, inputActions, control
         disabled={workspaceId === undefined}
         onClick={activate}
       >
-        <IconArchiveOutline20 size={16} />
+        <BranchMarkLogo compact size={15} />
         <span>引用枝签</span>
         {references.length > 0 && <b>{references.length > 99 ? '99+' : String(references.length)}</b>}
       </button>

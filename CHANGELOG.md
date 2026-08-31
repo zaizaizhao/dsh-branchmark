@@ -1,12 +1,34 @@
 # Changelog
 
-BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)；版本号遵循 [Semantic Versioning](https://semver.org/)。由于 DeepSeek Harness 仍处于预发布阶段，每个 BranchMark 版本同时声明已验证的 DSH 版本。
+BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。公开 npm 版本与已验证的 DeepSeek Harness 版本完全同号，npm dist-tag 表示兼容通道。
 
 ## [Unreleased]
 
 尚无公开变化。
 
-## [0.3.0] - 2026-08-30
+## [0.1.2-alpha.2] - 2026-09-01
+
+### Changed
+
+- 将唯一受支持的宿主版本更新为 DeepSeek Harness `0.1.2-alpha.2`，并统一使用 Cordis `4.0.2` 与对应 DSH package family。
+- Browser 集成改用 API Session/Workspace Controller、UI Conversation/Chat、UI Renderer 和 Session/Workspace 标准 Hook；Session 创建与分叉直接调用公开的 `ISessions`。
+- Conversation 快照从 UI Conversation binding 取得，消息选区从 Chat View 读取；当前没有打开 Session 时，项目入口按 DSH 的最近活跃 Workspace 规则选择目标。
+- DSH Markdown primitive 所需的复制与脚注文案由 BranchMark 单一模块提供。
+- 侧边栏、Composer、创建流程、空状态与右侧 Dock 统一使用线装本和环抱枝条组成的枝签品牌标志；图形随 DSH 明暗主题切换为深色或浅色，并缩小视觉尺寸，紧凑把手继续保留枝签数量与 Side Chat 运行状态。
+
+### Removed
+
+- 移除对已被 DSH 删除的 `@deepseek-ai/dsh-client-runtime`、concrete `SessionRuntime` 和 rc.2 混合依赖图的全部引用。
+
+### Compatibility
+
+- `clip_explorer` domain、Clip 记录、衍生关系和 Side Chat Host 语义保持不变，不需要数据迁移。
+
+### Documentation
+
+- 新增 DSH Client 架构设计解读，并在课程中补充 API Controller、UI adapter、Conversation/Chat target、显式 Client composition 与统一 Remote failure 的官方动机、收益、代价和 BranchMark 落点。
+
+## [0.1.1-rc.2] - 2026-09-01
 
 ### Added
 
@@ -21,7 +43,7 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 - 搜索或标签筛选期间禁用拖拽；Host 拒绝不完整集合与跨置顶组的排序请求，避免隐藏枝签被意外重排。
 - DSH 重载 Composer 后，Client 会把 draft mirror 中可解析的 `@branchmark:<id>` 持久化投影重新构造成原生 Reference Chip，并保留其余草稿文字；无法解析的 token 保持可见。
 
-## [0.2.0] - 2026-08-30
+## Pre-public source preview - 2026-08-30
 
 ### Added
 
@@ -40,8 +62,8 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 
 ### Known limitations
 
-- 衍生 Session 的 BranchMark 关系记录与 DSH `recall` 日志当前没有跨子系统事务。Host 在两次持久写入之间异常退出可能留下部分提交；`0.2.x` public preview 尚未提供自动对账修复。
+- 衍生 Session 的 BranchMark 关系记录与 DSH `recall` 日志当前没有跨子系统事务。Host 在两次持久写入之间异常退出可能留下部分提交；插件不提供自动对账修复。
 
-[Unreleased]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/zaizaizhao/dsh-branchmark/releases/tag/v0.2.0
+[Unreleased]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.1.2-alpha.2...HEAD
+[0.1.2-alpha.2]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.1.1-rc.2...v0.1.2-alpha.2
+[0.1.1-rc.2]: https://github.com/zaizaizhao/dsh-branchmark/tree/v0.1.1-rc.2

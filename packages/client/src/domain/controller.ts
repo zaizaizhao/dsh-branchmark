@@ -1,7 +1,8 @@
 /** Browser-only BranchMark UI state shared by every Client slot entry. */
 
 import { useSyncExternalStore } from 'react'
-import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type {
   Clip, ClipId, ClipSourceInput, SideChatId, SideChatSnapshot,
 } from 'dsh-branchmark-host/types'

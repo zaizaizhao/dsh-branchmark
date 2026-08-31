@@ -40,7 +40,7 @@ sessions.fork({
 })
 ```
 
-clips-only 调用 concrete `SessionRuntime.create({ workspaceId })`，并在运行时检查方法存在。两条路径创建后都调用 Host `recordDerivedSession`。
+clips-only 调用 API Session Controller 的 `sessions.create({ workspaceId })`。两条路径创建后都调用 Host `recordDerivedSession`。
 
 检查点：spy 证明 clips-only 没有调用 fork，full-fork 没有调用 create；二者都不调用 Composer `insertReference()` 或 `setDraft()`，Clip 上下文只由后续 Host recall append 提供。
 
@@ -48,7 +48,7 @@ clips-only 调用 concrete `SessionRuntime.create({ workspaceId })`，并在运�
 
 对 child `sessionPersistence.inspect()`。clips-only 要求 header 无 `parentSession/seedLength`；full-fork 要求 parent 等于 primary source Session，seedLength 等于当前 DSH fork 算法对该 source event 的预期值。
 
-必须读目标 DSH [`host/apiproxy`](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/packages/host/apiproxy/src/api-proxy.ts) 与 [`SessionHeader`](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/packages/core/session/src/types.ts) 的当前源码定位；不要假设课程版本和你的目标版本一致。
+必须读目标 DSH [`api/session-controller`](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/api/session-controller/src/commands.ts) 与 [`SessionHeader`](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/core/session/src/types.ts) 的当前源码定位；不要假设课程版本和你的目标版本一致。
 
 检查点：创建一个无关 child 后伪造 full-fork record，Host 返回 `derived-session-mismatch`；relation table 不新增记录。
 
@@ -95,7 +95,7 @@ binding.session.prompt([{ type: 'text', text: question }], 'queue')
 
 Client launch 对照 [`domain/client.ts`](../../packages/client/src/domain/client.ts)，Host header 验证对照 [`recordDerivedSession`](../../packages/host/src/index.ts)，lineage 对照 [`domain/lineage.ts`](../../packages/client/src/domain/lineage.ts)，divider 对照 [`ForkDivider.tsx`](../../packages/client/src/components/ForkDivider.tsx)。
 
-若你发现需要复制父消息文本来实现 full-fork，请停下来重读 DSH [Session 文档](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/docs/subsystems/session.md)；正确路径应由宿主 fork seed。
+若你发现需要复制父消息文本来实现 full-fork，请停下来重读 DSH [Session 文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/subsystems/session.md)；正确路径应由宿主 fork seed。
 
 ## 复盘
 

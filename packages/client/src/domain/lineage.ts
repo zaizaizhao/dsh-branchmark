@@ -1,6 +1,7 @@
 /** Pure current-lineage projection for the plugin-owned relationship view. */
 
-import type { SessionId, SessionSummary } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
 export interface ClipLineageRow {
   readonly session: SessionSummary

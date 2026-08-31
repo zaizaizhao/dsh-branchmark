@@ -1,6 +1,6 @@
 # 系统架构与数据流
 
-本页是查阅型参考，回答“一个动作跨过了哪些模块、最后写到哪里”。实现顺序见[主线课程](../README.md#主线课程)，类型和方法细节见[Remote API](remote-api.md)。
+本页是查阅型参考，回答“一个动作跨过了哪些模块、最后写到哪里”。实现顺序见[主线课程](../README.md#主线课程)，类型和方法细节见[Remote API](remote-api.md)，DSH Client 为什么采用这些所有者见[架构设计解读](dsh-client-architecture-rationale.md)。
 
 ## 运行时组件
 
@@ -19,6 +19,14 @@ DSH Web profile
 │       ├── 14-method Typert Remote namespace
 │       └── TemporarySideChatRuntime Map
 └── Browser
+    ├── DSH API Controllers
+    │   ├── ctx.sessions / Session binding
+    │   └── ctx.workspaces / Workspace snapshot
+    ├── DSH UI owners
+    │   ├── uiConversation binding / target-neutral snapshot
+    │   ├── keyed Chat View
+    │   ├── UI Session / UI Workspace standard sources
+    │   └── UI Renderer / Slots
     ├── generated remote.branchmark methods
     ├── BranchMarkClient
     ├── BranchMarkUiController
@@ -113,11 +121,11 @@ label 是可见短文本，clipboard projection 是持久化/复制文本，ref 
 selected Clips
   ↓ BranchMarkLauncherSheet chooses mode, primary Clip, note flags
   ├── full-fork
-  │     ↓ SessionRuntime.fork({ sourceSessionId, atSeq: sourceEventSeq })
+  │     ↓ ctx.sessions.fork({ sessionId: sourceSessionId, atSeq: sourceEventSeq })
   │   DSH Host extends cut to the first matching turn/end and trailing standalone events
   │     ↓ child header: parentSession + seedLength
   └── clips-only
-        ↓ concrete SessionRuntime.create({ workspaceId })
+        ↓ ctx.sessions.create({ workspaceId })
       fresh header: no parentSession, no seedLength
 
 created SessionId

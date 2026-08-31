@@ -1,10 +1,13 @@
-/** Typed Remote and DSH Client Runtime orchestration for BranchMark. */
+/** Typed Remote and DSH Client service orchestration for BranchMark. */
 
-import type {
-  ClientContext, SessionId, SessionRuntime, WorkspaceId,
-} from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type {} from '@deepseek-ai/dsh-api-gateway/client'
+import type {} from '@deepseek-ai/dsh-api-session-controller/client'
+import type {} from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { InputState } from '@deepseek-ai/dsh-client-ui-conversation/client'
 // Type-only: merges this plugin's generated Remote namespace into DSH's client transport.
 import type {} from 'dsh-branchmark-host/remote'
 import type {
@@ -13,6 +16,7 @@ import type {
   CreateSideChatRequest, SideChatId, SideChatSnapshot,
   SideChatModelSelection,
   BatchUpdateClipsRequest, BatchUpdateClipsValue,
+  ClipRejected, ClipSuccess,
 } from 'dsh-branchmark-host/types'
 import {
   BRANCHMARK_REFERENCE_SOURCE, clipReferenceInsert, parseClipReference,
@@ -30,6 +34,10 @@ function remoteError(code: string, message: string): BranchMarkClientError {
   return new BranchMarkClientError(code, message)
 }
 
+type BranchMarkTransport<T> =
+  | { readonly ok: true; readonly value: ClipSuccess<T> | ClipRejected }
+  | { readonly ok: false; readonly error: { readonly code: string; readonly message: string } }
+
 /** Result of one explicit multi-Clip Composer attachment request. */
 export interface BatchComposerAttachmentResult {
   readonly inserted: readonly ClipId[]
@@ -46,7 +54,7 @@ export interface ComposerReferenceRecoveryResult {
 
 const BRANCHMARK_CLIPBOARD_TOKEN = /@branchmark:([A-Za-z0-9-]+)/gu
 
-/** Browser port that keeps transport errors, DSH Session APIs, and draft admission out of components. */
+/** Deep browser integration module that keeps DSH state and transport details out of components. */
 export class BranchMarkClient {
   constructor(private readonly ctx: ClientContext) {}
 
@@ -57,9 +65,24 @@ export class BranchMarkClient {
 
   currentWorkspace(): WorkspaceId | undefined {
     const current = this.ctx.sessions.list.getSnapshot().current
-    return current === undefined
-      ? this.ctx.workspaces.list.getSnapshot().recentWorkspaceId
-      : this.workspaceForSession(current)
+    if (current !== undefined) return this.workspaceForSession(current)
+    const workspaces = this.ctx.workspaces.list.getSnapshot().items
+    const sessions = this.ctx.sessions.list.getSnapshot().byId
+    let selected: WorkspaceId | undefined
+    let selectedTime = Number.NEGATIVE_INFINITY
+    for (const workspace of workspaces) {
+      let latest = Number.NEGATIVE_INFINITY
+      for (const sessionId of workspace.sessionIds) {
+        const session = sessions[sessionId]
+        if (session !== undefined) latest = Math.max(latest, session.updatedAt)
+      }
+      if (latest === Number.NEGATIVE_INFINITY) latest = Date.parse(workspace.createdAt)
+      if (selected === undefined || latest > selectedTime) {
+        selected = workspace.workspaceId
+        selectedTime = latest
+      }
+    }
+    return selected
   }
 
   sessionTitle(sessionId: SessionId): string | undefined {
@@ -67,7 +90,10 @@ export class BranchMarkClient {
   }
 
   sessionSnapshot(sessionId: SessionId) {
-    return this.ctx.sessions.binding(sessionId)?.session.getSnapshot()
+    const binding = this.ctx.sessions.binding(sessionId)
+    return binding === undefined
+      ? undefined
+      : this.ctx.uiConversation.binding(binding).snapshot.getSnapshot()
   }
 
   /** Insert one compact native reference at the start of the current Composer draft. */
@@ -80,7 +106,7 @@ export class BranchMarkClient {
     if (scoped === undefined) return 'unavailable'
     const input = this.ctx.conversation.input.for(scoped)
     const snapshot = input.state.getSnapshot()
-    const duplicate = snapshot.occurrences.some((occurrence) => {
+    const duplicate = snapshot.occurrences.some((occurrence: InputState['occurrences'][number]) => {
       if (occurrence.source !== BRANCHMARK_REFERENCE_SOURCE) return false
       try {
         return parseClipReference(occurrence.ref).clipId === clip.id
@@ -234,86 +260,51 @@ export class BranchMarkClient {
   }
 
   async create(request: CreateClipRequest): Promise<Clip> {
-    const transport = await this.ctx.remote.branchmark.create(request)
-    if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
-    return transport.value.value
+    return this.unwrap(await this.ctx.remote.branchmark.create(request))
   }
 
   async list(request: ListClipsRequest): Promise<ListClipsValue> {
-    const transport = await this.ctx.remote.branchmark.list(request)
-    if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
-    return transport.value.value
+    return this.unwrap(await this.ctx.remote.branchmark.list(request))
   }
 
   async update(request: Parameters<ClientContext['remote']['branchmark']['update']>[0]): Promise<Clip> {
-    const transport = await this.ctx.remote.branchmark.update(request)
-    if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
-    return transport.value.value
+    return this.unwrap(await this.ctx.remote.branchmark.update(request))
   }
 
   async setStatus(request: Parameters<ClientContext['remote']['branchmark']['setStatus']>[0]): Promise<Clip> {
-    const transport = await this.ctx.remote.branchmark.setStatus(request)
-    if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
-    return transport.value.value
+    return this.unwrap(await this.ctx.remote.branchmark.setStatus(request))
   }
 
   async deleteForever(request: Parameters<ClientContext['remote']['branchmark']['deleteForever']>[0]): Promise<void> {
-    const transport = await this.ctx.remote.branchmark.deleteForever(request)
-    if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
+    this.unwrap(await this.ctx.remote.branchmark.deleteForever(request))
   }
 
   async batchUpdate(request: BatchUpdateClipsRequest): Promise<BatchUpdateClipsValue> {
-    const transport = await this.ctx.remote.branchmark.batchUpdate(request)
-    if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
-    return transport.value.value
+    return this.unwrap(await this.ctx.remote.branchmark.batchUpdate(request))
   }
 
   async relations(request: ListRelationsRequest): Promise<ListRelationsValue> {
-    const transport = await this.ctx.remote.branchmark.listRelations(request)
-    if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
-    return transport.value.value
+    return this.unwrap(await this.ctx.remote.branchmark.listRelations(request))
   }
 
   async createSideChat(request: CreateSideChatRequest): Promise<SideChatSnapshot> {
-    const transport = await this.ctx.remote.branchmark.createSideChat(request)
-    if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
-    return transport.value.value
+    return this.unwrap(await this.ctx.remote.branchmark.createSideChat(request))
   }
 
   async getSideChat(id: SideChatId): Promise<SideChatSnapshot> {
-    const transport = await this.ctx.remote.branchmark.getSideChat({ id })
-    if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
-    return transport.value.value
+    return this.unwrap(await this.ctx.remote.branchmark.getSideChat({ id }))
   }
 
   async sendSideChat(id: SideChatId, text: string): Promise<SideChatSnapshot> {
-    const transport = await this.ctx.remote.branchmark.sendSideChat({ id, text })
-    if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
-    return transport.value.value
+    return this.unwrap(await this.ctx.remote.branchmark.sendSideChat({ id, text }))
   }
 
   async selectSideChatModel(id: SideChatId, selection: SideChatModelSelection): Promise<SideChatSnapshot> {
-    const transport = await this.ctx.remote.branchmark.selectSideChatModel({ id, selection })
-    if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
-    return transport.value.value
+    return this.unwrap(await this.ctx.remote.branchmark.selectSideChatModel({ id, selection }))
   }
 
   async cancelSideChat(id: SideChatId): Promise<SideChatSnapshot> {
-    const transport = await this.ctx.remote.branchmark.cancelSideChat({ id })
-    if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
-    return transport.value.value
+    return this.unwrap(await this.ctx.remote.branchmark.cancelSideChat({ id }))
   }
 
   async closeSideChat(id: SideChatId): Promise<void> {
@@ -347,14 +338,7 @@ export class BranchMarkClient {
         increaseTitle: true,
       })
     } else {
-      // ISessions intentionally omits creation, but DSH exports the concrete Runtime;
-      // using its existing create path guarantees a distinct ordinary Session instead
-      // of connectWorkspace's documented blank-session reuse.
-      const sessions = this.ctx.sessions as SessionRuntime
-      if (typeof sessions.create !== 'function') {
-        throw remoteError('session-create-unavailable', '当前 DSH 客户端未提供可用的 SessionRuntime.create。')
-      }
-      sessionId = await sessions.create({ workspaceId: input.workspaceId })
+      sessionId = await this.ctx.sessions.create({ workspaceId: input.workspaceId })
     }
 
     const attachments: ClipAttachmentSelection[] = input.clips.map(clip => ({
@@ -386,7 +370,10 @@ export class BranchMarkClient {
   private async recordDerived(
     request: Parameters<ClientContext['remote']['branchmark']['recordDerivedSession']>[0],
   ): Promise<RecordDerivedSessionValue> {
-    const transport = await this.ctx.remote.branchmark.recordDerivedSession(request)
+    return this.unwrap(await this.ctx.remote.branchmark.recordDerivedSession(request))
+  }
+
+  private unwrap<T>(transport: BranchMarkTransport<T>): T {
     if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
     if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
     return transport.value.value

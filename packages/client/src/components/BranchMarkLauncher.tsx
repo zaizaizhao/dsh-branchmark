@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import {
-  IconArchiveOutline20,
   IconCloseOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ClipId } from 'dsh-branchmark-host/types'
 import type { BranchMarkClient } from '../domain/client.ts'
 import type { BranchMarkLauncher, BranchMarkUiController } from '../domain/controller.ts'
 import { formatClipSource } from '../domain/clip-presentation.ts'
+import { BranchMarkLogo } from './BranchMarkLogo.tsx'
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -127,7 +127,7 @@ export function BranchMarkLauncherSheet({ launcher, client, controller }: {
           <h3>携带的枝签与备注</h3>
           {launcher.clips.map(clip => (
             <div className="dbm-source-row" key={clip.id}>
-              <IconArchiveOutline20 size={15} />
+              <BranchMarkLogo compact size={14} />
               <span><strong>{clip.excerpt}</strong><small>{formatClipSource(clip)}</small></span>
               {clip.note !== undefined && (
                 <label className="dbm-note-toggle"><input type="checkbox" checked={notes.has(clip.id)} onChange={() => {

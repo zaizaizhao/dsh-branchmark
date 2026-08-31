@@ -46,7 +46,9 @@ packages/bundle  installable package + patch + repackaged Host/Remote/Client
 }
 ```
 
-实际 `inject` 数组包含 Gateway、Runtime、Locale、Layout、Sidebar 和 Conversation。四个面分别被 Loader、Client Modules、Typert registry 与 Browser `$mount` 消费；缺一个都可能出现“Host 启动了但 UI 没出现”或“UI 加载了但 Remote namespace 不存在”。
+实际 `inject` 数组包含 Gateway、API Session/Workspace Controller、Locale、UI Renderer、Session/Workspace 标准 hooks、Layout、Sidebar、Conversation、Chat 和 Input Trigger。四个面分别被 Loader、Client Modules、Typert registry 与 Browser `$mount` 消费；缺一个都可能出现“Host 启动了但 UI 没出现”或“UI 加载了但 Remote namespace 不存在”。
+
+这份显式列表是当前 DSH Client 架构的一部分，而不是发布噪音。没有聚合 Runtime 后，组合包必须说明它需要哪些 React-free Controller、UI adapter、target 与 Renderer；这样缺失能力会在 composition 或 Cordis activation 阶段暴露，具体 target 也能按自己的 plugin lifecycle 装载和卸载。更长 roster 的收益和维护成本见[架构设计解读](../reference/dsh-client-architecture-rationale.md#9-为什么-bundle-inject-列表变长反而更健康)。
 
 ## 3. Node 产物内联开发 Host package
 
@@ -84,7 +86,7 @@ window.__ModuleLoader__.load({
 })
 ```
 
-React 与 DSH Browser packages 保持 external，由 `window.__ModuleLoader__` 同步 `require`；Markdown projection 等插件专用依赖则打入 `client.js`。`dsh.client.inject` 描述代码到达顺序，Client Modules 扫描 package、计算 rev，并通过 `/plugins/<id>/client.js?rev=...` 提供文件。官方机制见 [Client Modules 文档](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/docs/subsystems/client-modules.md)。
+React 与 DSH Browser packages 保持 external，由 `window.__ModuleLoader__` 同步 `require`；Markdown projection 等插件专用依赖则打入 `client.js`。`dsh.client.inject` 描述 factory arrival 的依赖边，但不规定 Cordis apply 顺序；Client Modules 扫描 package、计算 rev，并通过 `/plugins/<id>/client.js?rev=...` 提供文件。官方机制见 [Client Modules 文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/subsystems/client-modules.md)。
 
 普通 ESM 浏览器文件即使能在本地 bundler 打开，也不满足 DSH 当前 lazy-CJS module table 的格式。
 
@@ -122,7 +124,7 @@ pnpm --dir packages/bundle pack --pack-destination ../../dist
 不要根据旧文档硬编码 tarball 名；从 `dist/` 选择本次命令刚生成且版本与 `packages/bundle/package.json` 一致的文件。检查发布内容：
 
 ```sh
-tar -tf /absolute/path/to/dsh-branchmark-0.3.0.tgz
+tar -tf /absolute/path/to/dsh-branchmark-0.1.2-alpha.2.tgz
 ```
 
 应包含 `package/lib/index.js`、`client.js`、Typert Host/Remote、声明、source maps、`cordis.patch.yml`、README、LICENSE 与 package.json；不应包含开发测试、整个 monorepo 或 `node_modules`。
@@ -134,7 +136,7 @@ tar -tf /absolute/path/to/dsh-branchmark-0.3.0.tgz
 ```sh
 CLIP_COURSE_HOME="$(mktemp -d)"
 export DSH_HOME="$CLIP_COURSE_HOME"
-dsh plugin --profile clip-course add /absolute/path/to/dsh-branchmark-0.3.0.tgz
+dsh plugin --profile clip-course add /absolute/path/to/dsh-branchmark-0.1.2-alpha.2.tgz
 dsh --profile clip-course --dump-config
 ```
 
@@ -185,20 +187,22 @@ DSH patch 后层覆盖同 id row 时，`config` 整体替换，不做 key 级 de
 - Cordis Service/inject/effect：Host 能力和生命周期。
 - `storageDomain`：Clip 与 relation 本地数据。
 - `sessionPersistence.inspect`、`sessions.get`：来源证明、header 验证和 recall append。
-- Client `SessionRuntime.fork/create/open/binding`：普通衍生 Session。
+- API Session Controller 的 `ISessions.fork/create/open/binding`：普通衍生 Session。
 - LLM/FS/Web services：Side Chat 直接模型流与固定只读工具。
 - Typert/API Gateway：Browser→Host typed Remote。
-- Client Modules 与六个 UI Slots：浏览器代码装载和 additive UI。
+- Client Modules 与五个 UI Slots：浏览器代码装载和 additive UI。
 - Conversation event extension：`session/end-seed` 分隔条。
 
 这些都是组合，不需要 Host 源码 patch；但“纯插件”不等于“没有版本耦合”。具体依赖和替代策略见 [DSH 依赖矩阵](../reference/dsh-dependency-map.md)。
+
+适配时不要寻找一个能把这些 owner 再次包起来的宿主 facade。先按数据和生命周期选择 API Controller、UI adapter、Conversation target 或 Slot，再把真正跨能力的调用收敛到插件自己的集成模块；DSH 本次拆分的官方理由和 BranchMark 落点见[架构设计解读](../reference/dsh-client-architecture-rationale.md)。
 
 ## 12. 升级适配顺序
 
 DSH 处于预发布阶段，升级时把全部 `@deepseek-ai/dsh-*` 作为一组更新，然后依次核对：
 
 1. Remote decorator/generator、四个 artifact 与 `$mount`。
-2. `SessionRuntime.create/fork`、Host fork turn-boundary、SessionHeader 与 `session/end-seed`。
+2. `ISessions.create/fork`、Host fork turn-boundary、SessionHeader 与 `session/end-seed`。
 3. Chat node data 与 `[data-chat-flow-key]` selection anchor。
 4. 五个 Slot 的名字、props、scope、render site，以及 Input Trigger service contract。
 5. `dsh.client` manifest、ModuleLoader wrapper 和 client route。

@@ -53,7 +53,7 @@ if (!fs.contains(root, target)) throw new Error('path resolves outside the curre
 
 `web_search` 和 `web_fetch` 复用 DSH Web Service，所以 provider、错误与 AbortSignal 均由宿主能力处理。当前默认 `dsh-base` 挂有 search provider，但明确没有默认 fetch provider；因此 schema 中存在 `web_fetch` 不代表每个安装都能成功执行。
 
-DSH [Web 子系统文档](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/docs/subsystems/web.md)还说明本地 HTTP fetch backend 默认不阻断 private-network target。若部署需要 fetch，管理员必须选配满足自身 SSRF/network policy 的 provider；插件不能把一个通用 `ctx.web.fetch` 调用宣传为自动隔离内网。
+DSH [Web 子系统文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/subsystems/web.md)还说明本地 HTTP fetch backend 默认不阻断 private-network target。若部署需要 fetch，管理员必须选配满足自身 SSRF/network policy 的 provider；插件不能把一个通用 `ctx.web.fetch` 调用宣传为自动隔离内网。
 
 Provider unavailable 会变成正常的 error tool result，模型可以据此改用搜索或向用户说明限制，不会让 Runtime 调用任意替代网络库。
 

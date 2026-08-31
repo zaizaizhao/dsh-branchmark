@@ -154,34 +154,43 @@ body[data-ds-dark-theme] {
 .dbm-reference-manage { width: calc(100% - 12px); height: 30px; margin: 0 6px 6px; border: 0; border-radius: 9px; background: transparent; color: var(--dbm-brand); cursor: pointer; font-size: 9px; }
 .dbm-reference-manage:hover { background: var(--dbm-brand-soft); }
 
+.dbm-brandmark { display: block; overflow: visible; color: var(--dbm-text); }
+.dbm-brandmark-page { fill: var(--dbm-raised); stroke: currentColor; }
+.dbm-brandmark-cover { fill: currentColor; fill-opacity: .14; stroke: currentColor; }
+.dbm-brandmark-detail, .dbm-brandmark-branch { fill: none; stroke: currentColor; }
+.dbm-brandmark-detail { opacity: .58; }
+.dbm-brandmark-binding { fill: none; stroke: currentColor; opacity: .66; }
+.dbm-brandmark-leaf { fill: currentColor; stroke: none; opacity: .56; }
+.dbm-brandmark-seal { fill: currentColor; stroke: var(--dbm-raised); }
+
 .dbm-dock-handle {
   position: absolute;
   z-index: 4;
   top: 50%;
   right: 0;
-  display: flex;
-  width: 34px;
-  min-height: 80px;
+  display: grid;
+  width: 46px;
+  min-height: 58px;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 8px 5px;
+  padding: 8px 6px;
   transform: translateY(-50%);
   border: 1px solid var(--dbm-border-strong);
   border-right: 0;
-  border-radius: 12px 0 0 12px;
+  border-radius: 16px 0 0 16px;
   background: var(--dbm-floating);
-  color: var(--dbm-brand);
+  color: var(--dbm-text);
   box-shadow: var(--dbm-shadow-sm);
   cursor: pointer;
   pointer-events: auto;
-  writing-mode: vertical-rl;
   transition: width 150ms ease, background 150ms ease, transform 150ms ease;
 }
-.dbm-dock-handle:hover:not(:disabled) { width: 38px; background: color-mix(in srgb, var(--dbm-brand-soft) 55%, var(--dbm-floating)); transform: translateY(-50%) translateX(-1px); }
+.dbm-dock-handle:hover:not(:disabled) { width: 50px; background: var(--dbm-hover-solid); transform: translateY(-50%) translateX(-1px); }
 .dbm-dock-handle:disabled { opacity: .42; cursor: not-allowed; }
-.dbm-dock-handle span { font-size: 9px; font-weight: 600; letter-spacing: .08em; }
-.dbm-dock-handle i { width: 7px; height: 7px; border: 2px solid var(--dbm-floating); border-radius: 50%; background: var(--dbm-success); animation: dbm-breathe 1.5s ease-in-out infinite; }
+.dbm-dock-handle .dbm-brandmark { transition: transform 180ms cubic-bezier(.22, 1, .36, 1); }
+.dbm-dock-handle:hover:not(:disabled) .dbm-brandmark { transform: translateY(-1px) rotate(-2deg) scale(1.06); }
+.dbm-dock-handle-count { position: absolute; top: 5px; left: 5px; display: grid; min-width: 15px; height: 15px; place-items: center; padding: 0 3px; border: 2px solid var(--dbm-floating); border-radius: 999px; background: var(--dbm-brand); color: var(--dsw-alias-label-primary-foreground); font-size: 7px; font-weight: 650; line-height: 1; }
+.dbm-dock-handle i { position: absolute; right: 6px; bottom: 6px; width: 7px; height: 7px; border: 2px solid var(--dbm-floating); border-radius: 50%; background: var(--dbm-success); animation: dbm-breathe 1.5s ease-in-out infinite; }
 
 .dbm-dock-panel {
   position: absolute;
@@ -204,7 +213,7 @@ body[data-ds-dark-theme] {
 .dbm-dock-resizer:hover::after, body[data-dbm-resizing="true"] .dbm-dock-resizer::after { background: var(--dbm-brand); }
 .dbm-dock-layout { position: relative; display: flex; height: 100%; overflow: hidden; flex-direction: column; border-radius: inherit; }
 .dbm-dock-header { display: flex; min-height: 64px; align-items: center; gap: 10px; padding: 11px 13px; border-bottom: 1px solid var(--dbm-border); }
-.dbm-dock-brand { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 11px; background: color-mix(in srgb, var(--dbm-session-accent) 14%, var(--dbm-muted)); color: var(--dbm-session-accent); }
+.dbm-dock-brand { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border: 1px solid var(--dbm-border); border-radius: 13px; background: var(--dbm-muted); color: var(--dbm-text); }
 .dbm-dock-heading { min-width: 0; flex: 1; }
 .dbm-dock-heading strong, .dbm-dock-heading small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dbm-dock-heading strong { font-size: 13px; line-height: 1.4; }
@@ -285,7 +294,7 @@ body[data-ds-dark-theme] {
 .dbm-empty { display: grid; min-height: 210px; place-items: center; padding: 26px; color: var(--dbm-text-3); text-align: center; }
 .dbm-empty strong { display: block; margin: 9px 0 5px; color: var(--dbm-text-2); font-size: 12px; }
 .dbm-empty p { max-width: 280px; margin: 0; font-size: 10px; line-height: 1.55; }
-.dbm-empty-orb { display: grid; width: 38px; height: 38px; margin: 0 auto; place-items: center; border-radius: 13px; background: var(--dbm-brand-soft); color: var(--dbm-brand); }
+.dbm-empty-orb { display: grid; width: 38px; height: 38px; margin: 0 auto; place-items: center; border-radius: 13px; background: var(--dbm-muted); color: var(--dbm-text); }
 .dbm-loading { padding: 28px; color: var(--dbm-text-3); text-align: center; font-size: 10px; }
 .dbm-error, .dbm-warning { padding: 8px 9px; border-radius: 9px; font-size: 10px; line-height: 1.5; }
 .dbm-error { border: 1px solid color-mix(in srgb, var(--dbm-danger) 38%, transparent); background: color-mix(in srgb, var(--dbm-danger) 7%, var(--dbm-muted)); color: var(--dbm-danger); }

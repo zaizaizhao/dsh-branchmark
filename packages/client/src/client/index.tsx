@@ -1,11 +1,17 @@
 /** Browser assembly for every additive BranchMark surface. */
 
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-api-gateway/client'
+import type {} from '@deepseek-ai/dsh-api-session-controller/client'
+import type {} from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
 import type { InputTriggerServiceContract } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import branchmarkRemote from 'dsh-branchmark-host/remote'
 import { installBranchMarkStyles } from './styles.ts'
@@ -20,7 +26,7 @@ import { browserBranchMarkUiPreferenceStore, BranchMarkUiController } from '../d
 
 /** Required DSH services and additive UI seats. */
 export const inject = [
-  'slots', 'sessions', 'workspaces', 'remote', 'conversationEvents', 'conversation', 'inputTriggers',
+  'slots', 'sessions', 'workspaces', 'remote', 'uiConversation', 'conversation', 'inputTriggers',
 ]
 
 /** Mount the generated Remote contribution and every BranchMark UI entry. */
@@ -38,7 +44,7 @@ export function apply(ctx: ClientContext): void {
     const ForkDividerEntry = (props: PropsRuntime<'conversation.chat.node', 'clip-fork-divider'>) => (
       <ForkDivider {...props} client={client} />
     )
-    scope.conversationEvents.register(forkDividerDefinition)
+    scope.uiConversation.events.register(forkDividerDefinition)
 
     scope.slots.inject('shell.overlay', () => scope.slots.register({
       name: 'shell.overlay', id: 'branchmark', order: 40,

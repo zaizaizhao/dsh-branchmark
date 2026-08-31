@@ -9,9 +9,15 @@
 | Cordis Context | 按 key 提供和消费 Service、事件与 effect 的插件上下文。 |
 | effect | 跟随插件 fiber 生命周期自动撤销的注册或资源；Host domain、Side Chat、Browser stylesheet 与 Remote mount 都有 disposer。 |
 | Host | DSH Node 进程中的插件面，拥有本地数据、Session 访问、LLM 调用和业务校验。 |
-| Client | Browser 中的 Cordis 插件面，拥有 UI、选区观察、Remote 调用和 DSH Client Runtime 编排。 |
+| Client | Browser 中的 Cordis 插件面，拥有 UI、选区观察、Remote 调用和 DSH Client service 编排。 |
 | Client Module | 声明 `dsh.client` 并导出 `./client` 的浏览器 bundle，由 DSH Client Modules 扫描和加载。 |
+| API Controller | DSH Client 中 React-free 的领域 owner；通过 Remote、observable source、binding 和 command 管理 Session 或 Workspace，而不拥有具体 UI target。 |
+| UI adapter | 把 React-free 领域 source 注册为标准 Slot props/Hook 的 `ui-*` owner；它不复制 Controller 的 transport 和 business command。 |
+| Conversation target | 从 UI Conversation 共享 assembly 取得 target-specific snapshot 的 owner，例如 UI Chat 或 UI Trajectory。每个 target 独立拥有 definition、builder、selection 和 renderer。 |
+| Session binding | API Session Controller 为一个 Session 提供的稳定 scope、snapshot、event source 和 command 入口；Session-scoped consumer 的清理跟随 binding context。 |
+| keyed Chat snapshot | UI Chat 的增量 projection；`order` 保存显示顺序，`nodes.get(key)` 按稳定 business key 读取当前节点，使数据或位置变化不必更换 React identity。 |
 | Typert Remote | 从 Host `@Remote` 方法生成 strict descriptor、codec 和 Client concrete method 的 unary RPC 机制。 |
+| RemoteResult | DSH Gateway 的 Client 调用结果，区分成功 value 与带 code/details 的 Remote failure。BranchMark 当前 value 内还包含插件自己的业务 success/rejection union。 |
 | Clip | 不可修改的摘录正文与来源锚点，加上可修改备注、标签、scope、置顶和状态，以及由 Host 管理的可选集合顺序。 |
 | owner Session | Clip 创建时所在的普通 Session。Session scope Clip 只在该 Session 的本会话视图出现。 |
 | project Clip | `scope: 'project'` 的 Clip，在同一 Workspace 的项目枝签视图中跨 Session 可见，但不会自动进入模型上下文。 |

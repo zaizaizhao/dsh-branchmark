@@ -1,9 +1,9 @@
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react'
-import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import {
-  IconArchiveOutline20,
   IconListPenOutline16,
   IconSearchOutline16,
   IconTrashOutline16,
@@ -14,6 +14,7 @@ import type { BranchMarkUiController } from '../domain/controller.ts'
 import { useBranchMarkUi } from '../domain/controller.ts'
 import { moveClipInCollection } from '../domain/clip-order.ts'
 import { BatchCommandCapsule } from './BatchCommandCapsule.tsx'
+import { BranchMarkLogo } from './BranchMarkLogo.tsx'
 import { ClipCard } from './ClipCard.tsx'
 
 type CollectionMode = 'session' | 'project'
@@ -304,7 +305,7 @@ export function ClipCollection({ mode, workspaceId, sessionId, client, controlle
       {loaded.loading && <div className="dbm-loading">正在读取本地枝签…</div>}
       {loaded.error !== undefined && <div className="dbm-error">{loaded.error}</div>}
       {!loaded.loading && loaded.error === undefined && clips.length === 0 && (
-        <div className="dbm-empty"><div><div className="dbm-empty-orb"><IconArchiveOutline20 /></div><strong>{trash ? '回收站为空' : '还没有枝签'}</strong><p>在消息中选择一段文字即可生成枝签。</p></div></div>
+        <div className="dbm-empty"><div><div className="dbm-empty-orb"><BranchMarkLogo compact size={20} /></div><strong>{trash ? '回收站为空' : '还没有枝签'}</strong><p>在消息中选择一段文字即可生成枝签。</p></div></div>
       )}
       <div className="dbm-card-grid" data-view={mode === 'project' ? view : 'list'}>
         {pinnedClips.length > 0 && <div className="dbm-collection-divider"><span>置顶</span><i /></div>}

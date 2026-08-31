@@ -2,15 +2,15 @@
 
 这是一套以真实源码为教材的顺序课程。完成主线后，你应当能从一个空目录构建、安装并验收一个不修改 DSH 源码的 BranchMark：它能从消息生成会话枝签和项目枝签、持久化置顶与手动顺序、恢复 Composer 原生引用、创建普通衍生 Session、运行多个临时 Side Chat，并在右侧 Dock 中展示父子会话关系。
 
-课程不是实现总结，也不是 API 目录。`tutorials/` 按先修关系带你完成系统；`labs/` 要求你在不照抄整文件的情况下复现关键纵向切片；`reference/` 用于开发时快速查阅。每个技术结论都链接到当前插件源码、当前 DSH 源码或官方文档。
+课程不是实现总结，也不是 API 目录。`tutorials/` 按先修关系带你完成系统；`labs/` 要求你在不照抄整文件的情况下复现关键纵向切片；`reference/` 用于开发时快速查阅。涉及 DSH 架构变化时，课程会区分官方明确决策、当前实现事实和 BranchMark 工程解读，避免把推测写成 DSH 作者动机。
 
 ## 版本锚点
 
 | 项目 | 本课程核对版本 |
 | --- | --- |
-| DeepSeek Harness | `0.1.1-rc.2` |
-| DSH Git commit | `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e` |
-| BranchMark | `0.3.0` |
+| DeepSeek Harness | `0.1.2-alpha.2` |
+| DSH Git commit | `0a53fb55bea101816fa226bb964ae2bed71c343b` |
+| BranchMark | `0.1.2-alpha.2` |
 | Node.js | `^22.19.0 || >=24.0.0` |
 | pnpm | `11.7.0` |
 | TypeScript | `^6.0.3` |
@@ -43,7 +43,7 @@ pnpm run check
 | 顺序 | 章节 | 完成后的可观察结果 |
 | ---: | --- | --- |
 | 1 | [产品模型与三种“继续探索”](tutorials/01-product-and-domain.md) | 能区分完整分叉、仅枝签 Session、Side Chat 和 DSH subagent |
-| 2 | [DSH 插件基础与总体架构](tutorials/02-dsh-plugin-foundation.md) | 能画出 Host、Client、Bundle 与现有 DSH 服务的组合图 |
+| 2 | [DSH 插件基础与总体架构](tutorials/02-dsh-plugin-foundation.md) | 能画出 Host、Client、Bundle 与现有 DSH 服务的组合图，并解释为何没有聚合 Client Runtime |
 | 3 | [建立独立工作区与生成链](tutorials/03-scaffold-and-build.md) | 能从空目录建立三个 package，并生成 Typert Host/Remote 产物 |
 | 4 | [领域类型与本地持久化](tutorials/04-domain-types-and-storage.md) | 能创建兼容旧记录的 `clip_explorer` domain，并读写不可变 Clip、排序元数据与关系快照 |
 | 5 | [Host Service、Remote 与来源校验](tutorials/05-host-remote-and-validation.md) | 能从浏览器调用类型化 API，拒绝伪造来源、局部排序和跨置顶组排序 |
@@ -67,6 +67,7 @@ pnpm run check
 ## 快速参考
 
 - [系统架构与数据流](reference/architecture-map.md)
+- [DSH Client 架构设计解读](reference/dsh-client-architecture-rationale.md)
 - [DSH 既有插件与依赖矩阵](reference/dsh-dependency-map.md)
 - [14 个 Typed Remote 方法](reference/remote-api.md)
 - [源码导航](reference/source-map.md)
