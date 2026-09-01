@@ -9,6 +9,7 @@
 <p align="center">为开发者提供重点知识摘录、可追溯 Session 树和注意力分叉，让主 Session 始终专注于当前目标，让每条支线都能找回来源，让 Vibe Coding 告别注意力丢失。</p>
 
 <p align="center">
+  <a href="#交互演示">交互演示</a> ·
   <a href="#branchmark-解决的是开发者的注意力丢失">为什么需要</a> ·
   <a href="#session-树与会话管理">Session 树</a> ·
   <a href="#快速开始">快速开始</a> ·
@@ -22,6 +23,12 @@
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-776D5E"></a>
 </p>
 
+## 交互演示
+
+下图展示会话关系树、本会话与项目枝签、聚焦阅读，以及把枝签引用到 Composer 的实际交互。
+
+![BranchMark 会话关系、知识枝签与 Composer 引用演示](https://github.com/zaizaizhao/dsh-branchmark/releases/download/v0.1.2-alpha.2/branchmark-session-tree-and-clips-demo.gif)
+
 > [!IMPORTANT]
 > BranchMark 的发布版本与目标 DSH 完全同号。`dsh-branchmark@0.1.1-rc.2` 对应 npm `latest` 的 DSH `0.1.1-rc.2`；`dsh-branchmark@0.1.2-alpha.2` 对应 npm `alpha` 的 DSH `0.1.2-alpha.2`。两个通道使用不同的 DSH Client API，不要交叉安装。
 
@@ -29,6 +36,7 @@ BranchMark 是一个不修改 DSH 源码的插件 Bundle。它把会话消息中
 
 ## 目录
 
+- [交互演示](#交互演示)
 - [BranchMark 解决的是开发者的注意力丢失](#branchmark-解决的是开发者的注意力丢失)
 - [核心工作流：摘录、分叉、回到主线](#核心工作流摘录分叉回到主线)
 - [Session 树与会话管理](#session-树与会话管理)
@@ -67,12 +75,6 @@ BranchMark 的核心对象不是额外的聊天窗口，而是从重点知识生
         │
         └── 主 Session 不需要承载每一次发散探索
 ```
-
-### 交互演示
-
-下图展示会话关系树、本会话与项目枝签、聚焦阅读，以及把枝签引用到 Composer 的实际交互。
-
-![BranchMark 会话关系、知识枝签与 Composer 引用演示](https://github.com/zaizaizhao/dsh-branchmark/releases/download/v0.1.2-alpha.2/branchmark-session-tree-and-clips-demo.gif)
 
 ### 1. 摘录重点知识
 
