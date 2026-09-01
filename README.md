@@ -68,6 +68,12 @@ BranchMark 的核心对象不是额外的聊天窗口，而是从重点知识生
         └── 主 Session 不需要承载每一次发散探索
 ```
 
+### 交互演示
+
+下图展示会话关系树、本会话与项目枝签、聚焦阅读，以及把枝签引用到 Composer 的实际交互。
+
+![BranchMark 会话关系、知识枝签与 Composer 引用演示](https://github.com/zaizaizhao/dsh-branchmark/releases/download/v0.1.2-alpha.2/branchmark-session-tree-and-clips-demo.gif)
+
 ### 1. 摘录重点知识
 
 在一条已完成的用户或助手消息中选择文字，然后保存到本会话或当前项目。会话枝签默认只属于来源 Session；项目枝签可以跨 Session 搜索和复用，但只有显式选择“摘录到项目”才会进入项目枝签库。当前 Session 不会看到其他 Session 的私有枝签。
