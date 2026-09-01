@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/brand/branchmark-logo-threadbook-v4.svg" width="112" alt="枝签 BranchMark 标志">
+  <img src="assets/brand/branchmark-logo-threadbook-v4-color.svg" width="112" alt="枝签 BranchMark 彩色标志">
 </p>
 
 <h1 align="center">枝签 · BranchMark</h1>

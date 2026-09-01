@@ -68,9 +68,22 @@ assert.deepEqual(manifests.map(manifest => manifest.version), Array(4).fill('0.1
 
 const readme = await readFile(`${root}/README.md`, 'utf8')
 const readmeHero = readme.slice(0, 1600)
-assert.match(readmeHero, /assets\/brand\/branchmark-logo-threadbook-v4\.svg/)
+const themeLogo = await readFile(`${root}/assets/brand/branchmark-logo-threadbook-v4.svg`, 'utf8')
+const readmeLogo = await readFile(`${root}/assets/brand/branchmark-logo-threadbook-v4-color.svg`, 'utf8')
+assert.match(readmeHero, /assets\/brand\/branchmark-logo-threadbook-v4-color\.svg/)
 assert.match(readmeHero, /<h1 align="center">枝签 · BranchMark<\/h1>/)
 assert.match(readmeHero, /摘一段，生一枝。/)
 assert.match(readmeHero, /重点知识摘录、可追溯 Session 树和注意力分叉/)
+assert.match(themeLogo, /currentColor/)
+assert.doesNotMatch(themeLogo, /#[\da-f]{3,8}/iu)
+assert.doesNotMatch(readmeLogo, /currentColor/)
+assert.deepEqual(new Set(readmeLogo.match(/#[\da-f]{6}/giu)), new Set([
+  '#4F6EF7',
+  '#7C3AED',
+  '#0E9F6E',
+  '#C97706',
+  '#E11D48',
+  '#F8FAFC',
+]))
 
 console.log('Verified BranchMark package identity, source namespaces, and product wording.')
