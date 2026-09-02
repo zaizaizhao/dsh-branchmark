@@ -89,10 +89,10 @@ DSH_HOME="$BRANCHMARK_NPM_SMOKE_HOME" dsh --profile web --dump-config
 DSH_HOME="$BRANCHMARK_NPM_SMOKE_HOME" dsh --profile web --no-open --port 0
 ```
 
-确认 npm `latest` 仍指向 `0.1.1-rc.2`、`alpha` 指向 `0.1.2-alpha.5`，再创建签名 tag 与 GitHub Release：
+确认 npm `latest` 仍指向 `0.1.1-rc.2`、`alpha` 指向 `0.1.2-alpha.5`，再创建 annotated tag 与 GitHub Release：
 
 ```sh
-git tag -s v0.1.2-alpha.5 -m "BranchMark 0.1.2-alpha.5"
+git tag -a v0.1.2-alpha.5 -m "BranchMark 0.1.2-alpha.5"
 git push origin v0.1.2-alpha.5
 ```
 
