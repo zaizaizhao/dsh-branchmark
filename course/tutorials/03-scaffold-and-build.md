@@ -29,9 +29,11 @@ dsh-branchmark/
 
 ## 2. 固定工具链和 DSH 版本
 
-根 [`package.json`](../../package.json) 固定 pnpm 11.7、Node engine、TypeScript、tsdown、Vitest 与 Typert generator。[`pnpm-workspace.yaml`](../../pnpm-workspace.yaml) 用 catalog 把所有 DSH package 固定为同一 `0.1.2-alpha.2`。
+根 [`package.json`](../../package.json) 固定 pnpm 11.7、Node engine、TypeScript、tsdown、Vitest 与 Typert generator。[`pnpm-workspace.yaml`](../../pnpm-workspace.yaml) 用 catalog 把所有 DSH package 固定为同一 `0.1.2-alpha.5`。
 
 不要只升级一个 DSH package。Remote generator、protocol、Gateway、API Session/Workspace Controller、UI Conversation/Chat 和 Slot types 共同组成跨 package contract，混用预发布版本可能在编译或运行阶段产生不一致。
+
+本章以及第 4–12 章按 alpha.2 源码复现。`0.1.2-alpha.5` 与 2026-09-02 master 不是可以只改 catalog 版本的 drop-in target；它们的精确差异和成组迁移顺序见[第 13 章](13-dsh-prerelease-upgrade.md)。
 
 当前主要技术栈：
 
@@ -51,7 +53,7 @@ dsh-branchmark/
 
 根 [`tsconfig.base.json`](../../tsconfig.base.json) 开启 `strict`、`noUncheckedIndexedAccess`、`exactOptionalPropertyTypes`、ES2024 和 React JSX。Host 与 Client 分别由 [`tsconfig.host.json`](../../tsconfig.host.json) 和 [`tsconfig.client.json`](../../tsconfig.client.json) 建立 project-reference aggregate。
 
-分开 face 的直接原因是 Host 和 Client 都会 declaration-merge Cordis `Context`，但同名 key 可能对应不同运行类型。把两者压进一个 TypeScript program 会制造 merge collision；DSH 自身也使用独立 Host/Client aggregate，见官方 [`development.md`](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/development.md#typescript-project-layout)。
+分开 face 的直接原因是 Host 和 Client 都会 declaration-merge Cordis `Context`，但同名 key 可能对应不同运行类型。把两者压进一个 TypeScript program 会制造 merge collision；DSH 自身也使用独立 Host/Client aggregate，见官方 [`development.md`](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/development.md#typescript-project-layout)。
 
 每个 package 自己的 `tsconfig.json` 指定 `rootDir=src`、`outDir=lib/types`。Client reference Host，是为了消费 Host public DTO 与生成 Remote declaration；Host 不 reference Client。
 
@@ -89,7 +91,7 @@ lib/typert.remote-client.d.ts
 
 这个文件的源码注释把它定义为“out-of-tree Typert analyzer 的 build-only identity bridge”。它保留 generator 需要的 `Remote`、`bindTypertRemote` 和 merge-extensible map 名称，同时把实现类型转交给实际安装包。它不是运行时代码，也不应被 Browser 或 Bundle import。
 
-这是当前 DSH/TypeScript 组合的项目级适配点。复现 `0.1.2-alpha.2` 时按源文件保留；升级时先在无 bridge 的最小分支运行 generator，只有真实 diagnostics 证明不再需要时才能删除，不能凭感觉简化。
+这是当前 DSH/TypeScript 组合的项目级适配点。复现 `0.1.2-alpha.5` 时按源文件保留；升级时先在无 bridge 的最小分支运行 generator，只有真实 diagnostics 证明不再需要时才能删除，不能凭感觉简化。
 
 ## 6. 建立 Client package
 

@@ -78,13 +78,13 @@ Client 先按相交的 `[data-chat-flow-key]` 拆分跨消息选区，再把每�
 
 Client 把来源消息的事件序号交给原生 Fork。DSH 将边界推进到该消息所在完整轮次的 `turn/end`，随后包含下一轮 `turn/start` 前的独立尾随事件。
 
-这里的来源是 Clip 所在的父 Session，不是 Clip 正文本身。新 Session 的 header 记录该父 Session 和 seed 长度，DSH 以普通会话历史投影并显示 seed；插件不复制、伪造或隐藏这些消息，只渲染继承横幅、来源入口和分叉分隔线。
+这里的来源是 Clip 所在的父 Session，不是 Clip 正文本身。新 Session 的 header 记录该父 Session 和 `isSeeded`，精确继承长度由 inspection 的 `inheritedEventCount` 表示。DSH 以普通会话历史投影并显示 seed；插件不复制、伪造或隐藏这些消息，只渲染继承横幅、来源入口和分叉分隔线。
 
 记录衍生关系时，Host 再次读取来源与子 Session：
 
 - `parentSession` 必须等于主要来源 Session；
-- `seedLength` 必须精确等于按上述规则计算的 cut；
-- 仅枝签 Session 的 `parentSession` 和 `seedLength` 必须都不存在。
+- `isSeeded` 必须为 true，`inheritedEventCount` 必须精确等于按上述规则计算的 cut；
+- 仅枝签 Session 必须没有 `parentSession`，`isSeeded` 必须为 false，`inheritedEventCount` 必须为 0。
 
 因此插件不会把一次失败或错误边界的 Fork 伪装成成功关系。
 
@@ -154,7 +154,7 @@ DSH 的公开 `InputActions.setDraft()` 只接受完整新 draft，并通过公�
 
 ## 已知兼容性边界
 
-- 插件以 DSH `0.1.2-alpha.2` 的已导出 API 和 Slot contract 为目标。
+- 插件以 DSH `0.1.2-alpha.5` release tag 的已导出 API 和 Slot contract 为目标；同版本字符串的后续 `master` 源码不属于这个发布目标。
 - Composer 引用依赖 `@deepseek-ai/dsh-client-ui-input-trigger` 的 `ReferenceInsert`、`InputTriggerSource.codec` 和 `SessionInput.insertReference()`；任一能力缺失都会让 Client 插件在装载或构建阶段失败，不会回退为可见全文草稿。
 - API Session Controller 的 `ISessions` 公开 `create`、`fork`、`open`、`binding` 与 `scope`。插件直接调用这些接口，并且不会通过可能复用既有空白 Session 的 Workspace 导航动作实现“仅枝签”。
 - `storageDomain` 不提供二级索引 API；当前全文搜索在 Workspace 可见 Clip 集合上执行有界本地扫描。若大规模数据需要倒排索引，应在后续 schema version 中增加插件自有索引记录，而不是绕过 storage domain。

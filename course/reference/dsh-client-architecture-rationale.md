@@ -1,6 +1,6 @@
 # DSH Client 架构设计解读
 
-本页专门回答 DSH `0.1.2-alpha.2` Client 为什么由多个明确所有者组成，以及这种设计给插件开发带来的收益和代价。它不是包名迁移表；需要查“BranchMark 引入哪个包”时看[依赖矩阵](dsh-dependency-map.md)，需要执行升级时看[兼容性清单](compatibility-and-limitations.md)。
+本页专门回答 DSH `0.1.2-alpha.5` Client 为什么由多个明确所有者组成，以及这种设计给插件开发带来的收益和代价。它不是包名迁移表；需要查“BranchMark 引入哪个包”时看[依赖矩阵](dsh-dependency-map.md)，需要执行升级时看[兼容性清单](compatibility-and-limitations.md)。
 
 ## 证据边界
 
@@ -12,7 +12,7 @@
 | 当前实现事实 | package README、公开类型、profile composition 与测试可直接观察 | 用于说明 API、所有者和运行时关系 |
 | BranchMark 工程解读 | 从前两类证据推导对本插件的影响 | 只说明插件为什么这样接入，不冒充 DSH 作者原话 |
 
-课程版本锚点 `0a53fb55bea101816fa226bb964ae2bed71c343b` 的源码和 DSH 自己的 implemented Agent Notes 是本页依据；搜索索引或未固定版本的页面只用于发现资料，不能覆盖这一版本的源码事实。
+课程版本锚点 `db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5` 的源码和 DSH 自己的 implemented Agent Notes 是本页依据；搜索索引或未固定版本的页面只用于发现资料，不能覆盖这一版本的源码事实。
 
 ## 一句话结论
 
@@ -34,7 +34,7 @@ ui-renderer
 business Slot component
 ```
 
-这个分层由 DSH 的 [Client Session、Conversation 与 UI 所有权决策](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/.agents/notes/implemented/architecture/2026-08-20-client-session-conversation-ownership.md)明确记录。该决策还明确拒绝保留 Runtime facade，因为聚合入口会继续成为依赖中心，并允许新代码绕过领域所有者。
+这个分层由 DSH 的 [Client Session、Conversation 与 UI 所有权决策](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/.agents/notes/implemented/architecture/2026-08-20-client-session-conversation-ownership.md)明确记录。该决策还明确拒绝保留 Runtime facade，因为聚合入口会继续成为依赖中心，并允许新代码绕过领域所有者。
 
 ## 1. 为什么删除聚合 Client Runtime
 
@@ -67,7 +67,7 @@ BranchMark 因此不应该寻找“新的 `client-runtime` 替代包”。正确
 | UI Renderer | Slot registry、scope binding、observable→hook、React root | 任何 Session/Workspace/Conversation 业务规则 |
 | Client Store | React-free snapshot/store 基础 | Session、Workspace、Remote stream 与连接 generation |
 
-当前接口和限制分别由 [Session Controller README](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/api/session-controller/README.md)、[Workspace Controller README](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/api/workspace-controller/README.md)、[UI Conversation README](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/client/ui-conversation/README.md)和 [UI Chat README](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/client/ui-chat/README.md)定义。
+当前接口和限制分别由 [Session Controller README](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/packages/api/session-controller/README.md)、[Workspace Controller README](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/packages/api/workspace-controller/README.md)、[UI Conversation README](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/packages/client/ui-conversation/README.md)和 [UI Chat README](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/packages/client/ui-chat/README.md)定义。
 
 这种拆分的核心收益是“一份事实只有一个 owner”。跨领域决策可以同时读取两个 source 后立即发出命令，但不把组合结果写回第三份长期 snapshot。例如 Workspace UI 可以读取 Workspace 和 Session 列表决定打开哪个 Session，却不需要发明一个同时复制两类实体的 WorkspaceRuntime。
 
@@ -88,7 +88,7 @@ API Controller 面向协议和领域生命周期。它需要在没有 React 的�
 
 Session Controller 只维护连续的逻辑事件窗口；它不解释 Assistant、Tool、Compaction、Retry 或 BranchMark 的 `session/end-seed`。UI Conversation 负责 target-neutral assembly：按稳定业务 id 匹配事件、维护 Context 与 Turn/Step location，并为已注册 target 构建 snapshot。UI Chat 是其中一个 target，拥有 Chat node、顺序、selection 和 renderer；Trajectory 可以用同一事件窗口构建不同投影。
 
-DSH 的 [Conversation node assembly 决策](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/.agents/notes/implemented/architecture/2026-08-09-client-conversation-node-assembly.md)记录了该设计解决的问题：如果 Session 或 React renderer 直接解释所有业务事件，新增一种节点就要修改中央 switch、历史回放、缓存和 React 分组；运行中的 Assistant/Tool 在完成时还可能跨 React parent 移动并被重挂载。
+DSH 的 [Conversation node assembly 决策](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/.agents/notes/implemented/architecture/2026-08-09-client-conversation-node-assembly.md)记录了该设计解决的问题：如果 Session 或 React renderer 直接解释所有业务事件，新增一种节点就要修改中央 switch、历史回放、缓存和 React 分组；运行中的 Assistant/Tool 在完成时还可能跨 React parent 移动并被重挂载。
 
 带 key 的 Chat snapshot 把身份和位置分开：
 
@@ -121,7 +121,7 @@ BranchMark 的 `sessionSnapshot()` 每次从官方 binding 获取当前 snapshot
 
 ## 6. 为什么跨 feature 协作改用 Service、Slot 与 type-only import
 
-DSH 的 [Client 跨包值依赖决策](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/.agents/notes/implemented/process/2026-08-23-client-cross-package-value-dependencies.md)指出，feature package 之间的 runtime value import 会把普通依赖变成同步 module-table 装载顺序约束。即使 manifest 用 external 声明顺序，feature 仍然在运行时绑定到另一个 feature 的实现和生命周期。
+DSH 的 [Client 跨包值依赖决策](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/.agents/notes/implemented/process/2026-08-23-client-cross-package-value-dependencies.md)指出，feature package 之间的 runtime value import 会把普通依赖变成同步 module-table 装载顺序约束。即使 manifest 用 external 声明顺序，feature 仍然在运行时绑定到另一个 feature 的实现和生命周期。
 
 当前分类规则是：
 
@@ -139,7 +139,7 @@ BranchMark 遵循相同思路：`BranchMarkClient` 是插件自己的跨 DSH 能
 
 ## 7. 为什么 DSH 统一 Remote failure
 
-DSH 的 [ctx.remote failure 决策](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/.agents/notes/implemented/architecture/2026-08-28-ctx-remote-failure-vocabulary.md)把各领域自己的 error class、mapping function 和 carrier code table 收敛为一个 merge-extensible `RemoteErrorDetailsMap`、一个 `RemoteError` class 和 `<domain>/<reason>` code。Host 在失败点抛出，Gateway 编码 `{ code, message, details }`，Client 通过 `RemoteResult<T>` 或 `isRemoteFailure()` 消费。
+DSH 的 [ctx.remote failure 决策](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/.agents/notes/implemented/architecture/2026-08-28-ctx-remote-failure-vocabulary.md)把各领域自己的 error class、mapping function 和 carrier code table 收敛为一个 merge-extensible `RemoteErrorDetailsMap`、一个 `RemoteError` class 和 `<domain>/<reason>` code。Host 在失败点抛出，Gateway 编码 `{ code, message, details }`，Client 通过 `RemoteResult<T>` 或 `isRemoteFailure()` 消费。
 
 这项设计解决了三个问题：
 
@@ -149,7 +149,7 @@ DSH 的 [ctx.remote failure 决策](https://github.com/deepseek-ai/deepseek-harn
 
 结果是新增 DSH domain failure 通常只需要一次 declaration merge 和一次 throw，`details` 会随 code 在 TypeScript 中自动收窄；未分类异常只在 Gateway 一处折叠为 `gateway/internal`，不会被伪装成看似正常的业务拒绝。
 
-BranchMark 当前仍有两层结果：外层是 DSH Gateway 的 `RemoteResult`，内层是插件自己的 `ClipSuccess | ClipRejected`。[`BranchMarkClient.unwrap()`](../../packages/client/src/domain/client.ts)集中处理这两层，避免组件重复判断；但内层结果是 BranchMark 的协议选择，不是 DSH alpha.2 要求。若从零设计一个只面向当前 DSH 的新 Remote namespace，可以让 Host 在业务失败点使用 DSH `RemoteError`，使方法直接产生单层 `RemoteResult<T>`。
+BranchMark 当前仍有两层结果：外层是 DSH Gateway 的 `RemoteResult`，内层是插件自己的 `ClipSuccess | ClipRejected`。[`BranchMarkClient.unwrap()`](../../packages/client/src/domain/client.ts)集中处理这两层，避免组件重复判断；但内层结果是 BranchMark 的协议选择，不是 DSH alpha.5 要求。若从零设计一个只面向当前 DSH 的新 Remote namespace，可以让 Host 在业务失败点使用 DSH `RemoteError`，使方法直接产生单层 `RemoteResult<T>`。
 
 这一区别值得保留在课程里：适配最新 API 不等于自动采用最新设计的每项收益。BranchMark 已经使用统一的 `ctx.remote` Client surface，但其业务错误 DTO 仍可在未来单独简化。
 
@@ -214,7 +214,7 @@ BranchMark 不提供旧布局检测或双版本 import。package import、declar
 | 展示通过 additive Slots 贡献 | Dock、Sidebar、Composer、Header、Chat divider 均注册到现有 Slot |
 | 组件不复制 DSH entity state | 组件接收 standard props、branded ids、BranchMark controller 与 integration module |
 | 显式 composition | Bundle inject 列出 Gateway、Controller、adapter、target 和 renderer |
-| 单版本依赖图 | 所有 DSH package 精确固定到 `0.1.2-alpha.2`，不保留 rc.2 fallback |
+| 单版本依赖图 | 所有 DSH package 精确固定到 `0.1.2-alpha.5`，不保留 rc.2 fallback |
 
 这套结构让下一次 DSH Client 重构主要集中在 Browser assembly、`BranchMarkClient`、Slot-facing types 和 Bundle manifest。它不能消除预发布 API 变化，但能把变化限制在真正跨宿主能力的模块，而不是扩散到每个 React component。
 
@@ -233,12 +233,12 @@ BranchMark 不提供旧布局检测或双版本 import。package import、declar
 
 ## 14. 原始资料阅读顺序
 
-1. [Client Session、Conversation 与 UI 所有权层](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/.agents/notes/implemented/architecture/2026-08-20-client-session-conversation-ownership.md)：本页最主要的“为什么”来源。
-2. [Conversation business-node assembly 与 keyed Chat snapshot](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/.agents/notes/implemented/architecture/2026-08-09-client-conversation-node-assembly.md)：稳定节点、增量回放和 target ownership 的算法依据。
-3. [Client 跨 package value dependency 分类](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/.agents/notes/implemented/process/2026-08-23-client-cross-package-value-dependencies.md)：Service、Slot、type-only import 的选择规则。
-4. [一个 ctx.remote failure vocabulary](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/.agents/notes/implemented/architecture/2026-08-28-ctx-remote-failure-vocabulary.md)：错误所有权、跨 realm discrimination 和统一 Client surface。
-5. [Dynamic Client render 与 attachment ownership](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/.agents/notes/implemented/architecture/2026-08-17-dynamic-client-render-and-attachment-ownership.md)：动态 renderer、Slot composition 和 plugin lifecycle。
-6. [Conversation subsystem](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/subsystems/conversation.md)：实现一个新 Conversation definition/target 时的当前 contract。
+1. [Client Session、Conversation 与 UI 所有权层](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/.agents/notes/implemented/architecture/2026-08-20-client-session-conversation-ownership.md)：本页最主要的“为什么”来源。
+2. [Conversation business-node assembly 与 keyed Chat snapshot](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/.agents/notes/implemented/architecture/2026-08-09-client-conversation-node-assembly.md)：稳定节点、增量回放和 target ownership 的算法依据。
+3. [Client 跨 package value dependency 分类](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/.agents/notes/implemented/process/2026-08-23-client-cross-package-value-dependencies.md)：Service、Slot、type-only import 的选择规则。
+4. [一个 ctx.remote failure vocabulary](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/.agents/notes/implemented/architecture/2026-08-28-ctx-remote-failure-vocabulary.md)：错误所有权、跨 realm discrimination 和统一 Client surface。
+5. [Dynamic Client render 与 attachment ownership](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/.agents/notes/implemented/architecture/2026-08-17-dynamic-client-render-and-attachment-ownership.md)：动态 renderer、Slot composition 和 plugin lifecycle。
+6. [Conversation subsystem](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/subsystems/conversation.md)：实现一个新 Conversation definition/target 时的当前 contract。
 
 ## 15. 检索练习
 

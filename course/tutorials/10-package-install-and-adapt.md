@@ -86,7 +86,7 @@ window.__ModuleLoader__.load({
 })
 ```
 
-React 与 DSH Browser packages 保持 external，由 `window.__ModuleLoader__` 同步 `require`；Markdown projection 等插件专用依赖则打入 `client.js`。`dsh.client.inject` 描述 factory arrival 的依赖边，但不规定 Cordis apply 顺序；Client Modules 扫描 package、计算 rev，并通过 `/plugins/<id>/client.js?rev=...` 提供文件。官方机制见 [Client Modules 文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/subsystems/client-modules.md)。
+React 与 DSH Browser packages 保持 external，由 `window.__ModuleLoader__` 同步 `require`；Markdown projection 等插件专用依赖则打入 `client.js`。`dsh.client.inject` 描述 factory arrival 的依赖边，但不规定 Cordis apply 顺序；Client Modules 扫描 package、计算 rev，并通过 `/plugins/<id>/client.js?rev=...` 提供文件。官方机制见 [Client Modules 文档](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/subsystems/client-modules.md)。
 
 普通 ESM 浏览器文件即使能在本地 bundler 打开，也不满足 DSH 当前 lazy-CJS module table 的格式。
 
@@ -124,7 +124,7 @@ pnpm --dir packages/bundle pack --pack-destination ../../dist
 不要根据旧文档硬编码 tarball 名；从 `dist/` 选择本次命令刚生成且版本与 `packages/bundle/package.json` 一致的文件。检查发布内容：
 
 ```sh
-tar -tf /absolute/path/to/dsh-branchmark-0.1.2-alpha.2.tgz
+tar -tf /absolute/path/to/dsh-branchmark-0.1.2-alpha.5.tgz
 ```
 
 应包含 `package/lib/index.js`、`client.js`、Typert Host/Remote、声明、source maps、`cordis.patch.yml`、README、LICENSE 与 package.json；不应包含开发测试、整个 monorepo 或 `node_modules`。
@@ -136,7 +136,7 @@ tar -tf /absolute/path/to/dsh-branchmark-0.1.2-alpha.2.tgz
 ```sh
 CLIP_COURSE_HOME="$(mktemp -d)"
 export DSH_HOME="$CLIP_COURSE_HOME"
-dsh plugin --profile clip-course add /absolute/path/to/dsh-branchmark-0.1.2-alpha.2.tgz
+dsh plugin --profile clip-course add /absolute/path/to/dsh-branchmark-0.1.2-alpha.5.tgz
 dsh --profile clip-course --dump-config
 ```
 
@@ -186,7 +186,7 @@ DSH patch 后层覆盖同 id row 时，`config` 整体替换，不做 key 级 de
 
 - Cordis Service/inject/effect：Host 能力和生命周期。
 - `storageDomain`：Clip 与 relation 本地数据。
-- `sessionPersistence.inspect`、`sessions.get`：来源证明、header 验证和 recall append。
+- alpha.2 的 `sessionPersistence.inspect`、`sessions.get`：来源证明、header 验证和 recall append；master 把第一项换成显式关闭的只读 `SessionHandle`。
 - API Session Controller 的 `ISessions.fork/create/open/binding`：普通衍生 Session。
 - LLM/FS/Web services：Side Chat 直接模型流与固定只读工具。
 - Typert/API Gateway：Browser→Host typed Remote。
@@ -201,12 +201,14 @@ DSH patch 后层覆盖同 id row 时，`config` 整体替换，不做 key 级 de
 
 DSH 处于预发布阶段，升级时把全部 `@deepseek-ai/dsh-*` 作为一组更新，然后依次核对：
 
+先固定 release tag commit 与实际 master commit。二者即使写着同一个 package version，也可能不是同一组导出；本课程已经遇到 npm alpha.5 仍有 `inspect()`、同版本字符串的后续 master 已改为 `SessionHandle` 的情况。完整案例见[第 13 章](13-dsh-prerelease-upgrade.md)。
+
 1. Remote decorator/generator、四个 artifact 与 `$mount`。
-2. `ISessions.create/fork`、Host fork turn-boundary、SessionHeader 与 `session/end-seed`。
+2. `ISessions.create/fork`、Host fork turn-boundary、`SessionHeader`、精确 inherited cut 与 `session/end-seed`。
 3. Chat node data 与 `[data-chat-flow-key]` selection anchor。
-4. 五个 Slot 的名字、props、scope、render site，以及 Input Trigger service contract。
+4. 五个 Slot 的名字、props、scope、render site、`useInput` standard prop，以及 Input Trigger service contract。
 5. `dsh.client` manifest、ModuleLoader wrapper 和 client route。
-6. storage domain、Workspace、LLM、FS、Web 方法签名与默认 providers。
+6. Session persistence 的 inspection/handle 生命周期，以及 storage domain、Workspace、LLM、FS、Web 方法签名与默认 providers。
 7. clean build、tarball自包含检查、独立 profile 实装和真实模型验收。
 
 完整清单位于[兼容性与限制](../reference/compatibility-and-limitations.md)。类型检查只能发现公开类型变化，发现不了 turn boundary、默认 provider、DOM selector 或 config merge 语义变化。

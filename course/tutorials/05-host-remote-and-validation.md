@@ -17,7 +17,7 @@ export class BranchMarkService extends Service {
 }
 ```
 
-Cordis 的 `inject` 不只是文档。缺少必需服务时，插件不会在一个半可用状态下继续运行。服务初始化时打开 domain，并用 `ctx.effect()` 注册 domain 与 Side Chat runtime 的反向清理；相关基础语义见 DSH 的 [Cordis primer](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/cordis-primer.md)。
+Cordis 的 `inject` 不只是文档。缺少必需服务时，插件不会在一个半可用状态下继续运行。服务初始化时打开 domain，并用 `ctx.effect()` 注册 domain 与 Side Chat runtime 的反向清理；相关基础语义见 DSH 的 [Cordis primer](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/cordis-primer.md)。
 
 ## 2. 配置在加载时完成校验
 
@@ -54,7 +54,7 @@ Browser: ctx.remote.$mount(branchmarkRemote)
 ctx.remote.branchmark.create(...)
 ```
 
-生成链的配置见 [`packages/host/tsdown.config.ts`](../../packages/host/tsdown.config.ts)，官方约束见 [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/api-gateway.md)。Remote 方法应使用可生成的公开 DTO，避免把 Cordis service、class instance、函数或隐式 closure 放进 wire 类型。
+生成链的配置见 [`packages/host/tsdown.config.ts`](../../packages/host/tsdown.config.ts)，官方约束见 [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/api-gateway.md)。Remote 方法应使用可生成的公开 DTO，避免把 Cordis service、class instance、函数或隐式 closure 放进 wire 类型。
 
 ## 5. 理解两层结果封装
 
@@ -72,7 +72,7 @@ return transport.value.value
 
 外层是 DSH Gateway/Typert transport 结果，表示模块、连接、参数解码或调用是否成功；内层是 BranchMark 业务结果，表示 Workspace、来源、字段与状态是否满足规则。不要把业务拒绝实现成未分类 throw，也不要在 UI 中把所有失败都显示成“网络错误”。
 
-DSH alpha.2 自身进一步统一了 Remote failure：所有领域共享一个 merge-extensible code/details 表和 `RemoteError`，code 使用 `<domain>/<reason>`，Client/Host/Worker 跨 realm 时按结构标记与 code 判断，而不依赖可能失效的 `instanceof`。这样新增 DSH failure 不再同时维护领域 error class、carrier 表和 consumer cast，未分类异常也只在 Gateway 一处折叠为 `gateway/internal`。官方动机见 [ctx.remote failure Agent Note](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/.agents/notes/implemented/architecture/2026-08-28-ctx-remote-failure-vocabulary.md)。
+DSH alpha.2 自身进一步统一了 Remote failure：所有领域共享一个 merge-extensible code/details 表和 `RemoteError`，code 使用 `<domain>/<reason>`，Client/Host/Worker 跨 realm 时按结构标记与 code 判断，而不依赖可能失效的 `instanceof`。这样新增 DSH failure 不再同时维护领域 error class、carrier 表和 consumer cast，未分类异常也只在 Gateway 一处折叠为 `gateway/internal`。官方动机见 [ctx.remote failure Agent Note](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/.agents/notes/implemented/architecture/2026-08-28-ctx-remote-failure-vocabulary.md)。
 
 BranchMark 的内层 `ClipSuccess | ClipRejected` 是插件自己的协议选择，不是 DSH 要求。当前 [`BranchMarkClient.unwrap()`](../../packages/client/src/domain/client.ts)把 DSH 外层和 BranchMark 内层集中在一个边界处理，组件不会看到两层判断；如果从零设计一个只面向当前 DSH 的 Remote namespace，也可以在 Host 业务失败点直接使用 DSH `RemoteError`，让每个调用只保留一层 `RemoteResult<T>`。两种层次与取舍见[架构设计解读](../reference/dsh-client-architecture-rationale.md#7-为什么-dsh-统一-remote-failure)。
 
@@ -99,6 +99,8 @@ deriveEventMessage，核对 messageId / role / turn
     ↓
 storage put
 ```
+
+这里的 `sessionPersistence.inspect()` 是课程 alpha.2 基线的读取入口。alpha.5 仍提供 `inspect()`，但把精确 fork cut 放在 `inspection.inheritedEventCount`；2026-09-02 master 已删除 `inspect()`，改为 `open(id, 'read')`、`handle.read()` 与 `finally handle.close()`。可信校验步骤不变，资源所有权和 lineage 字段必须按[第 13 章](13-dsh-prerelease-upgrade.md)迁移。
 
 关键实现位于 [`resolveSource` 与 `resolvePersistedSource`](../../packages/host/src/index.ts)。用户消息还要求事件来源为真正的 `source.kind === 'user'`，避免插件自己追加的 recall 被伪装成普通用户输入。
 

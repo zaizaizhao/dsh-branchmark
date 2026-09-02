@@ -26,13 +26,19 @@
 | complete reorder | 用目标集合全部 active Clip id 表达的替换顺序。Host 拒绝局部成员和跨置顶组顺序，再写入连续 `sortIndex`。 |
 | primary Clip | full-fork 或 Side Chat 用来决定来源 Session、消息位置、完整 turn 与初始模型 route 的主要摘录。其余 Clip 只是显式附件。 |
 | canonical text | Host 与 Client 共同采用的 DSH message 文本投影：本插件把 text/reasoning blocks 以空行连接。range 必须切出 exact excerpt。 |
-| event seq | Session append-only log 中连续的事件序号。Clip 保存来源消息的 seq，而不是 DOM 索引。 |
+| event seq | Session append-only log 中连续的事件序号。Clip 保存来源消息的 seq，而不是 DOM 索引；alpha.5 起，同进程类型使用 `SessionSeq`。 |
+| SessionSeq | DSH alpha.5/master 中指向一条已存在 Session event 的 branded number。Wire 与磁盘仍是普通 number，进入同进程领域后再验证并加 brand。 |
+| SessionLogOffset | DSH alpha.5/master 中指向日志间隙、读取 offset、事件总数或继承前缀长度的 branded number；它可以等于事件数，不能当作现存 event identity。 |
 | turn | DSH 从 `turn/start` 到 `turn/end` 的执行单位，可能包含多个 LLM step。full-fork 边界必须落在完整 turn 后。 |
 | full-fork | 调用 DSH 原生 fork，继承来源 Session 从开头到主要 Clip 所在完整 turn 的事件 seed，并产生 DSH parent lineage。 |
 | clips-only | 调用 DSH create 创建无 parent/seed 的新普通 Session，再把 Clip 使用快照作为 `recall` 消息写入日志。 |
 | derived Session | 经 full-fork 或 clips-only 流程创建、并有 BranchMark relation 的普通持久 Session。 |
 | parentSession | DSH `SessionHeader` 中的父 Session id，是 fork lineage 的权威字段。 |
-| seedLength | child header 中继承的前缀事件数量。BranchMark 用它验证 full-fork 边界。 |
+| seedLength | BranchMark alpha.2 所用的 child logical header 字段，表示继承前缀事件数。alpha.5/master 的逻辑 `SessionHeader` 不再暴露它；v0 JSONL 编码仍保留该物理字段以兼容旧日志。 |
+| isSeeded | DSH alpha.5/master 的 `SessionHeader` lineage 位，只回答 Session 是否含 fork-inherited prefix，不携带精确切点。 |
+| inheritedEventCount | DSH alpha.5/master 在含日志正文的 observation、Session 或 handle 上提供的精确继承前缀长度，类型为 `SessionLogOffset`。 |
+| SessionInspection | header、`inheritedEventCount` 与完整事件日志组成的不可变读取结果。alpha.5 可由 `sessionPersistence.inspect()` 获得；当前 master 由读 handle 的字段与 `read()` 组合得到。 |
+| SessionHandle | 当前 DSH master 中由 `sessionPersistence.create/open` 返回的逐 Session 通道。读 handle 可并存，写 handle 独占；调用方必须在 `finally` 中 `close()`。 |
 | `session/end-seed` | Seeded Session 构造后追加的 log-only marker，指示本 lifecycle 的 live write 起点。 |
 | ClipUsage | 创建衍生 Session 时冻结的 excerpt/note 快照；删除原 Clip 后仍保留。 |
 | DerivedSessionRelation | 插件记录的 child、mode、primary/source 与 attached Clip ids；它补充 DSH lineage，但不替代它。 |

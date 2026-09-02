@@ -5,7 +5,7 @@
 ## 学习目标
 
 - 从 primary Clip 的 message 位置分叉到完整 turn。
-- 用 DSH `parentSession/seedLength/session/end-seed` 证明 lineage。
+- 用目标 DSH 的 `parentSession`、seeded 标记、精确 inherited cut 与 `session/end-seed` 证明 lineage。
 - 为 clips-only 创建无 parent 的真正新 Session。
 - 把 relation/usages 存入插件 domain，把 recall 写入模型可见 Session log。
 - 支持创建并打开与创建并发送，不污染 Composer。
@@ -13,6 +13,8 @@
 ## 先修与准备
 
 完成实验 1，准备一个至少三轮且全部持久化的来源 Session。创建三条 Clip：第 2 轮 assistant 上一条作为 primary，第 1 轮或其他消息一条作为附件，另一个来源 Session 一条作为跨来源附件。为至少两条加 note。
+
+沿用实验 1 的 alpha.5 版本轨道：使用 `isSeeded + inspection.inheritedEventCount`。alpha.2 的 `seedLength` 与 2026-09-02 master 的 `handle.inheritedEventCount` 只用于第 13 章对照；不要在同一个实现里做三套运行时探测，本实验要求单目标、精确依赖。
 
 ## 任务 1：定义两种 mode
 
@@ -46,9 +48,9 @@ clips-only 调用 API Session Controller 的 `sessions.create({ workspaceId })`�
 
 ## 任务 3：Host 验证 child 事实
 
-对 child `sessionPersistence.inspect()`。clips-only 要求 header 无 `parentSession/seedLength`；full-fork 要求 parent 等于 primary source Session，seedLength 等于当前 DSH fork 算法对该 source event 的预期值。
+通过 `sessionPersistence.inspect()` 读取 child 的 header、events 与精确 inherited cut。clips-only 要求无 `parentSession`、`isSeeded=false`、cut 为 0；full-fork 要求 parent 正确、`isSeeded=true`、`inheritedEventCount` 等于预期。
 
-必须读目标 DSH [`api/session-controller`](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/api/session-controller/src/commands.ts) 与 [`SessionHeader`](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/core/session/src/types.ts) 的当前源码定位；不要假设课程版本和你的目标版本一致。
+必须读目标 DSH [`api/session-controller`](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/packages/api/session-controller/src/commands.ts) 与 [`SessionHeader`](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/packages/core/session/src/types.ts) 的当前源码定位；不要假设课程版本和你的目标版本一致。
 
 检查点：创建一个无关 child 后伪造 full-fork record，Host 返回 `derived-session-mismatch`；relation table 不新增记录。
 
@@ -56,7 +58,7 @@ clips-only 调用 API Session Controller 的 `sessions.create({ workspaceId })`�
 
 先把 relation + usages 放进同一个 KV value，再向 child append plugin recall user message。Recall 正文按 attachment 顺序包含 excerpt 与被选择的 note。
 
-检查点：inspect child events，最后的 recall source 为 `kind=plugin`、`plugin=dsh-branchmark`、`form=recall`；模型输入可以从 event log 重建，Composer draft 仍为空。
+检查点：读取 child events，最后的 recall source 为 `kind=plugin`、`plugin=dsh-branchmark`、`form=recall`；模型输入可以从 event log 重建，Composer draft 仍为空。
 
 额外设计题：storage put 成功而 Session append 失败时如何恢复？当前实现没有跨系统事务。为你的练习实现至少写一份恢复设计，可选 `preparing/ready + retry` 或对账 repair；不要用“不会失败”回答。
 
@@ -82,7 +84,7 @@ binding.session.prompt([{ type: 'text', text: question }], 'queue')
 | --- | --- | --- |
 | 新 Session id | 是 | 是 |
 | DSH `parentSession` | primary source Session | 无 |
-| DSH `seedLength` | 截止 source 完整 turn | 无 |
+| DSH 精确 inherited cut | 截止 source 完整 turn | `0`/无继承 |
 | `session/end-seed` | 是 | 否 |
 | Plugin relation/usages | 是 | 是 |
 | Plugin recall | 是 | 是 |
@@ -95,7 +97,7 @@ binding.session.prompt([{ type: 'text', text: question }], 'queue')
 
 Client launch 对照 [`domain/client.ts`](../../packages/client/src/domain/client.ts)，Host header 验证对照 [`recordDerivedSession`](../../packages/host/src/index.ts)，lineage 对照 [`domain/lineage.ts`](../../packages/client/src/domain/lineage.ts)，divider 对照 [`ForkDivider.tsx`](../../packages/client/src/components/ForkDivider.tsx)。
 
-若你发现需要复制父消息文本来实现 full-fork，请停下来重读 DSH [Session 文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/subsystems/session.md)；正确路径应由宿主 fork seed。
+若你发现需要复制父消息文本来实现 full-fork，请停下来重读 DSH [Session 文档](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/subsystems/session.md)；正确路径应由宿主 fork seed。
 
 ## 复盘
 

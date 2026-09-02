@@ -5,6 +5,7 @@ import { Buffer } from 'node:buffer'
 import { Context, Service } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
 import { createUserMessage, type Message } from '@deepseek-ai/dsh-llm'
+import { SessionLogOffset } from '@deepseek-ai/dsh-session'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SessionInspection } from '@deepseek-ai/dsh-session-persistence'
@@ -506,7 +507,7 @@ export class BranchMarkService extends Service {
     } catch {
       return rejected({ code: 'session-not-found', sessionId: request.derivedSessionId })
     }
-    let expectedSeedLength: number | undefined
+    let expectedInheritedEventCount: SessionLogOffset | undefined
     if (primary?.source.kind === 'session-message') {
       let sourceInspection: SessionInspection
       try {
@@ -514,12 +515,12 @@ export class BranchMarkService extends Service {
       } catch {
         return rejected({ code: 'session-not-found', sessionId: primary.source.sessionId })
       }
-      expectedSeedLength = this.expectedForkSeedLength(sourceInspection.events, primary.source)
-      if (expectedSeedLength === undefined) {
+      expectedInheritedEventCount = this.expectedForkInheritedEventCount(sourceInspection.events, primary.source)
+      if (expectedInheritedEventCount === undefined) {
         return rejected({ code: 'source-mismatch', sessionId: primary.source.sessionId, eventSeq: primary.source.eventSeq })
       }
     }
-    if (!this.matchesDerivedHeader(request.mode, inspection, primary?.source, expectedSeedLength)) {
+    if (!this.matchesDerivedHeader(request.mode, inspection, primary?.source, expectedInheritedEventCount)) {
       return rejected({ code: 'derived-session-mismatch', derivedSessionId: request.derivedSessionId })
     }
     const derivedSession = this.ctx.sessions.get(request.derivedSessionId)
@@ -725,21 +726,24 @@ export class BranchMarkService extends Service {
     mode: RecordDerivedSessionRequest['mode'],
     inspection: SessionInspection,
     source: SessionMessageClipSource | undefined,
-    expectedSeedLength: number | undefined,
+    expectedInheritedEventCount: SessionLogOffset | undefined,
   ): boolean {
     if (mode === 'clips-only') {
-      return inspection.meta.parentSession === undefined && inspection.meta.seedLength === undefined
+      return inspection.meta.parentSession === undefined
+        && !inspection.meta.isSeeded
+        && inspection.inheritedEventCount === 0
     }
     return source !== undefined
-      && expectedSeedLength !== undefined
+      && expectedInheritedEventCount !== undefined
       && inspection.meta.parentSession === source.sessionId
-      && inspection.meta.seedLength === expectedSeedLength
+      && inspection.meta.isSeeded
+      && inspection.inheritedEventCount === expectedInheritedEventCount
   }
 
-  private expectedForkSeedLength(
+  private expectedForkInheritedEventCount(
     events: readonly SessionEvent[],
     source: SessionMessageClipSource,
-  ): number | undefined {
+  ): SessionLogOffset | undefined {
     const sourceIndex = events.findIndex(event => event.seq === source.eventSeq)
     if (sourceIndex < 0) return undefined
     const boundaryIndex = events.findIndex((event, index) => index >= sourceIndex
@@ -747,7 +751,7 @@ export class BranchMarkService extends Service {
     if (boundaryIndex < 0) return undefined
     let cut = boundaryIndex + 1
     while (cut < events.length && events[cut]?.type !== 'turn/start') cut += 1
-    return cut
+    return SessionLogOffset(cut)
   }
 
   private requireClips(): KvTable<ClipId, Clip> {

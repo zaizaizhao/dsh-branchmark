@@ -14,11 +14,13 @@
 - 能用 API Session Controller 的 `ISessions.fork` 与 `ISessions.create` 创建两类普通衍生会话，并正确处理父子 lineage、seed 和 Clip 快照。
 - 能直接使用 `ctx.llm.stream`、`BlockAssembler`、`ctx.fs` 与 `ctx.web` 实现一个关闭即销毁、只读的 Side Chat。
 - 能将 Host、浏览器 Client、Typert 产物打进一个 Bundle tarball，安装到未修改源码的 DSH Web profile，并完成可复现验收。
+- 能把 npm release tag、对应 Git commit 与移动中的 `master` 分成不同目标，按源码与运行证据迁移 Session lineage、日志读取、Composer 和 persistence 接口。
 
 ## Constraints
 
-- 目标宿主是 DSH `0.1.2-alpha.2`，源码锚点为 `0a53fb55bea101816fa226bb964ae2bed71c343b`。
-- 插件版本为 `0.1.2-alpha.2`，只使用 DSH 已公开或已导出的扩展能力，不修改 DSH 核心源码。
+- 目标宿主是 DSH `0.1.2-alpha.5` release tag，源码锚点为 `db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5`。
+- 插件版本为 `0.1.2-alpha.5`，只使用 DSH 已公开或已导出的扩展能力，不修改 DSH 核心源码。
+- DSH alpha.2 只作为第 13 章的迁移起点；2026-09-02 的 `master` 是尚未发布的后续审计目标，不能与同号的 alpha.5 npm 包混用。
 - 课程以当前仓库源码、生成 API 与官方文档为依据；遇到版本差异时必须重新核对源码，不能假设兼容。
 - 课程使用 Markdown，并把顺序教程与查阅型参考分开。
 

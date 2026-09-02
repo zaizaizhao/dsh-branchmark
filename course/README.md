@@ -8,15 +8,17 @@
 
 | 项目 | 本课程核对版本 |
 | --- | --- |
-| DeepSeek Harness | `0.1.2-alpha.2` |
-| DSH Git commit | `0a53fb55bea101816fa226bb964ae2bed71c343b` |
-| BranchMark | `0.1.2-alpha.2` |
+| DeepSeek Harness | `0.1.2-alpha.5` |
+| DSH Git commit | `db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5` |
+| BranchMark | `0.1.2-alpha.5` |
 | Node.js | `^22.19.0 || >=24.0.0` |
 | pnpm | `11.7.0` |
 | TypeScript | `^6.0.3` |
 | React | `^18.2.0` |
 
-DSH 当前处于预发布阶段。课程中标为“当前导出”的能力不等于稳定 API；升级前先执行[兼容性审计](reference/compatibility-and-limitations.md)，不要用编译通过代替运行行为核对。
+这个表是当前 BranchMark 源码可以直接复现的发布基线，不是移动中的“最新 DSH”标签。第 13 章保留 alpha.2 到 alpha.5 的迁移过程，并把当日 [`master@49a606b`](https://github.com/deepseek-ai/deepseek-harness/tree/49a606bc5b5934603f22a26957a07dc799ab0291) 作为另一个独立目标；该 master 还需要迁移到 `SessionHandle` 持久化接口，不能用本课程的 alpha.5 构建替代。
+
+DSH 当前处于预发布阶段。课程中标为“当前导出”的能力不等于稳定 API；升级前先执行[兼容性审计](reference/compatibility-and-limitations.md)，再按[第 13 章](tutorials/13-dsh-prerelease-upgrade.md)建立目标版本适配，不要用相同版本字符串或编译通过代替运行行为核对。
 
 ## 先修知识
 
@@ -54,8 +56,9 @@ pnpm run check
 | 10 | [单包发布、安装与 DSH 适配](tutorials/10-package-install-and-adapt.md) | 能打出自包含 tarball，并安装到未修改源码的 Web profile |
 | 11 | [测试、调试与真实验收](tutorials/11-testing-debugging-and-release.md) | 能区分单元、构建产物、真实组合和带凭证 LLM 验收 |
 | 12 | [毕业项目：从空目录到可安装插件](tutorials/12-capstone-reproduction.md) | 能按检查点重建功能，不依赖复制现有目录 |
+| 13 | [进阶：跟随 DSH 预发布版本升级](tutorials/13-dsh-prerelease-upgrade.md) | 能区分 release tag 与移动中的 master，迁移 lineage、日志读取、Composer 与持久化接口，并制定安全发布版本 |
 
-建议按顺序学习。第 1–3 章建立 DSH 心智模型，第 4–6 章完成 Clip 主干，第 7 章完成持久衍生会话，第 8–9 章完成临时 Side Chat，第 10–12 章完成交付与独立复现。
+建议按顺序学习。第 1–3 章建立 DSH 心智模型，第 4–6 章完成 Clip 主干，第 7 章完成持久衍生会话，第 8–9 章完成临时 Side Chat，第 10–12 章完成交付与独立复现。第 13 章是进阶升级课；只有目标 DSH 不再是课程基线时才需要执行其中的迁移。
 
 ## 动手实验
 

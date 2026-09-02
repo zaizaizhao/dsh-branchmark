@@ -30,6 +30,8 @@ ctx.inject(['remote.branchmark'], (scope) => {
 
 Composer 引用不占用额外 Slot；插件向 `ctx.inputTriggers` 注册 `branchmark` source，并通过 `SessionInput.insertReference()` 写入原生 occurrence。完整注册见 [`client/index.tsx`](../../packages/client/src/client/index.tsx)。`shell.overlay` 的宿主容器本身允许 click-through，插件只让可交互区域接收 pointer event；不要把透明全屏根节点注册成阻塞层。
 
+版本边界：alpha.2 的 `conversation.input.left` 通过 `InputZone.input` owner prop 把输入快照交给按钮；alpha.5/master 已移除这个可变 owner prop，Slot entry 应从标准 `useInput` selector 订阅 `occurrences`，动作仍走稳定的 `inputActions`。DSH 这样可以让 memoized `InputBar` 只接收稳定 owner props，避免无关 shell render 创建新 React element 并击穿 memo。迁移代码见[第 13 章](13-dsh-prerelease-upgrade.md)。
+
 ## 3. UI controller 只拥有 Browser 状态
 
 [`BranchMarkUiController`](../../packages/client/src/domain/controller.ts) 是一个小型 external store，通过 `useSyncExternalStore` 供多个 Slot 共享。它保存 Dock mode/view/width、当前选区、Side Chat tabs、刷新 revision 和 toast；Composer occurrence 由 DSH 自己的 Session input state 拥有。
@@ -60,7 +62,7 @@ DOM 只告诉我们可见文字与节点位置。`BranchMarkClient` 先通过 `c
 - streaming/未 settled assistant 没有稳定 final anchor，因此不能摘录为持久来源。
 - hidden node、tool-only node 和无法解析 location 的 node 被跳过。
 
-实现位于 [`domain/selection.ts`](../../packages/client/src/domain/selection.ts)。这一步得到的是候选锚点，不是信任证明；Host 仍会 inspect 持久日志。
+实现位于 [`domain/selection.ts`](../../packages/client/src/domain/selection.ts)。这一步得到的是候选锚点，不是信任证明；Host 仍会读取并复核持久日志。当前 alpha.5 实现使用 `inspect()`，未发布 master 使用只读 `SessionHandle`。
 
 这里同时依赖 UI Conversation 和 UI Chat 是有意分层，不是重复取数。UI Conversation 只拥有 Session event window 到 target snapshot 的通用组装与 binding；UI Chat 拥有 Chat node 的具体类型、keyed store、顺序和 selection 语义。DSH 这样做能让 Chat、Trajectory 等 target 共享稳定 id、分页和增量回放机制，又不要求彼此共享最终 projection；新增 BranchMark node 也不需要修改 Session Controller 的中央 switch。算法动机与 keyed snapshot 收益见[架构设计解读](../reference/dsh-client-architecture-rationale.md#4-为什么-conversation-与-chat-分开)。
 

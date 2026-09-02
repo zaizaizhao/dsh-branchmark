@@ -15,12 +15,14 @@
 
 完成主线第 1–5 章，并确认空 Host/Client/Bundle 能 build。实验只实现 session-scope active Clip，不实现 UI、project scope、note、tag、trash、Fork 或 Side Chat。
 
+先选择一条版本轨道并写进实验 README：alpha.2/alpha.5 使用 `sessionPersistence.inspect()`；2026-09-02 master 使用 `sessionPersistence.open(id, 'read')`、`handle.read()` 与 `finally handle.close()`。后续任务里的“inspect”表示逻辑上的只读日志 observation，不要求在 master 上保留已删除的方法名。
+
 ## 约束
 
 - 必须复用 DSH `WorkspaceId`、`SessionId`、`MessageId`，只给 Clip 新建 branded id。
 - `excerpt` 与 source 创建后不可修改。
 - Client 不能提交 `reopenable/forkable`。
-- Host 必须 inspect persisted Session，不能调用 Client 回传的 message text 作为 authority。
+- Host 必须从目标版本的 persistence 读取 Session 日志，不能调用 Client 回传的 message text 作为 authority。
 - 所有 durable write 经 `storageDomain`，不能直接写 JSON 文件。
 - 业务拒绝返回 discriminated result，不用无分类异常表示“找不到来源”。
 
@@ -76,7 +78,7 @@ list({ workspaceId, ownerSessionId }) -> business result<Clip[]>
 
 1. Workspace 存在，且 `ownerSessionId` 属于 Workspace。
 2. `source.sessionId === ownerSessionId`。
-3. `sessionPersistence.inspect(source.sessionId)` 成功。
+3. persistence 的只读 observation 成功：alpha.2/alpha.5 调用 `inspect()`，master 打开并读取 read handle。
 4. `eventSeq` 对应 append surface 的 `user/message` 或 `assistant/message`。
 5. `deriveEventMessage` 后 id/role/turn 一致。
 6. canonical message text 的 `slice(range.start, range.end) === excerpt`。
@@ -97,6 +99,8 @@ list({ workspaceId, ownerSessionId }) -> business result<Clip[]>
 
 测试 transcript 应使用真实 DSH Session append event 序列，不能把 `inspect()` mock 成一个已经计算好的 message object。
 
+master 轨道把同一要求改写为：测试 fake 返回真实的 read handle，事件仍通过 handle 的 `read()` 取得，并断言成功与失败路径都关闭 handle。
+
 ## 验收标准
 
 ```text
@@ -110,7 +114,7 @@ list({ workspaceId, ownerSessionId }) -> business result<Clip[]>
 
 ## 提示与对照源码
 
-卡在事件到 message 的映射时，只查看 [`resolvePersistedSource`](../../packages/host/src/index.ts)；卡在 schema 时查看 [`spec.ts`](../../packages/host/src/spec.ts)；卡在生成链时查看 [`host tsdown config`](../../packages/host/tsdown.config.ts)与 DSH [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/api-gateway.md)。
+卡在事件到 message 的映射时，只查看 [`resolvePersistedSource`](../../packages/host/src/index.ts)；卡在 schema 时查看 [`spec.ts`](../../packages/host/src/spec.ts)；卡在生成链时查看 [`host tsdown config`](../../packages/host/tsdown.config.ts)与 DSH [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/api-gateway.md)。
 
 不要直接复制全部 `types.ts`，否则会把本实验尚未理解的 Side Chat/derived relation 类型一起带入。
 

@@ -15,7 +15,7 @@
 
 先完成实验 1，并让 Browser 能调用 `create/list/update/batchUpdate`。准备同一 Workspace 下两个普通 Session：Session A 至少有四条 session Clip，项目集合至少有三条 project Clip；两组中各置顶至少一条。另准备一条可删除或移入回收站的 Clip，用于恢复失败场景。
 
-复核目标 DSH 版本的 [UI Input Trigger 文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/client/ui-input-trigger/README.md)和 `SessionInput.insertReference()` 类型。若该版本的 occurrence、clipboard projection 或 CAS 参数不同，应先更新设计，不能用完整原文草稿冒充原生引用。
+复核目标 DSH 版本的 [UI Input Trigger 文档](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/packages/client/ui-input-trigger/README.md)和 `SessionInput.insertReference()` 类型。若该版本的 occurrence、clipboard projection 或 CAS 参数不同，应先更新设计，不能用完整原文草稿冒充原生引用。
 
 ## 任务 1：扩展兼容旧记录的 Clip schema
 

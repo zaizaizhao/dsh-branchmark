@@ -6,6 +6,25 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 
 尚无公开变化。
 
+## [0.1.2-alpha.5] - 2026-09-02
+
+### Changed
+
+- 将 alpha 通道整体更新为 DeepSeek Harness `0.1.2-alpha.5`，并把 BranchMark 直接使用的 DSH package、开发依赖、peer dependency 和发布检查固定到同一版本。
+- 衍生 Session 校验改用 `SessionHeader.isSeeded` 与 `SessionInspection.inheritedEventCount`，用 `SessionLogOffset` 明确表示完整分叉继承的日志前缀长度。
+- Composer 枝签入口改从 Session 标准 `useInput` selector 读取草稿和引用，继续通过稳定的 `inputActions` 删除引用，不依赖已移除的可变 owner snapshot。
+- 测试 persistence fixture 改用 `Session.inheritedEventCount` 与 `snapshotEvents()`，保持与 alpha.5 的 Session 读取接口一致。
+
+### Compatibility
+
+- 本版本只对应 DSH npm/tag `0.1.2-alpha.5`。它保留该发布版的 `sessionPersistence.inspect()`，不包含 DSH 后续 `master` 尚未发布的 `SessionHandle` persistence API。
+- `clip_explorer` domain、Clip 记录、备注、标签、回收站、衍生关系和 Side Chat 内存状态不需要数据迁移。
+
+### Documentation
+
+- README 和 Bundle README 同时列出 npm `latest` 的 `0.1.1-rc.2` 稳定组合与 npm `alpha` 的 `0.1.2-alpha.5` 组合，并更新源码构建、tarball 安装和真实 Profile 验收命令。
+- 发布说明按 `release/dsh-0.1.1-rc`、`release/dsh-0.1.2-alpha` 两条兼容通道维护，精确发布使用不可变 Git tag。
+
 ## [0.1.2-alpha.2] - 2026-09-01
 
 ### Changed
@@ -64,6 +83,7 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 
 - 衍生 Session 的 BranchMark 关系记录与 DSH `recall` 日志当前没有跨子系统事务。Host 在两次持久写入之间异常退出可能留下部分提交；插件不提供自动对账修复。
 
-[Unreleased]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.1.2-alpha.2...HEAD
+[Unreleased]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.1.2-alpha.5...HEAD
+[0.1.2-alpha.5]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.1.2-alpha.2...v0.1.2-alpha.5
 [0.1.2-alpha.2]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.1.1-rc.2...v0.1.2-alpha.2
 [0.1.1-rc.2]: https://github.com/zaizaizhao/dsh-branchmark/tree/v0.1.1-rc.2

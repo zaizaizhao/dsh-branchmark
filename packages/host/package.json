@@ -1,6 +1,6 @@
 {
   "name": "dsh-branchmark-host",
-  "version": "0.1.2-alpha.2",
+  "version": "0.1.2-alpha.5",
   "private": true,
   "description": "Host-side BranchMark storage, source validation, Side Chat, and conversation lineage for DeepSeek Harness",
   "type": "module",

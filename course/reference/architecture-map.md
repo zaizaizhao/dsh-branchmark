@@ -2,6 +2,8 @@
 
 本页是查阅型参考，回答“一个动作跨过了哪些模块、最后写到哪里”。实现顺序见[主线课程](../README.md#主线课程)，类型和方法细节见[Remote API](remote-api.md)，DSH Client 为什么采用这些所有者见[架构设计解读](dsh-client-architecture-rationale.md)。
 
+本图描述当前 BranchMark `0.1.2-alpha.5` 源码：持久日志通过 `sessionPersistence.inspect` 读取，lineage 使用 `SessionHeader.isSeeded` 与 `SessionInspection.inheritedEventCount`。未发布 master 保留 Host 复核、full-fork 与 recall 语义，但把读取入口改成 `SessionHandle`；迁移过程见[第 13 章](../tutorials/13-dsh-prerelease-upgrade.md)。
+
 ## 运行时组件
 
 ```text
@@ -123,10 +125,10 @@ selected Clips
   ├── full-fork
   │     ↓ ctx.sessions.fork({ sessionId: sourceSessionId, atSeq: sourceEventSeq })
   │   DSH Host extends cut to the first matching turn/end and trailing standalone events
-  │     ↓ child header: parentSession + seedLength
+  │     ↓ child metadata: parentSession + isSeeded + inheritedEventCount
   └── clips-only
         ↓ ctx.sessions.create({ workspaceId })
-      fresh header: no parentSession, no seedLength
+      fresh metadata: no parentSession, isSeeded=false, inheritedEventCount=0
 
 created SessionId
   ↓ remote.branchmark.recordDerivedSession
@@ -137,7 +139,7 @@ Host re-inspects child and source headers
   └── create-and-send → child binding.session.prompt(question, 'queue')
 ```
 
-DSH header 是 full-fork 父子关系的权威来源。插件关系表只能在 Host 确认 `parentSession` 和精确 `seedLength` 后写入。`clips-only` 不设置 DSH parent；它是一个根 Session，只和 Clip 使用记录有关。
+DSH Session metadata 是 full-fork 父子关系的权威来源。插件关系表只能在 Host 确认 `parentSession`、`isSeeded` 和精确 `inheritedEventCount` 后写入。`clips-only` 不设置 DSH parent；它是一个根 Session，只和 Clip 使用记录有关。
 
 Relation 与 usages 在一个 KV record 内共同提交，但随后的 Session recall append 属于另一个 durable subsystem，两步之间没有跨系统事务；失败窗口见[兼容性与限制](compatibility-and-limitations.md#跨-durable-subsystem-的提交限制)。
 

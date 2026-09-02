@@ -6,7 +6,7 @@ BranchMark 与 DeepSeek Harness 的预发布扩展点直接集成，因此只维
 
 | BranchMark | DeepSeek Harness | Security fixes |
 | --- | --- | --- |
-| `0.1.2-alpha.2` | `0.1.2-alpha.2` | Supported (`alpha`) |
+| `0.1.2-alpha.5` | `0.1.2-alpha.5` | Supported (`alpha`) |
 | `0.1.1-rc.2` | `0.1.1-rc.2` | Supported (`latest`) |
 | 其他或交叉组合 | 不同号 | Not supported |
 

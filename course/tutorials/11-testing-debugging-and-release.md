@@ -4,12 +4,12 @@
 
 ## 1. 当前自动化测试清单
 
-当前源码包含 36 个 Vitest case：
+当前源码包含 40 个 Vitest case：
 
 | 层 | 数量 | 已覆盖行为 |
 | --- | ---: | --- |
 | Host | 11 | Remote roster；source/forkable；伪造来源拒绝；visibility；note/trash/delete；batch；置顶与完整集合顺序；usage retention/recall；Side Chat 不改 Session；摘要；模型独立切换 |
-| Client domain | 24 | 原生 Composer 引用、选择顺序、draft mirror 恢复、提交 codec 与安全移除；命令胶囊、同组排序和卡片阅读控件；入口 UI；两类 launch 行为；多 Side Chat tabs；Dock preferences；lineage；普通/Markdown selection；卡片点击不会调用浏览器 `stop()` |
+| Client domain | 28 | 原生 Composer 引用、选择顺序、draft mirror 恢复、提交 codec 与安全移除；命令胶囊、同组排序和卡片阅读控件；入口 UI；两类 launch 行为；多 Side Chat tabs；Dock preferences；lineage；普通/Markdown selection；卡片点击不会调用浏览器 `stop()` |
 | Bundle | 1 | 单 Host row、client/typert/remote exports 与 manifest |
 
 测试名称可直接在 [`host spec`](../../packages/host/tests/branchmark.spec.ts)、[`client spec`](../../packages/client/tests/domain.spec.ts)和 [`bundle spec`](../../packages/bundle/tests/bundle.spec.ts) 中检索。
@@ -19,6 +19,8 @@
 ## 2. Host test harness 复用真实 DSH 服务
 
 [`packages/host/tests/helpers.ts`](../../packages/host/tests/helpers.ts) 组装 Cordis context、JSON storage/domain、Session store/persistence、Workspace、LLM 等需要的服务，并创建可 inspect 的事件 transcript。测试直接调用 `ctx.branchmark`，因此能证明 Service 与 DSH 数据模型的 same-process 组合，不只是在 mock repository 上测试字符串。
+
+“可 inspect”描述的是 alpha.2 harness。迁移到 master 时，fake 必须实现 `create/open/stat/list/flush` 与读写 handle，并测试 `close()`；只把生产代码改成 `open()`、测试继续伪造旧 `inspect()` 会掩盖真正的资源生命周期错误。
 
 来源测试必须包含真实顺序：`turn/start → step/start → user/message → assistant/message → step/end → turn/end`。测试 open turn 时省略闭合事件，验证 Host 得出 `forkable=false`。
 
@@ -112,7 +114,7 @@ pnpm run check
 
 ### full-fork 后报 `derived-session-mismatch`
 
-核对 child header `parentSession/seedLength`，再对比 DSH API Session Controller 当前 boundary 算法与插件 `expectedForkSeedLength`。不要绕过验证直接写 relation。
+alpha.2 核对 child header `parentSession/seedLength`；alpha.5/master 核对 `parentSession/isSeeded`，并从 inspection 或 handle 读取 `inheritedEventCount`。两种版本都要再对比 DSH API Session Controller 当前 boundary 算法；不要绕过验证直接写 relation。
 
 ### UI 没出现但 Host 正常
 
@@ -135,7 +137,7 @@ pnpm run check
 - 没有大数据性能基准；Clip list 是扫描，project search 是有界遍历。
 - 没有 schema migration、导入导出、跨设备或跨 Host 恢复测试，因为产品当前不承诺这些能力。
 
-复现课程时至少为前两项补测试；稳定版发布前应设计 relation/recall reconciliation，并为真实 Browser flow 增加可重复的集成录制。`0.1.2-alpha.2` 以 public preview 发布时，必须在根 README、npm README 与 release notes 同时披露这个持久化窗口。
+复现课程时至少为前两项补测试；稳定版发布前应设计 relation/recall reconciliation，并为真实 Browser flow 增加可重复的集成录制。`0.1.2-alpha.5` 作为 alpha 发布时，必须在根 README、npm README 与 release notes 同时披露这个持久化窗口。
 
 ## 11. 发布前判定
 
@@ -143,6 +145,7 @@ pnpm run check
 
 ```text
 版本锚点与 peer dependency 一致
+release tag commit 与实际构建 commit 已分别记录
 pnpm run release:check 通过
 tarball内容和独立 profile config 正确
 Clip 重启持久化与 Side Chat 重启销毁符合承诺
@@ -152,6 +155,8 @@ full-fork/clips-only header 与 recall 真实正确
 ```
 
 如果只通过 `pnpm run check`，准确报告“本地自动化通过”；不要扩张为“真实 DSH 和所有模型已验证”。
+
+若适配的是未发布 master，使用新的 prerelease 标识并在 release notes 写明目标 commit；不能覆盖或复用已经代表 npm DSH tag 的兼容版本号。
 
 正式操作顺序、临时 `DSH_HOME` smoke、npm dry-run 与发布后复验见根目录 [`RELEASING.md`](../../RELEASING.md)。
 

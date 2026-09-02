@@ -4,7 +4,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { InputState } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
@@ -64,11 +64,13 @@ export function BranchMarkSidebarButton({ wide, useSessions, useWorkspaces, cont
 type ComposerTriggerProps = PropsRuntime<'conversation.input.left'> & EntryFace
 
 /** Session-scoped Dock trigger inside the native Composer tool row. */
-export function BranchMarkDrawerButton({ sessionId, input, inputActions, controller, client }: ComposerTriggerProps) {
+export function BranchMarkDrawerButton({ sessionId, useInput, inputActions, controller, client }: ComposerTriggerProps) {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement | null>(null)
   const workspaceId = client.workspaceForSession(sessionId)
-  const references = input.occurrences.filter(occurrence => occurrence.source === BRANCHMARK_REFERENCE_SOURCE)
+  const draft: string = useInput((input: InputState) => input.draft)
+  const occurrences: InputState['occurrences'] = useInput((input: InputState) => input.occurrences)
+  const references = occurrences.filter(occurrence => occurrence.source === BRANCHMARK_REFERENCE_SOURCE)
   useEffect(() => {
     if (!open) return
     const dismiss = (event: PointerEvent): void => {
@@ -85,10 +87,10 @@ export function BranchMarkDrawerButton({ sessionId, input, inputActions, control
     }
   }, [open])
   const remove = (occurrenceId: number): void => {
-    const occurrence = input.occurrences.find(candidate => candidate.occurrenceId === occurrenceId)
+    const occurrence = occurrences.find(candidate => candidate.occurrenceId === occurrenceId)
     if (occurrence === undefined) return
     if (references.length === 1) setOpen(false)
-    for (const draft of referenceRemovalDrafts(input.draft, occurrence)) inputActions.setDraft(draft)
+    for (const nextDraft of referenceRemovalDrafts(draft, occurrence)) inputActions.setDraft(nextDraft)
   }
   const activate = (): void => {
     if (workspaceId === undefined) return

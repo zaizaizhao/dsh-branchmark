@@ -4,7 +4,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
-import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { ConversationSnapshot, InputState } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
@@ -407,19 +407,24 @@ describe('BranchMark browser domain', () => {
 
   it('renders the Composer entry as a compact counted reference control', () => {
     const reference = clipReferenceInsert(clip(), true)
+    const input: InputState = {
+      draft: '@枝签 · alpha ',
+      imageIds: [],
+      draftRev: 1,
+      phase: 'plain',
+      occurrences: [{
+        occurrenceId: 1,
+        source: BRANCHMARK_REFERENCE_SOURCE,
+        ref: reference.ref,
+        label: reference.label,
+        offset: 0,
+        length: reference.label.length + 1,
+      }],
+      queue: [],
+    }
     const html = renderToStaticMarkup(createElement(BranchMarkDrawerButton, {
       sessionId,
-      input: {
-        draft: '@枝签 · alpha ',
-        occurrences: [{
-          occurrenceId: 1,
-          source: BRANCHMARK_REFERENCE_SOURCE,
-          ref: reference.ref,
-          label: reference.label,
-          offset: 0,
-          length: reference.label.length + 1,
-        }],
-      },
+      useInput: (selector: (state: InputState) => unknown) => selector(input),
       inputActions: { setDraft: vi.fn() },
       controller: new BranchMarkUiController(),
       client: { workspaceForSession: () => workspaceId },

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
 import {
   ToolCallId, createAssistantMessage, createToolResultMessage, createUserMessage, LlmAdapter,
 } from '@deepseek-ai/dsh-llm'
@@ -410,14 +410,16 @@ describe('BranchMarkService', () => {
       note: 'Carry this note',
     })))
     const childId = SessionId('fork-child')
+    const sourceEvents = source.session.snapshotEvents()
     const child = h.ctx.sessions.create(childId, {
-      seed: source.session.events,
+      seed: sourceEvents,
       meta: {
         createdAt: 1_700_000_000_100,
         cwd: h.projectRoot,
         parentSession: source.session.id,
-        seedLength: source.session.events.length,
+        isSeeded: true,
       },
+      inheritedEventCount: SessionLogOffset(sourceEvents.length),
     })
     h.persistence.persist(child)
     await h.workspace.attachSession(childId)
@@ -444,7 +446,7 @@ describe('BranchMarkService', () => {
       excerptSnapshot: clip.excerpt,
       noteSnapshot: 'Carry this note',
     })
-    expect(child.events.at(-1)).toMatchObject({
+    expect(child.snapshotEvents().at(-1)).toMatchObject({
       type: 'user/message',
       data: {
         source: { kind: 'plugin', plugin: 'dsh-branchmark', form: 'recall' },

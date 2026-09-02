@@ -57,7 +57,11 @@ export class TestPersistence extends SessionPersistence {
     const record = this.records.get(id)
     return record === undefined
       ? Promise.reject(new Error(`test persistence: session '${id}' not found`))
-      : Promise.resolve({ meta: record.meta, events: record.events.filter(event => event.seq >= fromSeq) })
+      : Promise.resolve({
+          meta: record.meta,
+          inheritedEventCount: record.inheritedEventCount,
+          events: record.events.filter(event => event.seq >= fromSeq),
+        })
   }
 
   list(): Promise<SessionHeader[]> {
@@ -72,7 +76,11 @@ export class TestPersistence extends SessionPersistence {
   }
 
   persist(session: Session): void {
-    this.records.set(session.id, { meta: session.header, events: session.events })
+    this.records.set(session.id, {
+      meta: session.header,
+      inheritedEventCount: session.inheritedEventCount,
+      events: session.snapshotEvents(),
+    })
   }
 
   set(record: SessionInspection): void {
@@ -150,6 +158,7 @@ export function transcript(
     id: sessionId,
     createdAt: 1_700_000_000_000,
     cwd,
+    isSeeded: false,
   }
   const session = Session.create(sessionId, [], header)
   session.append('request/header', {

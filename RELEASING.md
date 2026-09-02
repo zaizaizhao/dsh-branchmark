@@ -4,12 +4,14 @@
 
 BranchMark 的版本与目标 DSH 完全同号。npm `latest` 跟随 DSH `latest`，npm `alpha` 跟随 DSH `alpha`；发布命令必须显式指定预发布 dist-tag，禁止让 alpha 覆盖 `latest`。
 
+维护分支按兼容通道而不是单个版本命名：`release/dsh-0.1.1-rc` 保留 npm `latest` 维护线，`release/dsh-0.1.2-alpha` 保留 npm `alpha` 维护线，精确发布快照使用 `v0.1.1-rc.2`、`v0.1.2-alpha.5` 等 Git tag。`main` 合入当前可发布的最新通道；未发布的 DSH `master` 只在隔离适配工作区验证，直到上游给出新的 package version 与 release tag。
+
 ## 1. Release prerequisites
 
 - GitHub 仓库为 `https://github.com/zaizaizhao/dsh-branchmark`，默认分支启用 CI 与必要的合并保护。
 - GitHub Security 已启用 private vulnerability reporting。
 - npm 账户拥有 `dsh-branchmark` package，启用双因素认证；如果使用 trusted publishing，应先在 npm 与 GitHub 配置对应 workflow，再单独评审发布 workflow。
-- 当前机器使用 Node.js `^22.19.0 || >=24.0.0` 和 pnpm `11.7.0`。
+- 当前机器使用 Node.js `24.19.0` 和 pnpm `11.7.0`；公开 engines 继续支持 `^22.19.0 || >=24.0.0`。
 - 发布版本已在根目录、Host、Client 与 Bundle 四份 `package.json` 中保持一致，`CHANGELOG.md` 已从 `Unreleased` 移入带日期的版本节。
 
 发布前确认目标版本不存在，并核对两个通道：
@@ -18,7 +20,7 @@ BranchMark 的版本与目标 DSH 完全同号。npm `latest` 跟随 DSH `latest
 npm view dsh-branchmark versions dist-tags --json
 ```
 
-首次发布前 `E404` 表示包名尚未占用。包存在后，目标版本必须不在 `versions` 中；`latest` 应保持 `0.1.1-rc.2`，本次发布只更新 `alpha` 为 `0.1.2-alpha.2`。
+首次发布前 `E404` 表示包名尚未占用。包存在后，目标版本必须不在 `versions` 中；`latest` 应保持 `0.1.1-rc.2`，本次发布只更新 `alpha` 为 `0.1.2-alpha.5`。
 
 ## 2. Build and inspect
 
@@ -37,7 +39,7 @@ pnpm run pack:bundle
 检查 tarball 只包含公开运行所需文件：
 
 ```sh
-tar -tf dist/dsh-branchmark-0.1.2-alpha.2.tgz
+tar -tf dist/dsh-branchmark-0.1.2-alpha.5.tgz
 pnpm --dir packages/bundle publish --dry-run --access public --no-git-checks
 ```
 
@@ -49,8 +51,8 @@ pnpm --dir packages/bundle publish --dry-run --access public --no-git-checks
 
 ```sh
 BRANCHMARK_SMOKE_HOME="$(mktemp -d)"
-npm install --global @deepseek-ai/dsh@0.1.2-alpha.2
-DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh plugin --profile web add "$(pwd)/dist/dsh-branchmark-0.1.2-alpha.2.tgz"
+npm install --global @deepseek-ai/dsh@0.1.2-alpha.5
+DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh plugin --profile web add "$(pwd)/dist/dsh-branchmark-0.1.2-alpha.5.tgz"
 DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh --profile web --dump-config
 DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh --profile web --no-open --port 0
 ```
@@ -73,8 +75,8 @@ DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh --profile web --no-open --port 0
 确认工作树、版本和 tarball 与已评审内容一致后发布：
 
 ```sh
-pnpm --dir packages/bundle publish --tag alpha --access public --no-git-checks
-npm view dsh-branchmark@0.1.2-alpha.2 name version dist.tarball engines peerDependencies --json
+npm publish ./dist/dsh-branchmark-0.1.2-alpha.5.tgz --tag alpha --access public
+npm view dsh-branchmark@0.1.2-alpha.5 name version dist.tarball engines peerDependencies --json
 npm view dsh-branchmark dist-tags --json
 ```
 
@@ -82,16 +84,16 @@ npm view dsh-branchmark dist-tags --json
 
 ```sh
 BRANCHMARK_NPM_SMOKE_HOME="$(mktemp -d)"
-DSH_HOME="$BRANCHMARK_NPM_SMOKE_HOME" dsh plugin --profile web add dsh-branchmark@0.1.2-alpha.2
+DSH_HOME="$BRANCHMARK_NPM_SMOKE_HOME" dsh plugin --profile web add dsh-branchmark@0.1.2-alpha.5
 DSH_HOME="$BRANCHMARK_NPM_SMOKE_HOME" dsh --profile web --dump-config
 DSH_HOME="$BRANCHMARK_NPM_SMOKE_HOME" dsh --profile web --no-open --port 0
 ```
 
-确认 npm `latest` 仍指向 `0.1.1-rc.2`、`alpha` 指向 `0.1.2-alpha.2`，再创建签名 tag 与 GitHub Release：
+确认 npm `latest` 仍指向 `0.1.1-rc.2`、`alpha` 指向 `0.1.2-alpha.5`，再创建签名 tag 与 GitHub Release：
 
 ```sh
-git tag -s v0.1.2-alpha.2 -m "BranchMark 0.1.2-alpha.2"
-git push origin v0.1.2-alpha.2
+git tag -s v0.1.2-alpha.5 -m "BranchMark 0.1.2-alpha.5"
+git push origin v0.1.2-alpha.5
 ```
 
 GitHub Release 说明应从对应 `CHANGELOG.md` 版本节整理，并附上兼容 DSH 版本、安装命令、数据迁移说明和已知限制。

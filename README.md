@@ -17,8 +17,9 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/dsh-branchmark"><img alt="npm alpha 0.1.2-alpha.2" src="https://img.shields.io/badge/npm-0.1.2--alpha.2-BD5745"></a>
-  <img alt="DeepSeek Harness 0.1.2-alpha.2" src="https://img.shields.io/badge/DSH-0.1.2--alpha.2-405F52">
+  <a href="https://www.npmjs.com/package/dsh-branchmark"><img alt="npm latest 0.1.1-rc.2" src="https://img.shields.io/badge/npm_latest-0.1.1--rc.2-6D5C46"></a>
+  <a href="https://www.npmjs.com/package/dsh-branchmark?activeTab=versions"><img alt="npm alpha 0.1.2-alpha.5" src="https://img.shields.io/badge/npm_alpha-0.1.2--alpha.5-BD5745"></a>
+  <img alt="DeepSeek Harness alpha 0.1.2-alpha.5" src="https://img.shields.io/badge/DSH_alpha-0.1.2--alpha.5-405F52">
   <img alt="Node.js 22.19 or 24+" src="https://img.shields.io/badge/Node.js-%5E22.19_%7C_%3E%3D24-5C7A69">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-776D5E"></a>
 </p>
@@ -27,10 +28,10 @@
 
 下图展示会话关系树、本会话与项目枝签、聚焦阅读，以及把枝签引用到 Composer 的实际交互。
 
-![BranchMark 会话关系、知识枝签与 Composer 引用演示](https://github.com/zaizaizhao/dsh-branchmark/releases/download/v0.1.2-alpha.2/branchmark-session-tree-and-clips-demo.gif)
+![BranchMark 会话关系、知识枝签与 Composer 引用演示](https://github.com/zaizaizhao/dsh-branchmark/releases/download/v0.1.2-alpha.5/branchmark-session-tree-and-clips-demo.gif)
 
 > [!IMPORTANT]
-> BranchMark 的发布版本与目标 DSH 完全同号。`dsh-branchmark@0.1.1-rc.2` 对应 npm `latest` 的 DSH `0.1.1-rc.2`；`dsh-branchmark@0.1.2-alpha.2` 对应 npm `alpha` 的 DSH `0.1.2-alpha.2`。两个通道使用不同的 DSH Client API，不要交叉安装。
+> BranchMark 的发布版本与目标 DSH 完全同号。`dsh-branchmark@0.1.1-rc.2` 对应 npm `latest` 的 DSH `0.1.1-rc.2`；`dsh-branchmark@0.1.2-alpha.5` 对应 npm `alpha` 的 DSH `0.1.2-alpha.5`。两个通道使用不同的 DSH Client API，不要交叉安装。
 
 BranchMark 是一个不修改 DSH 源码的插件 Bundle。它把会话消息中的关键片段保存为“枝签”，再以枝签所在消息为注意力分叉点，创建继承原上下文的子 Session，或只携带重点知识的独立 Session。枝签原文与来源锚点保持不可变，备注和标签可以编辑。
 
@@ -136,9 +137,11 @@ BranchMark 通过 npm Bundle 安装到 DSH Web Profile。保存枝签、查看�
 | npm 通道 | BranchMark | DeepSeek Harness | 用途 |
 | --- | --- | --- | --- |
 | `latest` | `0.1.1-rc.2` | `0.1.1-rc.2` | 默认安装；使用 DSH npm `latest` |
-| `alpha` | `0.1.2-alpha.2` | `0.1.2-alpha.2` | 当前 `main`；使用新版 DSH Client API |
+| `alpha` | `0.1.2-alpha.5` | `0.1.2-alpha.5` | 当前 `main`；使用新版 DSH Client API |
 
 两个通道都要求 Node.js `^22.19.0` 或 `>=24.0.0`，并且只支持 DSH Web Profile。BranchMark 版本必须和 `dsh --version` 完全一致。
+
+`dsh-branchmark@latest` 与 `dsh-branchmark@alpha` 分别是上表两个版本的 npm 别名。下面使用精确版本，避免 DSH 与 BranchMark 的 dist-tag 在发布窗口中暂时不同步。
 
 ### 1. 选择并安装同号版本
 
@@ -152,8 +155,8 @@ dsh plugin --profile web add dsh-branchmark@0.1.1-rc.2
 使用与当前 `main` 对应的 `alpha` 通道：
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.1.2-alpha.2
-dsh plugin --profile web add dsh-branchmark@0.1.2-alpha.2
+npm install --global @deepseek-ai/dsh@0.1.2-alpha.5
+dsh plugin --profile web add dsh-branchmark@0.1.2-alpha.5
 ```
 
 如果需要与日常 Profile 隔离，可以在安装前创建专用 DSH home：
@@ -161,7 +164,7 @@ dsh plugin --profile web add dsh-branchmark@0.1.2-alpha.2
 ```sh
 export BRANCHMARK_DSH_HOME="$(mktemp -d)"
 DSH_HOME="$BRANCHMARK_DSH_HOME" \
-  dsh plugin --profile web add dsh-branchmark@0.1.2-alpha.2
+  dsh plugin --profile web add dsh-branchmark@0.1.2-alpha.5
 ```
 
 采用隔离 home 时，后续每条 `dsh` 命令也必须带上 `DSH_HOME="$BRANCHMARK_DSH_HOME"`；否则命令会读取默认 Profile。
@@ -196,7 +199,7 @@ corepack enable
 pnpm install --frozen-lockfile
 pnpm run release:check
 pnpm run pack:bundle
-dsh plugin --profile web add ./dist/dsh-branchmark-0.1.2-alpha.2.tgz
+dsh plugin --profile web add ./dist/dsh-branchmark-0.1.2-alpha.5.tgz
 ```
 
 不要通过 Git URL、GitHub source specifier 或 `plugin add .` 安装。源码仓库不提交构建后的 `lib/`；npm 包和本地构建的 tarball 才是完整安装介质。
@@ -231,9 +234,9 @@ BranchMark 把长期知识与关系留在 DSH 本地，把临时探索限制在�
 
 ## DSH 插件发布与生态要求
 
-BranchMark 按目标版本 DSH 的官方 Bundle 机制分发。DSH 的[插件打包与安装文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/user/develop/basic/publish.md)定义 Profile Bundle，[Client module 文档](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/client/modules/README.md)定义 Web 浏览器入口。
+BranchMark 按目标版本 DSH 的官方 Bundle 机制分发。DSH 的[插件打包与安装文档](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/user/develop/basic/publish.md)定义 Profile Bundle，[Client module 文档](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/packages/client/modules/README.md)定义 Web 浏览器入口。
 
-在 BranchMark 支持的 DSH 版本中，官方资料没有提供第三方插件市场提交接口，官方仓库也暂不接受外部代码 PR。DSH 的[贡献说明](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/CONTRIBUTING.md)建议作者在自己的仓库维护插件，并添加 GitHub [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic 供生态发现。社区目录可以作为额外分发渠道，但不代表 DSH 官方审核、兼容性保证或安全认证。
+在 BranchMark 支持的 DSH 版本中，官方资料没有提供第三方插件市场提交接口，官方仓库也暂不接受外部代码 PR。DSH 的[贡献说明](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/CONTRIBUTING.md)建议作者在自己的仓库维护插件，并添加 GitHub [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic 供生态发现。社区目录可以作为额外分发渠道，但不代表 DSH 官方审核、兼容性保证或安全认证。
 
 <details>
 <summary>查看可安装条件与 BranchMark 发布准备状态</summary>
@@ -242,7 +245,7 @@ BranchMark 按目标版本 DSH 的官方 Bundle 机制分发。DSH 的[插件打
 
 | DSH 条件 | BranchMark 的实现 |
 | --- | --- |
-| 包必须有非空 `name` 和 `version`，并提供可解析的运行入口 | `dsh-branchmark@0.1.2-alpha.2` 发布预编译 Host、Typert、Remote 和浏览器入口 |
+| 包必须有非空 `name` 和 `version`，并提供可解析的运行入口 | `dsh-branchmark@0.1.2-alpha.5` 发布预编译 Host、Typert、Remote 和浏览器入口 |
 | `package.json` 必须声明 `dsh.bundle.patch`，否则 `dsh plugin add` 只安装普通依赖，不激活 Profile 层 | `packages/bundle/package.json` 指向 `./cordis.patch.yml` |
 | `cordis.patch.yml` 必须插入或覆盖实际 Loader 行，并使用安装后可解析的包名 | Bundle patch 插入 `branchmark-host`，模块名为 `dsh-branchmark` |
 | Web 插件必须导出 `./client`，并以 `dsh.client.platform: "web"` 声明浏览器入口 | Bundle 导出自包含 `lib/client.js`，并声明所需 Client 注入项 |

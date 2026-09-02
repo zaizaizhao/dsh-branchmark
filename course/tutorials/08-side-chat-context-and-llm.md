@@ -2,6 +2,8 @@
 
 本章实现不创建普通 Session 的临时问答运行时。完成后，你应能从 primary Clip 恢复来源模型配置与消息前缀，把较早历史压成摘要、保留最近原始消息和完整 Clip，并直接通过 DSH LLM capability 流式回答。
 
+本章的上下文算法不因新版 persistence 改变，但“取得来源 events”是版本适配点：alpha.2/alpha.5 使用 inspection，2026-09-02 master 使用只读 `SessionHandle` 并要求显式关闭。不要把资源读取差异扩散进摘要、消息重建和工具循环；收敛方法见[第 13 章](13-dsh-prerelease-upgrade.md)。
+
 ## 1. Side Chat 不是“小号 Session”
 
 [`TemporarySideChatRuntime`](../../packages/host/src/side-chat.ts) 拥有一个 `Map<SideChatId, SideChatEntry>`。Entry 包含冻结的 source messages、Clip、模型 route、临时消息、流式片段、工具状态和 AbortController，但没有 DSH `SessionId`、SessionHeader、event log 或 persistence。

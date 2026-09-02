@@ -24,6 +24,8 @@
 
 建立一张适配表，至少记录 API Controller/UI adapter/target/Renderer 的 owner 映射、`ISessions.create/fork`、Host fork boundary、SessionHeader、`session/end-seed`、五个 Slot、Input Trigger reference contract、Conversation/Chat View、Chat row anchor、Remote failure contract、Typert artifacts 和 `dsh.client` format。若目标版本与本课程锚点不同，先更新设计，不照搬实现，也不要用另一个聚合 facade 掩盖 owner 变化。
 
+版本证据必须把 release tag 与 master 分行记录。目标为 alpha.5/master 时，再补 `SessionSeq`/`SessionLogOffset`、`isSeeded`/`inheritedEventCount`、`Session` 读取意图、`SessionPersistence` inspection/handle、Composer `useInput` 所有权五项；可直接复用[第 13 章](13-dsh-prerelease-upgrade.md)的审计表。
+
 检查点：你能用源码位置回答“full-fork 最终截止哪个事件”和“Browser client.js 由谁发现与加载”。
 
 ## 3. 建立 workspace 与空 package
@@ -36,7 +38,7 @@ Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 No
 
 ## 4. 完成最小 durable Clip 纵向切片
 
-只实现一条路径：Browser 提交人工构造 candidate → Remote `create` → Host inspect/validate → storage `put` → Remote `list`。先不写 React selection UI。
+只实现一条路径：Browser 提交人工构造 candidate → Remote `create` → Host 读取持久日志并校验 → storage `put` → Remote `list`。alpha.2/alpha.5 可使用 inspection，master 使用只读 handle；先不写 React selection UI。
 
 顺序是 branded ids 与 DTO → Zod domain v1 → Service init/dispose → `create/list` Remote → generated Remote mount → Host tests。伪造 eventSeq/messageId/range/excerpt 各加一个拒绝用例。
 
@@ -76,7 +78,7 @@ Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 No
 
 ## 8. 完成两类普通 Session
 
-先实现 clips-only `sessions.create({ workspaceId })`，验证无 parent/seed，再实现 full-fork `sessions.fork({ atSeq })`。Host `recordDerivedSession` 必须 inspect child header，并按当前 DSH 算法核对 full-fork seed。
+先实现 clips-only `sessions.create({ workspaceId })`，验证无 parent/seed，再实现 full-fork `sessions.fork({ atSeq })`。Host `recordDerivedSession` 必须读取 child header 与精确 inherited cut，并按当前 DSH 算法核对 full-fork seed；具体字段和读取入口服从你在第 2 节固定的目标版本。
 
 写入 relation/usages 后 append `form=recall` user message；创建模式 open child，创建并发送模式调用 child binding `SessionFace.prompt(..., 'queue')`。实现 `listRelations`、Header marker、DSH parentId lineage tree 与 `session/end-seed` divider。
 
