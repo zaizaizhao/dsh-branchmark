@@ -9,6 +9,7 @@
 <p align="center">为开发者提供重点知识摘录、可追溯 Session 树和注意力分叉，让主 Session 始终专注于当前目标，让每条支线都能找回来源，让 Vibe Coding 告别注意力丢失。</p>
 
 <p align="center">
+  <a href="README.en.md">English</a> ·
   <a href="#交互演示">交互演示</a> ·
   <a href="#branchmark-解决的是开发者的注意力丢失">为什么需要</a> ·
   <a href="#session-树与会话管理">Session 树</a> ·
@@ -26,9 +27,22 @@
 
 ## 交互演示
 
-下图展示会话关系树、本会话与项目枝签、聚焦阅读，以及把枝签引用到 Composer 的实际交互。
+左侧展示从重点摘录创建正式 Session、切换会话并沿 Session 树追溯来源；右侧展示不打断主线的临时 Side Chat，以及把值得保留的内容重新摘录为枝签。点击任一动图可以查看原尺寸。
 
-![BranchMark 会话关系、知识枝签与 Composer 引用演示](https://github.com/zaizaizhao/dsh-branchmark/releases/download/v0.1.2-alpha.5/branchmark-session-tree-and-clips-demo.gif)
+<table>
+  <thead>
+    <tr>
+      <th width="50%">枝签、正式分叉与 Session 树</th>
+      <th width="50%">临时 Side Chat 与再摘录</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="50%" valign="top"><a href="assets/demo/branchmark-session-tree-and-derived-session-demo.gif"><img src="assets/demo/branchmark-session-tree-and-derived-session-demo.gif" width="100%" alt="BranchMark 从知识枝签创建正式 Session，并通过会话关系树切换和追溯来源"></a></td>
+      <td width="50%" valign="top"><a href="assets/demo/branchmark-side-chat-and-clipping-demo.gif"><img src="assets/demo/branchmark-side-chat-and-clipping-demo.gif" width="100%" alt="BranchMark 使用临时 Side Chat 快速探索，并把值得保留的内容重新摘录为枝签"></a></td>
+    </tr>
+  </tbody>
+</table>
 
 > [!IMPORTANT]
 > BranchMark 的发布版本与目标 DSH 完全同号。`dsh-branchmark@0.1.1-rc.2` 对应 npm `latest` 的 DSH `0.1.1-rc.2`；`dsh-branchmark@0.1.2-alpha.5` 对应 npm `alpha` 的 DSH `0.1.2-alpha.5`。两个通道使用不同的 DSH Client API，不要交叉安装。
@@ -141,15 +155,15 @@ BranchMark 通过 npm Bundle 安装到 DSH Web Profile。保存枝签、查看�
 
 两个通道都要求 Node.js `^22.19.0` 或 `>=24.0.0`，并且只支持 DSH Web Profile。BranchMark 版本必须和 `dsh --version` 完全一致。
 
-`dsh-branchmark@latest` 与 `dsh-branchmark@alpha` 分别是上表两个版本的 npm 别名。下面使用精确版本，避免 DSH 与 BranchMark 的 dist-tag 在发布窗口中暂时不同步。
+默认通道可以直接使用 npm `latest` 标签。`@deepseek-ai/dsh@latest` 与 `dsh-branchmark@latest` 必须解析为同一版本；安装后使用 `dsh --version` 验证，若版本不一致则改用上表中的精确版本。`alpha` 通道仍使用精确版本，避免预发布标签在发布窗口中暂时不同步。
 
 ### 1. 选择并安装同号版本
 
 使用默认 `latest` 通道：
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.1.1-rc.2
-dsh plugin --profile web add dsh-branchmark@0.1.1-rc.2
+npm install --global @deepseek-ai/dsh@latest
+dsh plugin --profile web add dsh-branchmark@latest
 ```
 
 使用与当前 `main` 对应的 `alpha` 通道：
@@ -261,7 +275,7 @@ BranchMark 当前的发布准备状态：
 | Node `22.19` / `24` CI、keyless 测试、Bundle 自包含检查和 npm dry-run | 已具备 |
 | 独立 Profile tarball 安装与 `--dump-config` 验证 | 已具备 |
 | npm `latest` 与 `alpha` 同号发布 | 已完成 |
-| GitHub `dsh-plugin` topic | 尚未添加 |
+| GitHub `dsh-plugin` topic | 已完成 |
 
 </details>
 
