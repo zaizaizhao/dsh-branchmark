@@ -23,11 +23,11 @@ Excerpt-driven session branching and conversation lineage for DeepSeek Harness.
 
 | BranchMark | DeepSeek Harness | Node.js | DSH surface |
 | --- | --- | --- | --- |
-| `0.1.2-rc.1` (`latest` target) | `0.1.2-rc.1` (`latest` target) | `^22.19.0 \|\| >=24.0.0` | Web profile |
+| `0.1.2-rc.1` | `0.1.2-rc.1` | `^22.19.0 \|\| >=24.0.0` | Web profile |
 
 DSH 仍处于预发布阶段。上表之外的组合没有经过兼容性验证；升级 DSH 前应在独立 profile 中重新完成安装与 UI smoke test。
 
-本源码与 Bundle 面向 DSH `0.1.2-rc.1`；发布前使用源码 tarball 安装。安装说明使用精确版本，避免两个 dist-tag 在发布窗口中暂时不同步。
+本 Bundle 只支持上表中的 DSH 版本。安装说明使用精确版本；两个包的 npm dist-tag 分别维护，不能用标签名称相同代替兼容性核对。
 
 ## 安装
 

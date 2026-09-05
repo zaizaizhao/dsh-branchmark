@@ -4,6 +4,8 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 
 ## [Unreleased]
 
+## [0.1.2-rc.1] - 2026-09-05
+
 ### Added
 
 - 右侧枝签浮签支持鼠标与触摸上下拖动，位置作为浏览器偏好保存；方向键、Home 和 End 提供键盘移动。
@@ -20,7 +22,7 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 ### Compatibility
 
 - `clip_explorer` domain 和会话来源格式保持不变；既有 `dsh-branchmark.ui.v1` 偏好可缺省新的 `railPosition` 字段。
-- 这些变化尚未作为 npm 版本发布；Git 提交或构建不会更新远端 dist-tag。
+- 本版本仅面向 DSH `0.1.2-rc.1`，不包含后续 DSH `master` 的 SessionHandle 或日志 v2 适配。
 
 ### Documentation
 
@@ -105,7 +107,8 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 
 - 衍生 Session 的 BranchMark 关系记录与 DSH `recall` 日志当前没有跨子系统事务。Host 在两次持久写入之间异常退出可能留下部分提交；插件不提供自动对账修复。
 
-[Unreleased]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.1.2-alpha.5...HEAD
+[Unreleased]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.1.2-rc.1...HEAD
+[0.1.2-rc.1]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.1.2-alpha.5...v0.1.2-rc.1
 [0.1.2-alpha.5]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.1.2-alpha.2...v0.1.2-alpha.5
 [0.1.2-alpha.2]: https://github.com/zaizaizhao/dsh-branchmark/compare/v0.1.1-rc.2...v0.1.2-alpha.2
 [0.1.1-rc.2]: https://github.com/zaizaizhao/dsh-branchmark/tree/v0.1.1-rc.2
