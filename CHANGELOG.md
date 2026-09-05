@@ -22,6 +22,12 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 - `clip_explorer` domain 和会话来源格式保持不变；既有 `dsh-branchmark.ui.v1` 偏好可缺省新的 `railPosition` 字段。
 - 这些变化尚未作为 npm 版本发布；Git 提交或构建不会更新远端 dist-tag。
 
+### Documentation
+
+- 课程统一到 rc.1 主线，区分本地源码、npm 标签与后续上游目标；修正生成命令、来源 marker、取消和读取限制的说明。
+- 拆出浮签交互课，补充布局、发布演练、Session 身份与验证矩阵；保留既有章节文件链接。
+- 文档检查增加课程基线、脚本引用、生成入口和导航验证，并用纯反例测试防止课程漂移。
+
 ## [0.1.2-alpha.5] - 2026-09-02
 
 ### Changed

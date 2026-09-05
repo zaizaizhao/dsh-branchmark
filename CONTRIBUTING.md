@@ -24,7 +24,8 @@ pnpm run check
 - `packages/host/`：持久化、Remote、来源校验、衍生 Session 和 Side Chat 运行时。
 - `packages/client/`：消息选区、Dock、项目集合、Composer 引用、关系树和 Side Chat UI。
 - `packages/bundle/`：唯一公开发布包；把 Host、Typert、Remote 与浏览器入口编译为自包含 Bundle。
-- `scripts/`：品牌、Bundle 和发布前机械校验。
+- `scripts/`：品牌、Bundle、课程和发布前机械校验。
+- `course/`：中文教程、实验与查阅型参考；编辑规则见[课程维护约定](course/MAINTAINING.md)。
 
 `dsh-branchmark-host` 与 `dsh-branchmark-client` 必须保持私有。运行时依赖 DSH 提供的 package 应保持 peer dependency，不要把 Cordis 或 DSH 核心 package 改成普通 dependency，否则 profile 可能加载重复框架实例。
 
@@ -55,6 +56,8 @@ pnpm run pack:bundle
 ```
 
 `release:check` 会构建并测试三个工作区、验证公开包元数据与 peer 声明、运行 publint，并执行 npm dry-run。涉及真实模型回答、摘要或 Web provider 的改动还需在本地配置好的测试 profile 中单独验证；不要把凭据加入测试夹具或 CI。
+
+课程文字改动先运行 `pnpm run verify:docs`，它包含 `verify:course` 的正反例测试和真实课程检查；只检查课程时可单独执行 `pnpm run verify:course`。这些检查不执行文档中的 shell、不启动 DSH 或调用模型，实际操作与环境验收仍须单独记录。
 
 ## Pull request
 

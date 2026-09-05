@@ -14,7 +14,7 @@
 
 完成实验 1，准备一个至少三轮且全部持久化的来源 Session。创建三条 Clip：第 2 轮 assistant 上一条作为 primary，第 1 轮或其他消息一条作为附件，另一个来源 Session 一条作为跨来源附件。为至少两条加 note。
 
-沿用实验 1 的 alpha.5 版本轨道：使用 `isSeeded + inspection.inheritedEventCount`。alpha.2 的 `seedLength` 与 2026-09-02 master 的 `handle.inheritedEventCount` 只用于第 13 章对照；不要在同一个实现里做三套运行时探测，本实验要求单目标、精确依赖。
+沿用实验 1 的 rc.1 基线，使用 `isSeeded + inspection.inheritedEventCount`。不要做多版本运行时探测；SessionHandle 是完成主线后的独立练习。
 
 ## 任务 1：定义两种 mode
 
@@ -50,7 +50,7 @@ clips-only 调用 API Session Controller 的 `sessions.create({ workspaceId })`�
 
 通过 `sessionPersistence.inspect()` 读取 child 的 header、events 与精确 inherited cut。clips-only 要求无 `parentSession`、`isSeeded=false`、cut 为 0；full-fork 要求 parent 正确、`isSeeded=true`、`inheritedEventCount` 等于预期。
 
-必须读目标 DSH [`api/session-controller`](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/packages/api/session-controller/src/commands.ts) 与 [`SessionHeader`](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/packages/core/session/src/types.ts) 的当前源码定位；不要假设课程版本和你的目标版本一致。
+必须读目标 DSH [`api/session-controller`](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/api/session-controller/src/commands.ts) 与 [`SessionHeader`](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/core/session/src/types.ts) 的当前源码定位；不要假设课程版本和你的目标版本一致。
 
 检查点：创建一个无关 child 后伪造 full-fork record，Host 返回 `derived-session-mismatch`；relation table 不新增记录。
 
@@ -70,7 +70,7 @@ clips-only 调用 API Session Controller 的 `sessions.create({ workspaceId })`�
 binding.session.prompt([{ type: 'text', text: question }], 'queue')
 ```
 
-检查点：prompt spy 只收到用户问题，不重复收到 Clip recall；prompt 失败时 child 和 relation 仍可找到，并给调用者准确部分成功错误。
+检查点：prompt spy 只收到用户问题，不重复收到 recall；失败时 child 和 relation 仍可找到。当前教材直接传播 prompt 错误；请为练习设计部分成功提示/恢复策略，不把设计题当成已实现功能。
 
 ## 任务 6：Lineage 与 divider
 
@@ -85,7 +85,7 @@ binding.session.prompt([{ type: 'text', text: question }], 'queue')
 | 新 Session id | 是 | 是 |
 | DSH `parentSession` | primary source Session | 无 |
 | DSH 精确 inherited cut | 截止 source 完整 turn | `0`/无继承 |
-| `session/end-seed` | 是 | 否 |
+| `session/end-seed` | 构造 seed 时可能出现 | 恢复已有日志也可能出现，不是无 parent 的判据 |
 | Plugin relation/usages | 是 | 是 |
 | Plugin recall | 是 | 是 |
 | Composer 初始为空 | 是 | 是 |
@@ -93,11 +93,13 @@ binding.session.prompt([{ type: 'text', text: question }], 'queue')
 
 再验证：primary 来自第 2 轮时，第 3 轮不出现在 full-fork seed；跨来源附件只进入 recall，不改变 parent；永久删除三个 live Clip 后 relation usages 与两个 child transcript 仍在。
 
+加一道反例：恢复无 parent 的普通 Session，看到 marker 时仍判为 unseeded。再检查 fork 后继续 fork 的多 marker 场景，把 UI divider 与精确 inherited cut 分开。
+
 ## 提示与对照源码
 
 Client launch 对照 [`domain/client.ts`](../../packages/client/src/domain/client.ts)，Host header 验证对照 [`recordDerivedSession`](../../packages/host/src/index.ts)，lineage 对照 [`domain/lineage.ts`](../../packages/client/src/domain/lineage.ts)，divider 对照 [`ForkDivider.tsx`](../../packages/client/src/components/ForkDivider.tsx)。
 
-若你发现需要复制父消息文本来实现 full-fork，请停下来重读 DSH [Session 文档](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/subsystems/session.md)；正确路径应由宿主 fork seed。
+若你发现需要复制父消息文本来实现 full-fork，请停下来重读 DSH [Session 文档](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/subsystems/session.md)；正确路径应由宿主 fork seed。
 
 ## 复盘
 

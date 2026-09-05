@@ -11,16 +11,18 @@
 - 能从消息选区生成经 Host 校验的 Clip，并实现会话私有与项目全局两种可见性。
 - 能实现置顶分组、完整集合排序、固定高度卡片、专注阅读与紧凑批量命令，并说明哪些规则必须由 Host 验证。
 - 能通过 DSH 原生 `ReferenceInsert` 把多条 Clip 按选择顺序加入 Composer，并从 draft mirror token 恢复未发送引用且绝不自动提交。
+- 能把浮签手势中的临时坐标与已提交布局偏好分开，完成单轴拖动、键盘定位、取消和组件清理，并用真实页面检查遮挡。
 - 能用 API Session Controller 的 `ISessions.fork` 与 `ISessions.create` 创建两类普通衍生会话，并正确处理父子 lineage、seed 和 Clip 快照。
 - 能直接使用 `ctx.llm.stream`、`BlockAssembler`、`ctx.fs` 与 `ctx.web` 实现一个关闭即销毁、只读的 Side Chat。
 - 能将 Host、浏览器 Client、Typert 产物打进一个 Bundle tarball，安装到未修改源码的 DSH Web profile，并完成可复现验收。
-- 能把 npm release tag、对应 Git commit 与移动中的 `master` 分成不同目标，按源码与运行证据迁移 Session lineage、日志读取、Composer 和 persistence 接口。
+- 能区分 npm dist-tag、Git release、源码、tarball、安装包与运行中服务；升级时检查 Session API 与已保存 Clip 的来源身份，不用编译通过替代数据验收。
 
 ## Constraints
 
-- 目标宿主是 DSH `0.1.2-alpha.5` release tag，源码锚点为 `db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5`。
-- 插件版本为 `0.1.2-alpha.5`，只使用 DSH 已公开或已导出的扩展能力，不修改 DSH 核心源码。
-- DSH alpha.2 只作为第 13 章的迁移起点；2026-09-02 的 `master` 是尚未发布的后续审计目标，不能与同号的 alpha.5 npm 包混用。
+- 主线版本、工具链与 npm 查询状态以[版本基线](reference/version-baseline.md)为准；本地源码不等于已经发布的包。
+- 只使用 DSH 已公开或已导出的能力，不修改宿主核心源码。
+- 第 13 章的后续源码审计与主线实现分开；SessionHandle、日志 v2 和旧 Clip 重定位不属于当前 rc.1 兼容承诺。
+- 课程演练不执行 npm 发布或推送 Git tag；真实 provider 场景需要实验执行者准备可用模型与成本预算。
 - 课程以当前仓库源码、生成 API 与官方文档为依据；遇到版本差异时必须重新核对源码，不能假设兼容。
 - 课程使用 Markdown，并把顺序教程与查阅型参考分开。
 

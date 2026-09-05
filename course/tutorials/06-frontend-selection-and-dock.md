@@ -1,4 +1,4 @@
-# 第 6 章：前端选区、Dock 与 Composer
+# 第 6 章：选区、集合与 Composer 引用
 
 本章把 BranchMark 作为 additive Browser plugin 挂到 DSH Web UI，并解决两个容易被低估的问题：用户选择的是渲染后的 DOM 文本，Host 验证的却是持久化 Markdown 原文；DSH 恢复 draft 时保留引用的 clipboard projection，却不会自动恢复来源插件的进程内 occurrence。完成后，你应能保存同一消息内的连续选区、把跨消息选择拆成多个 Clip、展示可排序 Dock，并把显式选择的摘录按顺序放进主输入框、刷新后恢复且绝不自动发送。
 
@@ -30,15 +30,15 @@ ctx.inject(['remote.branchmark'], (scope) => {
 
 Composer 引用不占用额外 Slot；插件向 `ctx.inputTriggers` 注册 `branchmark` source，并通过 `SessionInput.insertReference()` 写入原生 occurrence。完整注册见 [`client/index.tsx`](../../packages/client/src/client/index.tsx)。`shell.overlay` 的宿主容器本身允许 click-through，插件只让可交互区域接收 pointer event；不要把透明全屏根节点注册成阻塞层。
 
-版本边界：alpha.2 的 `conversation.input.left` 通过 `InputZone.input` owner prop 把输入快照交给按钮；alpha.5/master 已移除这个可变 owner prop，Slot entry 应从标准 `useInput` selector 订阅 `occurrences`，动作仍走稳定的 `inputActions`。DSH 这样可以让 memoized `InputBar` 只接收稳定 owner props，避免无关 shell render 创建新 React element 并击穿 memo。迁移代码见[第 13 章](13-dsh-prerelease-upgrade.md)。
+rc.1 的 `conversation.input.left` 不提供 `InputZone.input` owner prop。入口组件从标准 `useInput(state => state.occurrences)` 订阅引用，动作走 `inputActions`；不能从宿主内部 InputBar 对象读取状态。[`EntryButtons.tsx`](../../packages/client/src/components/EntryButtons.tsx)是可运行实现，selector 的所有权解释见[Client 架构参考](../reference/dsh-client-architecture-rationale.md)。
 
 ## 3. UI controller 只拥有 Browser 状态
 
-[`BranchMarkUiController`](../../packages/client/src/domain/controller.ts) 是一个小型 external store，通过 `useSyncExternalStore` 供多个 Slot 共享。它保存 Dock mode/view/width、当前选区、Side Chat tabs、刷新 revision 和 toast；Composer occurrence 由 DSH 自己的 Session input state 拥有。
+[`BranchMarkUiController`](../../packages/client/src/domain/controller.ts) 是 external store，通过 `useSyncExternalStore` 供多个 Slot 共享。Composer occurrence 仍由 DSH Session input 拥有，Clip 由 Host 拥有；不要在 controller 中复制两者作为第二份权威数据。
 
-只有 `mode`、`view` 与 `width` 写进 `localStorage`，key 为 `dsh-branchmark.ui.v1`。Clip 正文、备注、关系、Side Chat 消息都不经过浏览器持久化。隐私模式或 quota 让 localStorage 失败时，只退回默认布局，不影响 Host 数据。
+布局的 `mode`、`view`、`width` 与 `railPosition` 才进入浏览器偏好。手势坐标、Side Chat tabs、选区和 launcher 不持久化；具体字段、拖动状态机、存储失败与取消行为由[第 6A 章](06a-dock-interaction-and-preferences.md)讲解。
 
-Dock 有三个显示状态：`expanded` 是右侧浮动面板，`rail` 是右侧中部最小化把手，`hidden` 是完全隐藏。展开时插件从 `data-conversation-scroll` 与 `data-composer-seat` 计算上下安全区，但不修改会话列宽度或宿主布局。最小化和隐藏不会关闭 Side Chat；只有明确关闭某个 Side Chat tab 才调用 Host 销毁它。
+`expanded`、`rail`、`hidden` 只表示展开、浮签、隐藏。它们不控制 Host Side Chat 的存活；关闭标签是另一条显式 Remote。Dock 作为 overlay 不改变宿主会话列宽度。
 
 ## 4. 从 selection 找到 DSH Chat 行
 
@@ -62,7 +62,7 @@ DOM 只告诉我们可见文字与节点位置。`BranchMarkClient` 先通过 `c
 - streaming/未 settled assistant 没有稳定 final anchor，因此不能摘录为持久来源。
 - hidden node、tool-only node 和无法解析 location 的 node 被跳过。
 
-实现位于 [`domain/selection.ts`](../../packages/client/src/domain/selection.ts)。这一步得到的是候选锚点，不是信任证明；Host 仍会读取并复核持久日志。当前 alpha.5 实现使用 `inspect()`，未发布 master 使用只读 `SessionHandle`。
+实现位于 [`domain/selection.ts`](../../packages/client/src/domain/selection.ts)。这一步得到候选锚点；Host 仍以 rc.1 的 `inspect()` 复核持久日志。持久 Clip 不能以 DOM node key 代替 message identity。
 
 这里同时依赖 UI Conversation 和 UI Chat 是有意分层，不是重复取数。UI Conversation 只拥有 Session event window 到 target snapshot 的通用组装与 binding；UI Chat 拥有 Chat node 的具体类型、keyed store、顺序和 selection 语义。DSH 这样做能让 Chat、Trajectory 等 target 共享稳定 id、分页和增量回放机制，又不要求彼此共享最终 projection；新增 BranchMark node 也不需要修改 Session Controller 的中央 switch。算法动机与 keyed snapshot 收益见[架构设计解读](../reference/dsh-client-architecture-rationale.md#4-为什么-conversation-与-chat-分开)。
 
@@ -171,7 +171,7 @@ pnpm --filter dsh-branchmark-client test
 4. 依次选择三条 Clip，通过命令胶囊引用到 Composer，确认原生 Chip 顺序与选择顺序一致、正文未展开且未自动发送；从 Popover 删除一枚 Chip 后，用户问题与相邻 Chip 仍保留。
 5. 保留未发送引用并重新绑定或刷新对应 Composer，确认可解析 token 恢复为原生 Chip；删除其中一条 Clip 后再次恢复，确认该 token 保持可见而不是假装携带上下文。
 6. 在无筛选 active 集合内同组拖拽并重启 Host，确认顺序保留；尝试跨置顶组或在搜索结果中拖拽，确认不会发出持久化重排。
-7. 展开 Dock 后确认 Session Log 与 Composer 均未被遮挡；最小化再恢复时 Side Chat 与当前 view 仍在，刷新浏览器后只恢复布局偏好。
+7. 最小化再恢复时 Side Chat 与当前 view 仍在；刷新后只恢复布局偏好。Dock 避让、指针拖动和键盘验收继续做第 6A 章，不能用 Client 纯逻辑测试代替页面观察。
 
 ## 13. 检索练习
 
@@ -182,4 +182,4 @@ pnpm --filter dsh-branchmark-client test
 5. 为什么恢复多个 draft mirror token 必须从右向左执行？
 6. 为什么搜索、标签筛选和回收站视图必须禁用拖拽？
 
-下一章将使用这些显式选择创建两类普通 Session，并证明只有 full-fork 才形成 DSH 原生父子关系。
+接着完成[第 6A 章](06a-dock-interaction-and-preferences.md)与[实验 4](../labs/04-ordered-collection-and-reference-recovery.md)。然后进入[第 7 章](07-derived-sessions-and-lineage.md)，用这些显式选择创建两类普通 Session。

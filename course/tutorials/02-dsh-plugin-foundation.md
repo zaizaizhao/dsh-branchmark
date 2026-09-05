@@ -4,7 +4,7 @@
 
 ## 1. “一切皆插件”的实际含义
 
-DSH 官方 [`architecture.md`](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/architecture.md) 说明：模型适配器、工具、Session log、agent loop 和 UI 都由 Cordis 插件组合，没有必须修改的特权核心。扩展的正确动作是把插件挂到现有 Service 和 Slot 旁边。
+DSH 官方 [`architecture.md`](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/architecture.md) 说明：模型适配器、工具、Session log、agent loop 和 UI 都由 Cordis 插件组合，没有必须修改的特权核心。扩展的正确动作是把插件挂到现有 Service 和 Slot 旁边。
 
 Cordis 对本项目最重要的五件事是：
 
@@ -14,7 +14,7 @@ Cordis 对本项目最重要的五件事是：
 4. 注册和资源通过 `ctx.effect()` 绑定 fiber 生命周期。
 5. declaration merging 把 Host/Client 的 `Context` 与 Slot/Remote 类型扩展到调用处。
 
-原始说明见 [`Cordis Primer`](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/cordis-primer.md)。
+原始说明见 [`Cordis Primer`](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/cordis-primer.md)。
 
 ## 2. Profile、Bundle 与插件模块
 
@@ -52,7 +52,7 @@ Bundle 不是第四套业务逻辑。它重导出 Host，并从 Client 源码构
 
 ### DSH Client 为什么也拆成多个所有者
 
-DSH `0.1.2-alpha.5` 本身没有一个承载 Session、Workspace、Conversation、React 和 Slots 的聚合 Client Runtime。API Session/Workspace Controller 拥有 React-free 领域状态，UI Session/Workspace 负责标准 React source，UI Conversation 负责 target-neutral event assembly，UI Chat 拥有具体 Chat snapshot，UI Renderer 只实现通用 source→Hook 与 Slot outlet。
+DSH `0.1.2-rc.1` 本身没有一个承载 Session、Workspace、Conversation、React 和 Slots 的聚合 Client Runtime。API Session/Workspace Controller 拥有 React-free 领域状态，UI Session/Workspace 负责标准 React source，UI Conversation 负责 target-neutral event assembly，UI Chat 拥有具体 Chat snapshot，UI Renderer 只实现通用 source→Hook 与 Slot outlet。
 
 DSH 的 implemented Agent Note 说明，聚合 Runtime 会让协议状态、业务投影、React binding 和展示共享一个依赖中心，使任何一层的修改扩散到整个前端。按 owner 拆分后，新 Conversation target 不需要修改 Session Controller 或 Renderer，Session binding 和 plugin fiber 也能分别拥有资源清理。完整的动机、收益、代价与原始资料见 [DSH Client 架构设计解读](../reference/dsh-client-architecture-rationale.md)。
 
@@ -136,8 +136,8 @@ Browser 不直接读取本地文件或 Session persistence，Host 不操作 DOM�
 
 ## 10. 检索练习
 
-1. 在 [`dsh-web-app/cordis.patch.yml`](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/packages/bundle/web-app/cordis.patch.yml) 找出 storage、API Session/Workspace Controller、UI Renderer、UI Session/Workspace、UI Conversation、UI Chat 和 UI Layout 行。
-2. 在 [`dsh-base/cordis.patch.yml`](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/packages/bundle/base/cordis.patch.yml) 找出 llm、session、persistence、fs 与 web 行。
+1. 在 [`dsh-web-app/cordis.patch.yml`](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/bundle/web-app/cordis.patch.yml) 找出 storage、API Session/Workspace Controller、UI Renderer、UI Session/Workspace、UI Conversation、UI Chat 和 UI Layout 行。
+2. 在 [`dsh-base/cordis.patch.yml`](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/bundle/base/cordis.patch.yml) 找出 llm、session、persistence、fs 与 web 行。
 3. 解释为什么 YAML 行顺序不负责 Host Service 的激活顺序。
 4. 解释为什么把 Dock 注册到 `root` slot 会破坏主界面，而 `shell.overlay` 不会。
 5. 为什么“把全部 Client 能力重新包进一个 BranchMarkRuntime”会失去 DSH 这次拆分的主要收益？

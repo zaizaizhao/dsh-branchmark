@@ -15,7 +15,7 @@
 
 完成主线第 1–5 章，并确认空 Host/Client/Bundle 能 build。实验只实现 session-scope active Clip，不实现 UI、project scope、note、tag、trash、Fork 或 Side Chat。
 
-先选择一条版本轨道并写进实验 README：alpha.2/alpha.5 使用 `sessionPersistence.inspect()`；2026-09-02 master 使用 `sessionPersistence.open(id, 'read')`、`handle.read()` 与 `finally handle.close()`。后续任务里的“inspect”表示逻辑上的只读日志 observation，不要求在 master 上保留已删除的方法名。
+固定[rc.1 基线](../reference/version-baseline.md)，使用 `sessionPersistence.inspect()`。不要求支持多个 DSH 版本；完成主线后才进入第 13 章的迁移练习。
 
 ## 约束
 
@@ -78,7 +78,7 @@ list({ workspaceId, ownerSessionId }) -> business result<Clip[]>
 
 1. Workspace 存在，且 `ownerSessionId` 属于 Workspace。
 2. `source.sessionId === ownerSessionId`。
-3. persistence 的只读 observation 成功：alpha.2/alpha.5 调用 `inspect()`，master 打开并读取 read handle。
+3. `sessionPersistence.inspect()` 取得来源 header 与 events。
 4. `eventSeq` 对应 append surface 的 `user/message` 或 `assistant/message`。
 5. `deriveEventMessage` 后 id/role/turn 一致。
 6. canonical message text 的 `slice(range.start, range.end) === excerpt`。
@@ -99,7 +99,7 @@ list({ workspaceId, ownerSessionId }) -> business result<Clip[]>
 
 测试 transcript 应使用真实 DSH Session append event 序列，不能把 `inspect()` mock 成一个已经计算好的 message object。
 
-master 轨道把同一要求改写为：测试 fake 返回真实的 read handle，事件仍通过 handle 的 `read()` 取得，并断言成功与失败路径都关闭 handle。
+fixture 使用受控 persistence 并保留真实事件结构。重启读取要用新的 storage 实例或隔离 Web profile 验证，不能从同一 Map 再 get 一次就宣称持久化通过。
 
 ## 验收标准
 
@@ -114,7 +114,7 @@ master 轨道把同一要求改写为：测试 fake 返回真实的 read handle�
 
 ## 提示与对照源码
 
-卡在事件到 message 的映射时，只查看 [`resolvePersistedSource`](../../packages/host/src/index.ts)；卡在 schema 时查看 [`spec.ts`](../../packages/host/src/spec.ts)；卡在生成链时查看 [`host tsdown config`](../../packages/host/tsdown.config.ts)与 DSH [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/api-gateway.md)。
+卡在事件到 message 的映射时，只查看 [`resolvePersistedSource`](../../packages/host/src/index.ts)；卡在 schema 时查看 [`spec.ts`](../../packages/host/src/spec.ts)；卡在生成链时查看 [`host tsdown config`](../../packages/host/tsdown.config.ts)与 DSH [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/api-gateway.md)。
 
 不要直接复制全部 `types.ts`，否则会把本实验尚未理解的 Side Chat/derived relation 类型一起带入。
 

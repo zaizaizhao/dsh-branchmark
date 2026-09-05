@@ -1,6 +1,6 @@
 # 第 4 章：领域类型与本地持久化
 
-本章实现 Clip、有序集合与普通衍生 Session 的 durable 数据模型。完成后，你应能打开 `clip_explorer` domain、写入合法 Clip、兼容读取 0.2.0 记录、拒绝损坏记录，并说明为什么 Side Chat 不在 schema 中。
+本章实现 Clip、有序集合与衍生 Session 的 durable 模型。完成后，你能打开 `clip_explorer`、写入合法 Clip、读取缺少排序字段的 version 1 旧记录、拒绝损坏记录，并说明 Side Chat 为什么不建表。插件 npm version 与 domain version 不是同一概念。
 
 ## 1. 先复用 DSH 身份
 
@@ -103,7 +103,7 @@ this.derivedSessions = domain.table('derived_sessions')
 
 `Domain.close()` 会先拒绝新写入，排空已经排队的写入，再释放 backend unit。Disposer 必须跟随 BranchMark Service，而不是只依赖 storage facility 在进程退出时兜底。
 
-官方 storage 语义见 [`docs/subsystems/storage.md`](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/subsystems/storage.md)：reads 来自 authoritative in-memory state；write 先 durable、再更新内存、再发 change event；失败写入不会污染读取状态。
+官方 storage 语义见 [`docs/subsystems/storage.md`](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/subsystems/storage.md)：reads 来自 authoritative in-memory state；write 先 durable、再更新内存、再发 change event；失败写入不会污染读取状态。
 
 ## 7. KV 记录应当替换而不是原地修改
 

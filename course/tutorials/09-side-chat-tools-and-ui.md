@@ -45,7 +45,7 @@ if (!fs.contains(root, target)) throw new Error('path resolves outside the curre
 
 ## 5. Project search 的资源上限
 
-当前 search 从目标目录 breadth-first 遍历，跳过 `.git` 和 `node_modules`，最多扫描 `maxSearchFiles`，最多保留 100 条匹配。每个文件最多读取/搜索 `maxReadChars` 个字符，最终 JSON 再受 `maxToolOutputChars` 限制。
+当前 search breadth-first 遍历，跳过 `.git` 和 `node_modules`，最多扫描 `maxSearchFiles`，最多保留 100 条匹配。`maxReadChars` 限制完整 `readText()` 返回后参与搜索或模型输入的字符数，工具文本再受 `maxToolOutputChars` 限制；它不是文件读取字节上限或峰值内存保证。100 条匹配是当前固定值，不是 Config 字段。
 
 这些是 LLM 上下文和运行成本边界，不是高性能全文索引。大仓库应考虑新增专用 search provider 或索引服务，而不是简单把默认值无限增大。
 
@@ -53,7 +53,7 @@ if (!fs.contains(root, target)) throw new Error('path resolves outside the curre
 
 `web_search` 和 `web_fetch` 复用 DSH Web Service，所以 provider、错误与 AbortSignal 均由宿主能力处理。当前默认 `dsh-base` 挂有 search provider，但明确没有默认 fetch provider；因此 schema 中存在 `web_fetch` 不代表每个安装都能成功执行。
 
-DSH [Web 子系统文档](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/subsystems/web.md)还说明本地 HTTP fetch backend 默认不阻断 private-network target。若部署需要 fetch，管理员必须选配满足自身 SSRF/network policy 的 provider；插件不能把一个通用 `ctx.web.fetch` 调用宣传为自动隔离内网。
+DSH [Web 子系统文档](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/subsystems/web.md)还说明本地 HTTP fetch backend 默认不阻断 private-network target。若部署需要 fetch，管理员必须选配满足自身 SSRF/network policy 的 provider；插件不能把一个通用 `ctx.web.fetch` 调用宣传为自动隔离内网。
 
 Provider unavailable 会变成正常的 error tool result，模型可以据此改用搜索或向用户说明限制，不会让 Runtime 调用任意替代网络库。
 
@@ -67,20 +67,20 @@ Provider unavailable 会变成正常的 error tool result，模型可以据此�
 
 ## 8. Abort 从 UI 贯穿到 provider
 
-每次 send 创建一个 `AbortController`，signal 同时传给 `ctx.llm.stream`、FS 和 Web calls。三种动作不同：
+每次 send 创建 `AbortController`，signal 传给回答阶段的 LLM、FS 和 Web 调用。取消是请求，不是完成确认；adapter 仍要响应。目录准备和首次摘要没有接入同一 signal，需要单独看待：
 
 | 动作 | Host entry | 当前运行 | 已完成消息 |
 | --- | --- | --- | --- |
 | 最小化/隐藏 Dock | 保留 | 继续 | 保留 |
-| “停止” | 保留 | abort，回到 idle | 保留 |
+| “停止” | 保留 | 请求 abort；回答处理完成后回 idle | 保留 |
 | 关闭 tab | 从 Map 删除 | abort | 全部销毁 |
 | 插件 dispose/Host 退出 | Map 清空 | 全部 abort | 全部销毁 |
 
-`cancel` 后 tab 可以继续提问；`close` 后旧 id 的 get/send 返回 `side-chat-not-found`。Browser 不能通过重新打开 Dock 恢复已关闭 entry。
+`cancel()` 返回当时 snapshot，可能仍 running；等待后续 idle 才能再次 send。`close()` 删除 Map entry，旧 id 的 get/send 返回 `side-chat-not-found`，但不可取消的 catalog/summary Promise 可能仍持有 entry 引用直到结束。“关闭即销毁”是产品访问与恢复语义，不是内存清零或所有上游请求停止的证明。
 
 ## 9. Browser 用 snapshot 短轮询
 
-[`SideChatView`](../../packages/client/src/components/SideChat.tsx) 每 500 ms 对所有当前 tab 并发调用 `getSideChat`，并用 `controller.upsertSideChat()` 替换 snapshot。它不是 token push、SSE 或 WebSocket：
+[`SideChatView`](../../packages/client/src/components/SideChat.tsx)挂载期间每 500 ms 对所有当前 tab 并发调用 `getSideChat`，再替换 snapshot。切换视图或收起使组件卸载时，轮询停止，但 Host 回答仍可继续；返回视图再获取最新状态。它不是 token push、SSE 或 WebSocket：
 
 ```text
 Host stream updates mutable entry

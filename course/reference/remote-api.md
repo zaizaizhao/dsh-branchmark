@@ -51,10 +51,12 @@ DSH 当前 Remote 设计本身只要求外层 `RemoteResult<T>`，并用一个 m
 | `getSideChat` | `{ id }` | 最新 snapshot | 无，供 Browser 轮询 |
 | `sendSideChat` | `{ id, text }` | 立即返回 running snapshot | 异步开始摘要/回答/工具循环 |
 | `selectSideChatModel` | `{ id, selection }` | 更新后的 snapshot | 只更新临时 route |
-| `cancelSideChat` | `{ id }` | 当前 snapshot | abort 当前回答，保留 tab |
+| `cancelSideChat` | `{ id }` | 当前 snapshot | 请求 abort 回答，保留 tab；返回时可能仍 running |
 | `closeSideChat` | `{ id }` | `{ destroyed: true }` | abort 并立即从 Map 删除 |
 
 Side Chat snapshot 是缩窄 wire projection，不包含隐藏来源上下文、provider replay state 或任意扩展 block。它只传 `MessageId`、角色、文本、reasoning、受限工具活动和模型目录。
+
+首次摘要未接入同一取消信号，关闭 Map entry 不证明已开始的上游请求终止，详见[生命周期限制](compatibility-and-limitations.md#side-chat-的已知限制)。
 
 ## 业务失败码
 
@@ -69,7 +71,7 @@ Side Chat snapshot 是缩窄 wire projection，不包含隐藏来源上下文、
 | `invalid-request` | 文本、标签、集合或 mode 违反规则 | 展示 message，不要自动改写语义后重试 |
 | `clip-not-found` | Clip 不存在或不在 Workspace | 刷新集合 |
 | `derived-session-already-recorded` | child 已有不可变关系 | 读取现有关系，不覆盖 |
-| `derived-session-mismatch` | DSH child header 不符合 full-fork/clips-only | 不伪称成功；删除空 child 或让用户处理 |
+| `derived-session-mismatch` | DSH child header 不符合 full-fork/clips-only | 保留失败证据并核对 child，不自动删除可能已有内容的会话 |
 | `derived-session-unavailable` | child 未挂载到 Host Session Store | 等待/诊断创建绑定，不能只写关系表 |
 | `side-chat-not-found` | tab 已关闭或 Host 重启 | Browser 移除 tab |
 | `side-chat-busy` | 同一个 tab 已有回答运行 | 等待或先 cancel |

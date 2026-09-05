@@ -14,6 +14,8 @@
 
 使用独立 DSH home/profile 安装本次 tarball，并在 DSH 自己的 credentials/settings 中配置 provider。不要把 API key 写入插件 config 或 shell command。
 
+先按[第 10 章](../tutorials/10-package-install-and-adapt.md)固定 rc.1 CLI 和 home。做两阶段 preflight：模型目录能返回；同一 profile 下的实际短推理请求能完成。目录存在不保证 provider 有可用路由。若缺凭证、返回 model_not_found/503 或持续超时，记录失败阶段并把依赖它的验收标 BLOCKED；不要自动换模型后仍说原模型通过。
+
 在测试 Workspace 创建：
 
 ```text
@@ -38,6 +40,8 @@ notes/other.md     不包含该短语
 
 验收：第一次回答能分别指出四类信息；被取消的第二条 note 不应成为依据；UI 没有 `contextWarning`。若回答缺较早信息，先查摘要失败/上下文上限，不要直接判模型“忘了”。
 
+回答质量不能独自证明请求内容：第二条 note 的独有短语不能同时出现在来源历史或其他 Clip 中，否则无法判定是否被排除。请求结构由确定性 Host 用例证明，真实场景只补充模型行为；出现 contextWarning 时分别记录“降级路径结果”和“摘要验收未通过”。
+
 若使用专用摘要 provider/model，记录 DSH 中配置的 id 和 provider request audit 的脱敏证据；不要记录 key 或完整敏感 prompt。
 
 ## 场景 3：独立模型切换
@@ -60,6 +64,8 @@ notes/other.md     不包含该短语
 
 再请求读取 `../` 指向项目外的已知测试路径。验收：tool result 为 error，消息说明 path outside project；不得返回外部内容。不要为了演示创建或读取敏感文件。
 
+必须看到真正的 tool-call 与对应 error result。若模型拒绝发起工具调用，只能记录未触达执行路径，不能算 containment 通过。`maxReadChars` 是完整 readText 后的截断，不把这个场景当作大文件内存上限测试。
+
 ## 场景 5：Web provider 差异
 
 先调用 `web_search`，确认当前 profile 的 search provider 可用。再请求 `web_fetch`：默认 `dsh-base` 没有 fetch provider，因此未额外配置时预期是结构化工具失败，不是成功。
@@ -75,6 +81,8 @@ notes/other.md     不包含该短语
 3. 再开始一次回答并直接关闭 tab；Host 应 abort 并删除 entry，恢复 Dock 不出现旧 tab。
 4. 保留另一个 Side Chat 后重启 DSH；普通 Clip/Session 恢复，临时 tab 消失。
 
+补测“首次摘要尚未结束时停止/关闭”：当前摘要没有接入同一 AbortSignal，cancel 的返回 snapshot 也可能仍 running。关闭后 get 失效和上游请求结束是两个验收项；明确记录此限制，不把点击按钮作为请求停止的证据。
+
 ## 场景 7：保存回答
 
 从一条 assistant answer 选择部分文字并保存，再点击另一条回答的“保存整段回答”。
@@ -84,8 +92,9 @@ notes/other.md     不包含该短语
 ## 证据记录模板
 
 ```text
-DSH version/commit:
-BranchMark version:
+DSH package version / release commit / CLI path:
+BranchMark version / source commit / tarball:
+OS / Browser / origin:
 Profile name:
 Provider/model ids（无密钥）:
 Source message count / recentContextMessages:
@@ -100,6 +109,7 @@ Temporary answer Clip:
 
 Failures and exact error codes/messages:
 Unverified items:
+每项状态（PASS / FAIL / BLOCKED / NOT RUN）及下一步:
 ```
 
 不要只记录“通过”。为每个场景保存可复核的 Session id、Clip id、工具状态或脱敏截图；Side Chat id 重启后失效是预期证据。
@@ -108,7 +118,7 @@ Unverified items:
 
 ```text
 [ ] Side Chat 全程不新增/修改普通 Session event
-[ ] 第一次问题同时利用 summary、recent 和 Clip recall，或明确展示降级 warning
+[ ] 摘要成功与降级 warning 路径分别记录，未以降级冒充摘要成功
 [ ] Side Chat model 变化不影响父 Session
 [ ] 三个 project tools 成功，项目外 path 被拒绝
 [ ] Web 行为与当前 provider 配置一致
@@ -127,6 +137,7 @@ Unverified items:
 路径越界成功 → projectTarget resolve/contains，立即停止发布
 fetch 失败 → 是否配置 fetch provider
 停止无效 → AbortSignal 是否传到 LLM/FS/Web adapter
+首次摘要期间停止无效 → 当前摘要取消链缺口，不代表回答阶段 signal 同样缺失
 关闭后仍可 get → Host Map delete/disposer
 ```
 

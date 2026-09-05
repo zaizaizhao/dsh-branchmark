@@ -2,7 +2,7 @@
 
 本页是查阅型参考，回答“一个动作跨过了哪些模块、最后写到哪里”。实现顺序见[主线课程](../README.md#主线课程)，类型和方法细节见[Remote API](remote-api.md)，DSH Client 为什么采用这些所有者见[架构设计解读](dsh-client-architecture-rationale.md)。
 
-本图描述当前 BranchMark `0.1.2-alpha.5` 源码：持久日志通过 `sessionPersistence.inspect` 读取，lineage 使用 `SessionHeader.isSeeded` 与 `SessionInspection.inheritedEventCount`。未发布 master 保留 Host 复核、full-fork 与 recall 语义，但把读取入口改成 `SessionHandle`；迁移过程见[第 13 章](../tutorials/13-dsh-prerelease-upgrade.md)。
+本图描述当前 BranchMark `0.1.2-rc.1` 源码：持久日志通过 `sessionPersistence.inspect` 读取，lineage 使用 `SessionHeader.isSeeded` 与 `SessionInspection.inheritedEventCount`。后续源码的 handle 与日志格式需单独审计，不能混入本图；见[Session 身份参考](session-identity-and-migrations.md)。
 
 ## 运行时组件
 
@@ -32,12 +32,12 @@ DSH Web profile
     ├── generated remote.branchmark methods
     ├── BranchMarkClient
     ├── BranchMarkUiController
-    └── DSH Slots
-        ├── shell.overlay
-        ├── sidebar.footer.action
-        ├── conversation.input.left
-        ├── conversation.session.header.actions
-        └── conversation.chat.node
+    ├── DSH Slots
+    │   ├── shell.overlay
+    │   ├── sidebar.footer.action
+    │   ├── conversation.input.left
+    │   ├── conversation.session.header.actions
+    │   └── conversation.chat.node
     └── ctx.inputTriggers
         └── branchmark Reference codec
 ```
@@ -52,10 +52,21 @@ Host 的入口是 [`BranchMarkService`](../../packages/host/src/index.ts)，Side
 | 衍生关系与 Clip 使用快照 | BranchMark | `clip_explorer/derived_sessions` | 保留 | 保留 |
 | 普通 Session 历史、parent、seed | DSH Session/Persistence | DSH Session backend | 保留 | 不受影响 |
 | Side Chat 隐藏上下文、消息、流式状态 | `TemporarySideChatRuntime` | Host 内存 | 丢失 | 只要标签未关闭就保留内存引用副本 |
-| Dock 显示模式、视图和宽度 | `BranchMarkUiController` | 浏览器 `localStorage` | 保留 | 不含 Clip 内容 |
+| Dock mode/view/width 与 railPosition | `BranchMarkUiController` | 浏览器 `localStorage` | 保留 | 不含 Clip 内容 |
 | Composer 中显式插入的 Clip occurrence | DSH Composer + BranchMark codec | occurrence 在当前 input state；clipboard token 在 DSH draft mirror | token 服从 DSH draft 持久化并可重建 occurrence | 提交时重新读取 active Clip；删除后 token 保持可见或已有 Chip 阻止发送 |
 
 这张表解释了插件为何同时需要两个持久系统：普通 Session 的模型历史属于 DSH 日志，Clip 知识对象与双向使用关系属于插件 domain。插件不得把 Session 日志复制到自己的 KV 表，也不得用 Clip 表替代 DSH lineage。
+
+## 浮签布局数据流
+
+```text
+Pointer Capture → gesture ref + liveTop 预览
+  ├── 松手 → controller 的受限 railPosition → localStorage
+  └── cancel / lost capture / resize → 撤销预览，不写偏好
+刷新 → 读取比例 → 按当前 viewport 计算 top
+```
+
+临时手势属于组件，已提交布局属于 Browser controller；这条路径不调用 Host。几何、键盘与清理机制见[第 6A 章](../tutorials/06a-dock-interaction-and-preferences.md)。
 
 ## Clip 创建数据流
 
@@ -167,7 +178,7 @@ browser polls getSideChat every 500 ms
 closeSideChat → AbortController.abort + Map.delete
 ```
 
-Side Chat 不是普通 Session，因此不会生成 Session id、Session event 或持久化记录。它使用 DSH 的消息和模型协议，但自己承担内存状态、取消、缩窄 wire projection 与不可恢复语义。
+关闭 Map entry 撤销产品访问，但不保证已经开始的目录/摘要请求立即终止，详见[限制](compatibility-and-limitations.md#side-chat-的已知限制)。Side Chat 不是普通 Session，因此不会生成 Session id、Session event 或持久化记录。它使用 DSH 的消息和模型协议，但自己承担内存状态、取消、缩窄 wire projection 与不可恢复语义。
 
 ## 父子层级的两份数据
 

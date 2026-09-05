@@ -17,7 +17,7 @@ export class BranchMarkService extends Service {
 }
 ```
 
-Cordis 的 `inject` 不只是文档。缺少必需服务时，插件不会在一个半可用状态下继续运行。服务初始化时打开 domain，并用 `ctx.effect()` 注册 domain 与 Side Chat runtime 的反向清理；相关基础语义见 DSH 的 [Cordis primer](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/cordis-primer.md)。
+Cordis 的 `inject` 不只是文档。缺少必需服务时，插件不会在一个半可用状态下继续运行。服务初始化时打开 domain，并用 `ctx.effect()` 注册 domain 与 Side Chat runtime 的反向清理；相关基础语义见 DSH 的 [Cordis primer](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/cordis-primer.md)。
 
 ## 2. 配置在加载时完成校验
 
@@ -44,17 +44,17 @@ Service 用 Schemastery 声明所有可调边界，例如 excerpt/note/tag 大�
 ```text
 Host TypeScript source
     ↓ typert package-mode generation
-packages/host/lib/typert-host.js
-packages/host/lib/remote.js
-packages/host/lib/remote.d.ts
-packages/host/lib/remote-map.d.ts
+packages/host/lib/typert.host.js
+packages/host/lib/typert.host.d.ts
+packages/host/lib/typert.remote-client.js
+packages/host/lib/typert.remote-client.d.ts
     ↓
 Browser: ctx.remote.$mount(branchmarkRemote)
     ↓
 ctx.remote.branchmark.create(...)
 ```
 
-生成链的配置见 [`packages/host/tsdown.config.ts`](../../packages/host/tsdown.config.ts)，官方约束见 [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/api-gateway.md)。Remote 方法应使用可生成的公开 DTO，避免把 Cordis service、class instance、函数或隐式 closure 放进 wire 类型。
+生成链的配置见 [`packages/host/tsdown.config.ts`](../../packages/host/tsdown.config.ts)，官方约束见 [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/api-gateway.md)。Remote 方法应使用可生成的公开 DTO，避免把 Cordis service、class instance、函数或隐式 closure 放进 wire 类型。
 
 ## 5. 理解两层结果封装
 
@@ -72,7 +72,7 @@ return transport.value.value
 
 外层是 DSH Gateway/Typert transport 结果，表示模块、连接、参数解码或调用是否成功；内层是 BranchMark 业务结果，表示 Workspace、来源、字段与状态是否满足规则。不要把业务拒绝实现成未分类 throw，也不要在 UI 中把所有失败都显示成“网络错误”。
 
-DSH alpha.2 自身进一步统一了 Remote failure：所有领域共享一个 merge-extensible code/details 表和 `RemoteError`，code 使用 `<domain>/<reason>`，Client/Host/Worker 跨 realm 时按结构标记与 code 判断，而不依赖可能失效的 `instanceof`。这样新增 DSH failure 不再同时维护领域 error class、carrier 表和 consumer cast，未分类异常也只在 Gateway 一处折叠为 `gateway/internal`。官方动机见 [ctx.remote failure Agent Note](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/.agents/notes/implemented/architecture/2026-08-28-ctx-remote-failure-vocabulary.md)。
+DSH 的 Remote failure 使用一个 merge-extensible code/details 表和 `RemoteError`，code 带 `<domain>/<reason>` 前缀；跨 Host/Client/Worker 按结构标记和 code 判断，不依赖跨 realm 的 `instanceof`。未分类异常由 Gateway 折叠为 `gateway/internal`，设计依据见[官方记录](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/.agents/notes/implemented/architecture/2026-08-28-ctx-remote-failure-vocabulary.md)。
 
 BranchMark 的内层 `ClipSuccess | ClipRejected` 是插件自己的协议选择，不是 DSH 要求。当前 [`BranchMarkClient.unwrap()`](../../packages/client/src/domain/client.ts)把 DSH 外层和 BranchMark 内层集中在一个边界处理，组件不会看到两层判断；如果从零设计一个只面向当前 DSH 的 Remote namespace，也可以在 Host 业务失败点直接使用 DSH `RemoteError`，让每个调用只保留一层 `RemoteResult<T>`。两种层次与取舍见[架构设计解读](../reference/dsh-client-architecture-rationale.md#7-为什么-dsh-统一-remote-failure)。
 
@@ -100,7 +100,7 @@ deriveEventMessage，核对 messageId / role / turn
 storage put
 ```
 
-这里的 `sessionPersistence.inspect()` 是课程 alpha.2 基线的读取入口。alpha.5 仍提供 `inspect()`，但把精确 fork cut 放在 `inspection.inheritedEventCount`；2026-09-02 master 已删除 `inspect()`，改为 `open(id, 'read')`、`handle.read()` 与 `finally handle.close()`。可信校验步骤不变，资源所有权和 lineage 字段必须按[第 13 章](13-dsh-prerelease-upgrade.md)迁移。
+这里的 `sessionPersistence.inspect()` 是 rc.1 的真实读取入口，精确 fork cut 在 `inspection.inheritedEventCount`。主线不实现 SessionHandle；将来换日志格式时还必须重新定位旧 Clip，不能只替换读取方法，见[Session 身份参考](../reference/session-identity-and-migrations.md)。
 
 关键实现位于 [`resolveSource` 与 `resolvePersistedSource`](../../packages/host/src/index.ts)。用户消息还要求事件来源为真正的 `source.kind === 'user'`，避免插件自己追加的 recall 被伪装成普通用户输入。
 
@@ -124,6 +124,8 @@ storage put
 | `project-trash` | 当前 Workspace、`scope=project`、trashed |
 
 本会话视图只使用 `session-drawer`，项目视图只使用 `project-library`。只有 Composer 引用序列化或 draft mirror 恢复这类需要解析两种可见 scope 的工作流，Client 才分别调用 session 与 project 查询后合并结果；Host 从不返回其他会话的 private Clip。全文搜索只匹配 excerpt 和 note；标签由独立的 AND 过滤参数处理，不属于全文搜索字段。
+
+这里的“会话私有”是受信任本地 DSH 内的视图/领域隔离，不是用户账户级多租户授权。调用者仍提交 Workspace/Session id，BranchMark 没有新增独立身份认证系统；不能把这组 DTO 直接暴露给互不信任的远程用户。部署访问控制仍由 DSH 和部署环境承担，见[安全说明](../../SECURITY.md)。
 
 ## 9. 更新、回收站与不可变来源
 
@@ -160,17 +162,17 @@ Client wrapper 把 code 转成面向用户的中文提示，但保留 code 供�
 运行 Host 测试并生成 Remote：
 
 ```sh
-pnpm --filter dsh-branchmark-host generate
+pnpm run build:host
 pnpm --filter dsh-branchmark-host test
 ```
 
 然后检查生成声明中存在 namespace：
 
 ```sh
-rg -n "branchmark|createSideChat|recordDerivedSession" packages/host/lib/remote-map.d.ts
+rg -n "branchmark|createSideChat|recordDerivedSession" packages/host/lib/typert.remote-client.d.ts
 ```
 
-应能观察到：伪造 session/message/range/excerpt 均被拒绝；失败请求不新增 Clip；session/project 查询不会跨 visibility 返回记录；完整集合顺序跨重启保留，局部与跨组重排不改变既有顺序；14 个方法均出现在生成产物中。
+测试负责来源、visibility 与排序规则；生成声明负责方法可见性；持久顺序的进程重启证据由实验 4 补足。不要把某条用例中的 domain 重开等同于真实 DSH 进程重启，具体证据范围见[验证矩阵](../reference/verification-matrix.md)。
 
 ## 13. 检索练习
 

@@ -2,7 +2,7 @@
 
 本章实现不创建普通 Session 的临时问答运行时。完成后，你应能从 primary Clip 恢复来源模型配置与消息前缀，把较早历史压成摘要、保留最近原始消息和完整 Clip，并直接通过 DSH LLM capability 流式回答。
 
-本章的上下文算法不因新版 persistence 改变，但“取得来源 events”是版本适配点：alpha.2/alpha.5 使用 inspection，2026-09-02 master 使用只读 `SessionHandle` 并要求显式关闭。不要把资源读取差异扩散进摘要、消息重建和工具循环；收敛方法见[第 13 章](13-dsh-prerelease-upgrade.md)。
+本章使用 rc.1 的 `sessionPersistence.inspect()`。取得 events、决定来源位置、重建消息是不同步骤；日志格式升级需要逐步复核，不能因为摘要函数没改就断言整条路径兼容，见[第 13 章](13-dsh-prerelease-upgrade.md)。
 
 ## 1. Side Chat 不是“小号 Session”
 
@@ -54,9 +54,11 @@ const sourceMessages = reconstructedMessages(prefix)
 
 `create()` 同步完成来源 inspect/prefix/header/messages，并启动 `prepareModelCatalog()`。初始 snapshot 的 `status='preparing'` 主要表示模型目录还在加载；catalog 完成后变成 `idle`。
 
-较早历史摘要不是创建时执行，而是在第一次 `send()` 时通过 `entry.contextPromise ??=` 懒启动。当前 UI 在空消息的 preparing 状态显示“正在生成来源摘要并恢复上下文”，这比底层真实动作更宽泛；复现时应把文案改成“正在准备模型与来源上下文”，或保留本章所述行为认知。
+较早历史摘要在第一次 `send()` 时通过 `entry.contextPromise ??=` 懒启动。当前 preparing 文案含摘要表述，但创建阶段实际仍是来源与目录准备；诊断以调用和请求证据为准，不能根据文案认定摘要已发生。
 
 懒执行的好处是用户关闭一个从未提问的 tab 时不会消耗摘要 token；代价是第一次回答的首 token 延迟包含摘要时间。
+
+`??=` 表达同一 entry 复用一次准备 Promise，不表示自动重试、deadline 或取消传播。当前 `summarize()` 没有接收 send 的 AbortSignal；关闭标签撤销访问，但已开始的摘要仍可能继续到 provider 完成或超时。不能承诺停止按钮立刻终止摘要或计费。
 
 ## 6. 上下文压缩算法
 
@@ -160,10 +162,10 @@ finish 处理如下：
 在 Host tests 中使用 fake LLM stream 验证：
 
 ```sh
-pnpm --filter dsh-branchmark-host test -- --run
+pnpm --filter dsh-branchmark-host test
 ```
 
-应能证明：创建/提问/回答不向 `SessionStore` 追加事件；第一次 send 才准备 context；较早历史被摘要、最近消息与所有 Clip 原文仍在 answer request；模型切换只改变 Side Chat route，不改变来源 Session 配置。
+核对已有用例对 Session 事件、summary/answer 请求和模型 route 的断言，范围以[验证矩阵](../reference/verification-matrix.md)为准。未实现的 tool/cancel 分支测试属于实验任务，不算现有测试已覆盖。
 
 真实 provider 的 token、finish 和 reasoning 表现留到实验 3，mock test 不能证明某个实际模型会遵循摘要 prompt。
 

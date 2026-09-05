@@ -1,88 +1,85 @@
 # 从零复现 枝签 · BranchMark
 
-这是一套以真实源码为教材的顺序课程。完成主线后，你应当能从一个空目录构建、安装并验收一个不修改 DSH 源码的 BranchMark：它能从消息生成会话枝签和项目枝签、持久化置顶与手动顺序、恢复 Composer 原生引用、创建普通衍生 Session、运行多个临时 Side Chat，并在右侧 Dock 中展示父子会话关系。
+这套课程带你用 DSH 的公开扩展点实现可安装的摘录插件：保存可信来源、整理枝签、恢复 Composer 引用、创建普通衍生 Session，并运行临时 Side Chat。主线对应本仓库的 `0.1.2-rc.1` 源码，宿主固定为 DSH `0.1.2-rc.1`，不是移动中的 master。可运行命令在现有教材仓库执行，独立重建任务在自己的练习目录完成，不要混用两种工作区。
 
-课程不是实现总结，也不是 API 目录。`tutorials/` 按先修关系带你完成系统；`labs/` 要求你在不照抄整文件的情况下复现关键纵向切片；`reference/` 用于开发时快速查阅。涉及 DSH 架构变化时，课程会区分官方明确决策、当前实现事实和 BranchMark 工程解读，避免把推测写成 DSH 作者动机。
+## 从哪里开始
 
-## 版本锚点
+先阅读[版本基线](reference/version-baseline.md)，确认源码、依赖、运行中的 DSH 是同一个目标。全局 CLI 版本或 npm latest 不能独自证明兼容；本地源码版本也不代表已经发布。
 
-| 项目 | 本课程核对版本 |
-| --- | --- |
-| DeepSeek Harness | `0.1.2-alpha.5` |
-| DSH Git commit | `db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5` |
-| BranchMark | `0.1.2-alpha.5` |
-| Node.js | `^22.19.0 || >=24.0.0` |
-| pnpm | `11.7.0` |
-| TypeScript | `^6.0.3` |
-| React | `^18.2.0` |
+| 你的目标 | 建议路线 | 交付物 |
+| --- | --- | --- |
+| 第一次开发 DSH 插件 | 第 1–5 章 → 实验 1 → 第 6、6A 章 → 实验 4、5 | 可信 Clip 主干与可恢复的浏览器交互 |
+| 复现全部功能 | 基础路线 → 第 7–9 章 → 实验 2、3 → 第 10–11 章 → 实验 6 → 第 12 章 | 自包含 tarball、真实 Web 验收和 provider 验证结果 |
+| 维护插件或跟进 DSH | 版本基线 → 第 13 章 → Session 身份参考 → 第 11 章 | 单目标兼容矩阵、数据演练和发布判定 |
 
-这个表是当前 BranchMark 源码可以直接复现的发布基线，不是移动中的“最新 DSH”标签。第 13 章保留 alpha.2 到 alpha.5 的迁移过程，并把当日 [`master@49a606b`](https://github.com/deepseek-ai/deepseek-harness/tree/49a606bc5b5934603f22a26957a07dc799ab0291) 作为另一个独立目标；该 master 还需要迁移到 `SessionHandle` 持久化接口，不能用本课程的 alpha.5 构建替代。
-
-DSH 当前处于预发布阶段。课程中标为“当前导出”的能力不等于稳定 API；升级前先执行[兼容性审计](reference/compatibility-and-limitations.md)，再按[第 13 章](tutorials/13-dsh-prerelease-upgrade.md)建立目标版本适配，不要用相同版本字符串或编译通过代替运行行为核对。
+编号用于稳定链接：第 6A 章接在第 6 章后，第 13 章是进阶选修，第 12 章仍是主线毕业项目。没有可用模型凭证时可以完成 keyless 路线，但不能把实验 3 标为通过。
 
 ## 先修知识
 
-- 能阅读严格模式 TypeScript、discriminated union、泛型与 declaration merging。
-- 能编写 React function component、Hook 和受控表单。
-- 知道 HTTP RPC、事件日志、流式 token、AbortSignal 和本地 KV 存储的基本概念。
-- 不要求提前了解 Cordis、Typert 或 DSH Session 内部结构；课程会在使用前建立这些概念。
+- TypeScript：能阅读 union、泛型、`import type` 与 declaration merging。
+- React：会写组件、Hook 和受控输入；外部 store 与 Pointer Capture 会在课内讲解。
+- 工程基础：会用 Git、终端和包管理器，能区分持久数据、内存状态与 RPC。
+- Cordis、Typert、DSH Session 不要求预先掌握；遇到术语先查[术语表](reference/glossary.md)。
 
 ## 先验证教材本体
 
-在插件根目录执行：
+在已检出的 BranchMark 根目录、使用[基线工具链](reference/version-baseline.md)执行：
 
 ```sh
-cd /absolute/path/to/deepseek-harness/dsh-branchmark
-corepack enable
-pnpm install
+node --version
+pnpm --version
+pnpm install --frozen-lockfile
 pnpm run check
+pnpm run verify:docs
+pnpm run verify:course
 ```
 
-`pnpm run check` 依次运行 Host 生成、TypeScript 检查、Vitest、全部构建和自包含 Bundle 校验。只有这条命令成功，后续章节引用的生成 Remote 与 Bundle 文件才是同步的。
+`check` 验证源码、测试、生成与构建产物；`verify:docs` 检查仓库内文档目标；`verify:course` 检查课程基线、命令引用与导航。它们不启动模型，也不证明真实浏览器布局。缺少工具时按[贡献指南](../CONTRIBUTING.md)准备，不在日常 DSH profile 上试装教材。
 
 ## 主线课程
 
 | 顺序 | 章节 | 完成后的可观察结果 |
 | ---: | --- | --- |
-| 1 | [产品模型与三种“继续探索”](tutorials/01-product-and-domain.md) | 能区分完整分叉、仅枝签 Session、Side Chat 和 DSH subagent |
-| 2 | [DSH 插件基础与总体架构](tutorials/02-dsh-plugin-foundation.md) | 能画出 Host、Client、Bundle 与现有 DSH 服务的组合图，并解释为何没有聚合 Client Runtime |
-| 3 | [建立独立工作区与生成链](tutorials/03-scaffold-and-build.md) | 能从空目录建立三个 package，并生成 Typert Host/Remote 产物 |
-| 4 | [领域类型与本地持久化](tutorials/04-domain-types-and-storage.md) | 能创建兼容旧记录的 `clip_explorer` domain，并读写不可变 Clip、排序元数据与关系快照 |
-| 5 | [Host Service、Remote 与来源校验](tutorials/05-host-remote-and-validation.md) | 能从浏览器调用类型化 API，拒绝伪造来源、局部排序和跨置顶组排序 |
-| 6 | [前端选区、Dock 与 Composer](tutorials/06-frontend-selection-and-dock.md) | 能恢复 canonical range，挂载完整 Dock，并维护可恢复的 DSH 原生 Clip 引用 |
-| 7 | [普通衍生 Session 与父子层级](tutorials/07-derived-sessions-and-lineage.md) | 能按消息所在完整 turn 分叉，并验证 parent/seed/recall/双向关系 |
-| 8 | [Side Chat 上下文与 LLM 流](tutorials/08-side-chat-context-and-llm.md) | 能恢复来源模型、生成较早历史摘要并流式组装回答 |
-| 9 | [只读工具、临时生命周期与 Side Chat UI](tutorials/09-side-chat-tools-and-ui.md) | 能运行有边界的工具循环、多个标签、停止与关闭即销毁 |
-| 10 | [单包发布、安装与 DSH 适配](tutorials/10-package-install-and-adapt.md) | 能打出自包含 tarball，并安装到未修改源码的 Web profile |
-| 11 | [测试、调试与真实验收](tutorials/11-testing-debugging-and-release.md) | 能区分单元、构建产物、真实组合和带凭证 LLM 验收 |
-| 12 | [毕业项目：从空目录到可安装插件](tutorials/12-capstone-reproduction.md) | 能按检查点重建功能，不依赖复制现有目录 |
-| 13 | [进阶：跟随 DSH 预发布版本升级](tutorials/13-dsh-prerelease-upgrade.md) | 能区分 release tag 与移动中的 master，迁移 lineage、日志读取、Composer 与持久化接口，并制定安全发布版本 |
+| 1 | [产品模型与三种继续探索](tutorials/01-product-and-domain.md) | 分清 Clip、full-fork、clips-only、Side Chat 与 subagent |
+| 2 | [DSH 插件基础与总体架构](tutorials/02-dsh-plugin-foundation.md) | 为状态和资源找到 Host、Client 或宿主 owner |
+| 3 | [独立工作区与生成链](tutorials/03-scaffold-and-build.md) | 分别证明 Typert 源码和 Bundle 产物正确 |
+| 4 | [领域类型与持久化](tutorials/04-domain-types-and-storage.md) | 校验 Clip、兼容可选元数据、保留关系快照 |
+| 5 | [Host Remote 与来源校验](tutorials/05-host-remote-and-validation.md) | 拒绝伪造来源、不完整重排和不匹配 Workspace |
+| 6 | [选区、集合与 Composer](tutorials/06-frontend-selection-and-dock.md) | 从 DOM 恢复原文 range；恢复 Chip 且不自动发送 |
+| 6A | [Dock 交互、可拖动浮签与偏好](tutorials/06a-dock-interaction-and-preferences.md) | 拖动、点击、取消、键盘与刷新恢复有明确结果 |
+| 7 | [普通衍生 Session 与父子层级](tutorials/07-derived-sessions-and-lineage.md) | 用 parent、继承切点和 recall 证明两类新会话 |
+| 8 | [Side Chat 上下文与 LLM 流](tutorials/08-side-chat-context-and-llm.md) | 区分目录准备、首次摘要、回答与降级 |
+| 9 | [只读工具与临时生命周期](tutorials/09-side-chat-tools-and-ui.md) | 区分停止请求、标签销毁与资源实际结束 |
+| 10 | [单包构建与隔离安装](tutorials/10-package-install-and-adapt.md) | 装入本次 tarball，启动精确版本 Web profile |
+| 11 | [测试、故障分类与发布证据](tutorials/11-testing-debugging-and-release.md) | 按证据分层验收，不用一次绿灯替代所有检查 |
+| 12 | [毕业项目](tutorials/12-capstone-reproduction.md) | 独立重建并交付功能、测试、限制与演示 |
 
-建议按顺序学习。第 1–3 章建立 DSH 心智模型，第 4–6 章完成 Clip 主干，第 7 章完成持久衍生会话，第 8–9 章完成临时 Side Chat，第 10–12 章完成交付与独立复现。第 13 章是进阶升级课；只有目标 DSH 不再是课程基线时才需要执行其中的迁移。
+## 进阶课程
+
+[第 13 章：跟随 DSH 预发布版本升级](tutorials/13-dsh-prerelease-upgrade.md)教你冻结目标、比较 API 与数据格式、定位消费路径，再选择修改集合。`SessionHandle` 与日志 v2 属于独立上游源码审计，不是 rc.1 主线已经实现的功能。
 
 ## 动手实验
 
-- [实验 1：最小可信 Clip](labs/01-minimum-durable-clip.md)要求你只做一条可验证的选区→Remote→storage 纵向切片。
-- [实验 2：两类普通衍生 Session](labs/02-derived-session.md)要求你用真实 DSH API 证明 full-fork 与 clips-only 的结构差异。
-- [实验 3：真实模型 Side Chat](labs/03-side-chat-e2e.md)要求你用有效 provider 完成摘要、流式回答、只读工具和取消测试。
-- [实验 4：有序集合与 Composer 引用恢复](labs/04-ordered-collection-and-reference-recovery.md)要求你实现完整集合重排，并从持久化 token 无损恢复原生引用。
+| 实验 | 接在何处 | 必须交付的证据 |
+| --- | --- | --- |
+| [1：最小可信 Clip](labs/01-minimum-durable-clip.md) | 第 5 章后 | 合法写入、伪造拒绝、重启读取 |
+| [4：有序集合与引用恢复](labs/04-ordered-collection-and-reference-recovery.md) | 第 6 章后 | 集合校验、选择顺序、draft CAS 与缺失 token |
+| [5：可拖动浮签](labs/05-draggable-rail.md) | 第 6A 章后 | 几何、组件事件、真实页面避让分层验证 |
+| [2：普通衍生 Session](labs/02-derived-session.md) | 第 7 章后 | parent/seed/recall 对照、删除后历史保留 |
+| [3：真实模型 Side Chat](labs/03-side-chat-e2e.md) | 第 9 章后 | provider/tool/取消结果与未验证项 |
+| [6：隔离安装与发布演练](labs/06-release-rehearsal.md) | 第 11 章后 | 源码→tarball→安装包证据；练习不发布 npm |
 
 ## 快速参考
 
-- [系统架构与数据流](reference/architecture-map.md)
-- [DSH Client 架构设计解读](reference/dsh-client-architecture-rationale.md)
-- [DSH 既有插件与依赖矩阵](reference/dsh-dependency-map.md)
-- [14 个 Typed Remote 方法](reference/remote-api.md)
-- [源码导航](reference/source-map.md)
-- [兼容性、限制与升级检查](reference/compatibility-and-limitations.md)
-- [术语表](reference/glossary.md)
+- [版本基线](reference/version-baseline.md)：课程版本的唯一口径。
+- [架构与数据流](reference/architecture-map.md)、[DSH Client 架构解读](reference/dsh-client-architecture-rationale.md)：所有权和设计取舍。
+- [依赖矩阵](reference/dsh-dependency-map.md)、[Remote API](reference/remote-api.md)、[源码导航](reference/source-map.md)：按问题定位实现。
+- [Session 身份与格式迁移](reference/session-identity-and-migrations.md)：seq、offset、lineage、句柄和旧 Clip 重定位风险。
+- [兼容性与限制](reference/compatibility-and-limitations.md)、[验证矩阵](reference/verification-matrix.md)：区分代码能力与环境证据。
+- [原始资料](RESOURCES.md)、[课程目标](MISSION.md)、[维护约定](MAINTAINING.md)：深入阅读与后续维护。
 
-## 课程约定
+## 学习约定
 
-- “普通 Session”指 DSH Web 侧边栏中的持久会话；“衍生 Session”仍是普通 Session。
-- “父子会话”只指 DSH `SessionHeader.parentSession` 形成的 lineage；Clip 的使用关系是插件自己的数据，不自动等于父子关系。
-- “Side Chat”指 Host 进程内 `Map` 拥有的临时上下文；它没有 Session id，也没有恢复承诺。
-- 源码链接是当前行为的最终依据。教程片段省略 import 或 UI 细节时会明确标为“节选”，不能直接替换完整源文件。
-- 每章末尾的“检索练习”先凭记忆回答，再打开源码核对。这样既验证理解，也避免只获得短期熟悉感。
+每章先理解用户结果，再读对应源码，最后完成检查点。省略 import、变量或业务细节的代码块是“节选/伪代码”，不是可直接替换的完整文件；可执行操作单独标明运行目录。检索练习先独立回答，再看源码和提示。
 
-如果某一章的结论和你安装的 DSH 类型或运行结果冲突，以安装版本为准，并从[兼容性清单](reference/compatibility-and-limitations.md)开始定位差异。
+实验使用 `PASS / FAIL / BLOCKED / NOT RUN` 并注明证据所属环境。模型没调用工具不等于工具通过，Mock 通过不等于 provider 通过，截图不等于持久化通过。未完成的场景写明原因和下一步，不用推测补齐。

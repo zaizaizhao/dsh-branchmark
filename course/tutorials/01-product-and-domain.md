@@ -28,7 +28,7 @@
 - 身份与归属：`id`、`workspaceId`、`ownerSessionId`。
 - 可见性与生命周期：`scope: session | project`、`status: active | trashed` 和时间。
 - 不可变内容：`source` 与 `excerpt`。
-- 可变整理信息：`note` 与 `tags`。
+- 可变整理信息：`note`、`tags`、`scope`、`pinnedAt` 与 Host 管理的集合 `sortIndex`。
 
 `scope=session` 不是“项目枝签里带会话筛选”的同一视图，而是 Host Remote 层的独立可见性规则：只允许 owner Session 的本会话视图读取。`scope=project` 只进入项目枝签视图，且不会自动注入其他 Session。
 
@@ -99,3 +99,5 @@ Dock 的 `hidden`/`rail`/`expanded` 只控制显示，不释放 Side Chat。只�
 正确结论依次是：不会；不应该；不应该；不同。若任何一项含糊，先不要进入框架实现，因为后续 package 划分依赖这些边界。
 
 下一章将把这四类对象放进 DSH 的插件树，确定哪些能力由宿主提供、哪些必须由插件自己拥有。
+
+进入下一章前，给一个自选功能写下“谁发起、谁验证、写到哪里、何时销毁”四项。例如浮签位置属于浏览器布局，不能因为需要刷新恢复就把它写进 Clip 表；Side Chat 使用在线 provider，也不等于数据从未离开本机。

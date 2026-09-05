@@ -2,6 +2,8 @@
 
 本章不是再讲一遍源码，而是给出一条可独立执行的重建路线。目标是在新目录中实现等价产品行为，不复制现有整文件；每个阶段都必须先产生可观察证据，再进入下一阶段。
 
+先完成第 1–11 章及实验 1、2、4、5、6。没有真实 provider 的读者可以交付“keyless 工程阶段”，但完整毕业还需要实验 3。第 13 章的上游迁移是可选加分任务，不要求主线同时支持多个 DSH 版本。
+
 ## 1. 毕业标准
 
 最终交付必须满足：
@@ -17,6 +19,8 @@
 - Side Chat 多标签、可隐藏、关闭即销毁，使用摘要 + 最近原始消息 + 完整 Clip。
 - Side Chat 模型可独立选择，只有固定只读 project/web tools。
 - 一个 tarball即可安装，Host/Remote/Browser/Typert 产物自包含。
+- 右侧浮签可单轴拖动、键盘定位、取消和刷新恢复；不修改 DSH 布局，不把位置写入 Clip domain。
+- 每项结果有可复核证据；尚未完成的模型、平台和恢复场景有明确状态，不以推测补齐。
 
 ## 2. 建立版本证据
 
@@ -24,7 +28,7 @@
 
 建立一张适配表，至少记录 API Controller/UI adapter/target/Renderer 的 owner 映射、`ISessions.create/fork`、Host fork boundary、SessionHeader、`session/end-seed`、五个 Slot、Input Trigger reference contract、Conversation/Chat View、Chat row anchor、Remote failure contract、Typert artifacts 和 `dsh.client` format。若目标版本与本课程锚点不同，先更新设计，不照搬实现，也不要用另一个聚合 facade 掩盖 owner 变化。
 
-版本证据必须把 release tag 与 master 分行记录。目标为 alpha.5/master 时，再补 `SessionSeq`/`SessionLogOffset`、`isSeeded`/`inheritedEventCount`、`Session` 读取意图、`SessionPersistence` inspection/handle、Composer `useInput` 所有权五项；可直接复用[第 13 章](13-dsh-prerelease-upgrade.md)的审计表。
+主线采用[rc.1 基线](../reference/version-baseline.md)，记录源码、artifact、installed、runtime 四层。上游迁移的额外交付另按第 13 章处理，不把 handle/v2 设计方案写成主线现有 API。
 
 检查点：你能用源码位置回答“full-fork 最终截止哪个事件”和“Browser client.js 由谁发现与加载”。
 
@@ -34,11 +38,11 @@
 
 Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 Node index 与 Browser CJS ModuleLoader wrapper；Bundle 先只 republish一个空 Host plugin。
 
-检查点：clean `pnpm run build` 后生成所有 manifest 声明的文件，Bundle verifier 能 import default export，tarball没有 workspace path。
+检查点：生成自己 manifest 声明的文件，default export 可加载，tarball 没有 workspace path。最小骨架还没有 14 个 Remote，不应运行完整产品 roster 断言，也不为通过检查伪造占位方法。
 
 ## 4. 完成最小 durable Clip 纵向切片
 
-只实现一条路径：Browser 提交人工构造 candidate → Remote `create` → Host 读取持久日志并校验 → storage `put` → Remote `list`。alpha.2/alpha.5 可使用 inspection，master 使用只读 handle；先不写 React selection UI。
+只实现一条路径：Browser candidate → Remote create → Host inspect 校验 → storage put → Remote list。沿用 rc.1 inspection，先不写 React selection UI。
 
 顺序是 branded ids 与 DTO → Zod domain v1 → Service init/dispose → `create/list` Remote → generated Remote mount → Host tests。伪造 eventSeq/messageId/range/excerpt 各加一个拒绝用例。
 
@@ -63,6 +67,8 @@ Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 No
 不要一开始写完整视觉样式。先用 Client pure tests证明 candidate，Host 再次证明 source；最后增加主题、grid/list、search/tags、resize、rail/hidden 和 accessibility。多选用有序 id 保存勾选顺序，只渲染一个可展开的六项命令胶囊；固定高度卡片把置顶、拖拽、编辑和衍生关系控件放在不可变正文之外，并提供卡片内展开与 DSH Modal 专注阅读。
 
 检查点：普通、重复文本、链接/强调、跨消息、未完成 assistant 各有明确结果；真实 UI 不挡住宿主其他 overlay；localStorage 中没有 Clip 正文；搜索、标签筛选和回收站禁用拖拽，跨置顶组放置不会发送 Remote。
+
+再完成[实验 5](../labs/05-draggable-rail.md)：把浮签几何提成纯函数，临时 pointer 状态只留在组件，松手后保存比例；cancel/resize 回滚，键盘可定位，拖后不误点击。检查 controller payload、组件清理和真实导航可点击，三层证据缺一不可。
 
 ## 7. 接入 Composer
 
@@ -98,7 +104,7 @@ Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 No
 
 定义五个 closed schemas，手工执行 tool-call/result loop。Project path 必须 DSH FS resolve 后 contains；所有读取、搜索文件数、matches、tool output 和 rounds 有配置上限。Web 只调用 `ctx.web`，不直接引入 HTTP/search SDK。
 
-检查点：正常 read/search 成功；escape path 失败；未知 tool 失败；未配置 fetch provider 以 tool error 返回；round exhaustion 可控；Abort 可中断 LLM 与正在运行的 FS/Web。
+检查点：真实 tool-call/result、escape 拒绝、未知工具、provider 缺失和 round 上限各有证据；分别验证回答/工具的取消和首轮摘要的现有限制。教材没有给摘要传入同一 signal，不能宣称全部后台工作立即中止。
 
 对应真实模型任务见[实验 3](../labs/03-side-chat-e2e.md)。
 
@@ -142,7 +148,7 @@ Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 No
 4. 把同三条按选择顺序引用到 Composer，保留一个问题后重新绑定；展示原生 Chip 恢复、逐条移除和绝不自动发送。
 5. 选 primary + 第二条 Clip，full-fork 到第 2 轮，创建但不发送；展示 parent tree、divider、recall 和空 Composer。
 6. 用相同 Clip clips-only 并创建并发送；展示它没有 parent。
-7. 启动两个 Side Chat，一个换模型、一个调用 project search；最小化后恢复。
+7. 沿右边缘拖动浮签，展示拖后不展开、键盘定位、同 origin 刷新恢复；再启动两个 Side Chat，一个换模型、一个调用 project search，最小化后恢复。
 8. 停止一个回答，关闭另一个，保存第一条临时回答为 Clip。
 9. 删除原 Clip，展示两个普通 child 不受影响且 relation usage 仍可读；未发送引用无法伪装成有效上下文。
 10. 重启 DSH，展示 Clip/Session/手动顺序仍在，Side Chat 已消失。
@@ -163,3 +169,13 @@ Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 No
 8. 纯插件实现最脆弱的五个版本适配点是什么？
 
 若任何一题只能回答“源码里就是这样”，回到相应章节重新完成检索练习。毕业标准不是记住文件名，而是能从产品承诺推导出正确的生命周期、可信边界和 DSH extension point。
+
+## 16. 交付分级
+
+| 等级 | 必须具备 | 不能声称 |
+| --- | --- | --- |
+| Keyless 工程完成 | 主干功能、生成/测试/打包、隔离 Web、浮签与引用实验 | 真实摘要和工具回答全部通过 |
+| 完整复现完成 | Keyless 证据 + 实验 3 指定 provider 的实际结果 | 所有 provider/平台均支持，或可自动发布 |
+| 上游适配加分 | 第 13 章矩阵 + 旧 Clip 数据迁移反例 + 单独目标测试 | rc.1 包天然兼容后续格式 |
+
+把[验证模板](../reference/verification-matrix.md#记录模板)作为交付首页：标明版本、工作树差异、tarball、测试命令、真实场景和已知限制。课程复现不要求 npm 发布，发布权限与工程验收分开。

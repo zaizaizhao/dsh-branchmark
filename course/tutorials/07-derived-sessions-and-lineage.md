@@ -2,7 +2,7 @@
 
 本章实现两个持久化去向：完整继承来源历史的 full-fork，以及只携带显式 Clip 的 clips-only。完成后，你应能从 DSH Session header 证明父子关系、把 Clip recall 写入模型可见日志、支持“创建并打开”和“创建并发送”，并说明插件关系为什么不能冒充 DSH lineage。
 
-本章代码和图按当前 alpha.5 release tag 讲解：`SessionHeader.isSeeded` 表示是否继承父日志，`SessionInspection.inheritedEventCount` 表示精确前缀长度。alpha.2 的旧 `seedLength` 与未发布 master 的 `SessionHandle` 只在[第 13 章](13-dsh-prerelease-upgrade.md)用于迁移对照，不能与本章实现交叉使用。
+本章使用 rc.1：`SessionHeader.isSeeded` 表示继承前缀存在，`SessionInspection.inheritedEventCount` 表示精确长度。事件身份、读取成本和 marker 的区别见[Session 身份参考](../reference/session-identity-and-migrations.md)，不在主线混入后续版本的 handle API。
 
 ## 1. 先画清三种对象
 
@@ -40,7 +40,7 @@ sessionId = await ctx.sessions.fork({
 
 ## 3. DSH 如何把 message seq 对齐到完整 turn
 
-Client `ISessions.fork` 最终调用 Host API Session Controller。当前 Host 的算法在来源事件中找到第一个 `seq >= atSeq` 的 `turn/end`，以它作为 seed boundary；随后还包含下一次 `turn/start` 之前的独立尾随事件。源码锚点见 [DSH 源码导航](../reference/source-map.md)与 [`docs/subsystems/session.md`](https://github.com/deepseek-ai/deepseek-harness/blob/db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5/docs/subsystems/session.md)。
+Client `ISessions.fork` 最终调用 Host API Session Controller。当前 Host 的算法在来源事件中找到第一个 `seq >= atSeq` 的 `turn/end`，以它作为 seed boundary；随后还包含下一次 `turn/start` 之前的独立尾随事件。源码锚点见 [DSH 源码导航](../reference/source-map.md)与 [`docs/subsystems/session.md`](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/subsystems/session.md)。
 
 低层 `SessionStore.fork` 只接受可平衡的边界，创建 child 时写入：
 
@@ -50,9 +50,9 @@ SessionHeader.isSeeded = true
 SessionInspection.inheritedEventCount = copied seed event count
 ```
 
-新 Session constructor 在 seed 后追加 `session/end-seed`。因此 full-fork 是宿主级结构，不是插件把历史消息重新发一遍；child 能在后台从 seed 重建上下文，前端不需要伪造一份父会话 transcript。
+Session constructor 接收 seed 时可能追加 `session/end-seed`；已有末尾 marker 会避免重复添加，恢复已有日志也可能产生 marker。它不是“有此事件就一定是 fork child”的判据。full-fork 必须通过 parent、seeded 位和精确切点证明，不能重发历史文本或数分隔线来冒充。
 
-`parentSession` 指出父会话，`isSeeded=true` 只指出存在继承前缀，精确长度由 `SessionInspection.inheritedEventCount` 提供。未发布 master 把相同精确值放在 `SessionHandle` 上。`session/end-seed` 仍是 lifecycle marker，不能反向当作 inherited cut 的权威来源。
+`parentSession` 指出父会话，`isSeeded` 表示继承前缀存在，精确长度由 `SessionInspection.inheritedEventCount` 提供。marker 说明构造/恢复生命周期，不能替代 inherited cut。
 
 ## 4. 为什么 Host 还要验证 child header
 
@@ -110,7 +110,7 @@ Launcher 支持两个完成动作：
 - 创建：先创建/分叉、记录 relation 与 recall，然后 `sessions.open(sessionId)` 跳到 child；用户在空 Composer 输入问题。
 - 创建并发送：Launcher 弹出问题输入框；完成 relation/recall 后取得 child binding，调用 `binding.session.prompt(..., 'queue')`。它不必先切换页面，任务会直接在后台运行。
 
-`queue` 是明确的提交策略。如果 prompt 返回失败，child 与已记录上下文仍然存在，UI 应告诉用户“会话已创建但问题未提交”，而不是删除 child 隐瞒部分成功。
+`queue` 是明确提交策略。prompt 失败时 child 与已记录上下文仍存在；当前 `launch()` 直接传播错误，没有统一的部分成功 DTO。先读取关系和 child，不能盲目重试整条流程创建重复会话，也不能自动删除可能已有内容的 child。改善部分成功提示属于独立实现任务。
 
 ## 9. 双向关系与删除后的可追溯性
 
@@ -135,7 +135,7 @@ clips-only relation 不产生 `parentId`，所以不会成为 DSH tree 的 child
 [child 后续问题与回答]
 ```
 
-点击分隔条调用 `sessions.open(sourceSessionId)`。分隔位置来自 authoritative `session/end-seed`，不是通过数 DOM 消息或猜 `inheritedEventCount` 渲染。
+点击分隔条调用 `sessions.open(sourceSessionId)`。分隔位置来自已匹配的 `session/end-seed`，不是数 DOM 消息；当前 definition 匹配这类 marker，不证明它是唯一 fork 切点。二次 fork 与恢复生命周期需要专门测试，见[兼容性限制](../reference/compatibility-and-limitations.md)。
 
 Header action 同样先查 relation：full-fork 显示“继承来源上下文”，clips-only 显示“由摘录创建”，点击后打开 lineage view。
 
@@ -160,6 +160,8 @@ pnpm --filter dsh-branchmark-host test
 2. 以相同 Clip 创建 clips-only，确认 child 没有 parent、没有 inherited prefix，仍有 recall 与 plugin relation，且不会出现在父会话的 DSH lineage branch 中。
 
 再删除原 Clip，确认两个 child transcript 和 usage snapshot 不变。
+
+如果 clips-only 只有插件 recall、还没有正式提问，DSH 的空会话列表策略可能不展示它。先用返回的 Session id、插件关系和 Host 日志检查，不要以侧边栏没卡片直接判定创建失败。
 
 ## 14. 检索练习
 
