@@ -128,11 +128,13 @@ Side Chat 的工具 schema 是固定常量，不从父 Session 的工具目录�
 
 ## 客户端状态与 Dock
 
-`BranchMarkUiController` 保存 Dock 的三种显示模式（`hidden`、`rail`、`expanded`）、当前视图、宽度、内嵌启动流程、DOM 选区、Toast 和 Side Chat 浏览器镜像。`rail` 只渲染右侧中部随 DSH 明暗主题切换的单色线装本 Logo 浮签、数量角标与运行状态点，不占据全高；`expanded` 在标题区继续使用同一品牌标志，并通过宿主稳定的 `data-conversation-scroll` 与 `data-composer-seat` 锚点计算上下安全区，始终作为 `shell.overlay` 中的浮层显示。插件不设置宿主会话根节点的宽度、属性或 CSS 变量。Dock 没有 backdrop，宽度限制为 340–620px；Escape 先关闭内嵌启动流程，再最小化为把手。
+`BranchMarkUiController` 保存 Dock 的三种显示模式（`hidden`、`rail`、`expanded`）、当前视图、宽度、内嵌启动流程、DOM 选区、Toast 和 Side Chat 浏览器镜像。`rail` 只渲染右侧中线上方随 DSH 明暗主题切换的单色线装本 Logo 浮签、数量角标与运行状态点，不占据全高；`expanded` 在标题区继续使用同一品牌标志，并通过宿主稳定的 `data-conversation-scroll` 与 `data-composer-seat` 锚点计算上下安全区，始终作为 `shell.overlay` 中的浮层显示。插件不设置宿主会话根节点的宽度、属性或 CSS 变量。Dock 没有 backdrop，宽度限制为 340–620px；Escape 先关闭内嵌启动流程，再最小化为把手。
 
 Client 组件按交互职责分开：`SelectionToolbar` 观察 DOM 选区并编排四个显式动作，`ClipCollection` 拥有查询、筛选、选择顺序和拖拽编排，`BatchCommandCapsule` 提供窄宽度优先的六项批量命令，`ClipCard` 拥有单枚枝签的元数据、固定高度阅读、卡片内展开、聚焦阅读和衍生关系，`BranchMarkLauncherSheet` 分别呈现 Side Chat 或普通 Session 启动流程，`BranchMarkShell` 只组合 Dock、关系树、选区工具条和 Toast。`BranchMarkClient` 是浏览器侧唯一的 DSH 集成模块，集中处理 API Session/Workspace Controller、UI Conversation binding、Composer admission 和 Typed Remote；视图组件不读取这些服务的内部投影。会话或项目范围的请求映射与工具条定位由 `domain/selection-actions.ts` 纯函数决定，`domain/clip-order.ts` 负责拒绝跨置顶组拖动，避免把持久化规则藏在视图事件中。
 
-浏览器 `localStorage` 只保存 Dock 显示模式、视图和宽度。Clip、备注、标签、关系、Side Chat 消息和 Composer 内容不会写入该存储。durable Clip 与普通衍生 Session 仍分别由 Host storage domain 和 DSH Session 恢复。
+浏览器 `localStorage` 只保存 Dock 显示模式、视图、宽度和浮签的相对垂直位置。`DockHandle` 使用 Pointer Capture 限制同一指针的上下拖动，松手时写入位置偏好；取消或窗口缩放时放弃未提交位移。默认位置位于中线上方 120px，旧偏好缺少 `railPosition` 时使用默认位置。Clip、备注、标签、关系、Side Chat 消息和 Composer 内容不会写入该存储。durable Clip 与普通衍生 Session 仍分别由 Host storage domain 和 DSH Session 恢复。
+
+浮签定位的取舍见 [浏览器持有的 Dock 浮签垂直位置](../.agents/notes/implemented/feature/2026-09-05-draggable-dock-rail.zh.md)。
 
 本会话视图在 Remote 返回结果后仍执行一次精确过滤：只接受 `scope=session && ownerSessionId=currentSessionId`。项目视图只接受 `scope=project`。该客户端过滤用于防止错误展示，不代替 Host Remote 的授权与隔离。
 
@@ -154,7 +156,7 @@ DSH 的公开 `InputActions.setDraft()` 只接受完整新 draft，并通过公�
 
 ## 已知兼容性边界
 
-- 插件以 DSH `0.1.2-alpha.5` release tag 的已导出 API 和 Slot contract 为目标；同版本字符串的后续 `master` 源码不属于这个发布目标。
+- 插件以 DSH `0.1.2-rc.1` npm/release tag 的已导出 API 和 Slot contract 为目标；同版本字符串的后续 `master` 源码不属于这个发布目标。
 - Composer 引用依赖 `@deepseek-ai/dsh-client-ui-input-trigger` 的 `ReferenceInsert`、`InputTriggerSource.codec` 和 `SessionInput.insertReference()`；任一能力缺失都会让 Client 插件在装载或构建阶段失败，不会回退为可见全文草稿。
 - API Session Controller 的 `ISessions` 公开 `create`、`fork`、`open`、`binding` 与 `scope`。插件直接调用这些接口，并且不会通过可能复用既有空白 Session 的 Workspace 导航动作实现“仅枝签”。
 - `storageDomain` 不提供二级索引 API；当前全文搜索在 Workspace 可见 Clip 集合上执行有界本地扫描。若大规模数据需要倒排索引，应在后续 schema version 中增加插件自有索引记录，而不是绕过 storage domain。

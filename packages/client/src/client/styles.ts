@@ -1,5 +1,7 @@
 /** Theme-aware BranchMark presentation layered entirely through Client slots. */
 
+import { BRANCHMARK_RAIL_HEIGHT } from '../domain/rail-position.ts'
+
 const STYLE_ID = 'dsh-branchmark-styles'
 
 const CSS = String.raw`
@@ -166,26 +168,28 @@ body[data-ds-dark-theme] {
 .dbm-dock-handle {
   position: absolute;
   z-index: 4;
-  top: 50%;
   right: 0;
   display: grid;
   width: 46px;
-  min-height: 58px;
+  height: ${BRANCHMARK_RAIL_HEIGHT}px;
   align-items: center;
   justify-content: center;
   padding: 8px 6px;
-  transform: translateY(-50%);
   border: 1px solid var(--dbm-border-strong);
   border-right: 0;
   border-radius: 16px 0 0 16px;
   background: var(--dbm-floating);
   color: var(--dbm-text);
   box-shadow: var(--dbm-shadow-sm);
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
   pointer-events: auto;
-  transition: width 150ms ease, background 150ms ease, transform 150ms ease;
+  transition: background 150ms ease;
 }
-.dbm-dock-handle:hover:not(:disabled) { width: 50px; background: var(--dbm-hover-solid); transform: translateY(-50%) translateX(-1px); }
+.dbm-dock-handle:hover:not(:disabled) { background: var(--dbm-hover-solid); }
+.dbm-dock-handle[data-dragging="true"] { cursor: grabbing; }
+.dbm-dock-handle:focus-visible { outline: 2px solid var(--dbm-brand); outline-offset: 2px; }
 .dbm-dock-handle:disabled { opacity: .42; cursor: not-allowed; }
 .dbm-dock-handle .dbm-brandmark { transition: transform 180ms cubic-bezier(.22, 1, .36, 1); }
 .dbm-dock-handle:hover:not(:disabled) .dbm-brandmark { transform: translateY(-1px) rotate(-2deg) scale(1.06); }

@@ -4,7 +4,23 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 
 ## [Unreleased]
 
-尚无公开变化。
+### Added
+
+- 右侧枝签浮签支持鼠标与触摸上下拖动，位置作为浏览器偏好保存；方向键、Home 和 End 提供键盘移动。
+
+### Fixed
+
+- 默认浮签位置上移 120px，避开 DSH 居中的轮次导航；拖动结束不会误打开面板，取消、窗口缩放和卸载均释放拖动状态。
+
+### Changed
+
+- 当前源码和全部 DSH 构建、peer 依赖对齐 npm `0.1.2-rc.1`；唯一目标发布包为 `dsh-branchmark@0.1.2-rc.1`。
+- 发布检查从清单读取版本，并验证实际安装的 DSH peer 与 Typert generator 一致。
+
+### Compatibility
+
+- `clip_explorer` domain 和会话来源格式保持不变；既有 `dsh-branchmark.ui.v1` 偏好可缺省新的 `railPosition` 字段。
+- 这些变化尚未作为 npm 版本发布；Git 提交或构建不会更新远端 dist-tag。
 
 ## [0.1.2-alpha.5] - 2026-09-02
 

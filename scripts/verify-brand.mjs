@@ -64,7 +64,7 @@ assert.deepEqual(manifests.map(manifest => manifest.name), [
   'dsh-branchmark-client',
   'dsh-branchmark',
 ])
-assert.deepEqual(manifests.map(manifest => manifest.version), Array(4).fill('0.1.2-alpha.5'))
+assert.deepEqual(manifests.map(manifest => manifest.version), Array(4).fill(manifests[0].version))
 
 const readme = await readFile(`${root}/README.md`, 'utf8')
 const readmeHero = readme.slice(0, 1600)

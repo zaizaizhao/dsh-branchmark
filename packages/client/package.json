@@ -1,6 +1,6 @@
 {
   "name": "dsh-branchmark-client",
-  "version": "0.1.2-alpha.5",
+  "version": "0.1.2-rc.1",
   "private": true,
   "description": "BranchMark selection, dock, project collection, session branching, and temporary Side Chat UI for DeepSeek Harness",
   "type": "module",
@@ -101,6 +101,7 @@
     "react-dom": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "happy-dom": "^20.14.0"
   }
 }

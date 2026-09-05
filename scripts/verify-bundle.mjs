@@ -59,7 +59,8 @@ assert.doesNotMatch(
 
 const manifest = JSON.parse(await readFile(new URL('package.json', bundleRoot), 'utf8'))
 assert.equal(manifest.name, 'dsh-branchmark')
-assert.equal(manifest.version, '0.1.2-alpha.5')
+const workspace = JSON.parse(await readFile(new URL('../../package.json', bundleRoot), 'utf8'))
+assert.equal(manifest.version, workspace.version)
 assert.equal(manifest.description, 'Excerpt-driven session branching and conversation lineage for DeepSeek Harness')
 const exportTargets = Object.values(manifest.exports).flatMap((value) => (
   typeof value === 'string' ? [value] : Object.values(value)

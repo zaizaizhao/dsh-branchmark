@@ -18,9 +18,9 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/dsh-branchmark"><img alt="npm latest 0.1.1-rc.2" src="https://img.shields.io/badge/npm_latest-0.1.1--rc.2-6D5C46"></a>
+  <a href="https://www.npmjs.com/package/dsh-branchmark"><img alt="npm latest" src="https://img.shields.io/npm/v/dsh-branchmark?label=npm%20latest&amp;color=6D5C46"></a>
   <a href="https://www.npmjs.com/package/dsh-branchmark?activeTab=versions"><img alt="npm alpha 0.1.2-alpha.5" src="https://img.shields.io/badge/npm_alpha-0.1.2--alpha.5-BD5745"></a>
-  <img alt="DeepSeek Harness alpha 0.1.2-alpha.5" src="https://img.shields.io/badge/DSH_alpha-0.1.2--alpha.5-405F52">
+  <img alt="DeepSeek Harness 0.1.2-rc.1" src="https://img.shields.io/badge/DSH-0.1.2--rc.1-405F52">
   <img alt="Node.js 22.19 or 24+" src="https://img.shields.io/badge/Node.js-%5E22.19_%7C_%3E%3D24-5C7A69">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-776D5E"></a>
 </p>
@@ -45,7 +45,7 @@ The left demo creates a durable Session from an important excerpt, switches betw
 </table>
 
 > [!IMPORTANT]
-> BranchMark releases use the exact version of their target DSH release. `dsh-branchmark@0.1.1-rc.2` tracks the npm `latest` DSH `0.1.1-rc.2` release, while `dsh-branchmark@0.1.2-alpha.5` tracks the npm `alpha` DSH `0.1.2-alpha.5` release. These channels use different DSH Client APIs and must not be mixed.
+> This source targets DSH npm `latest` version `0.1.2-rc.1` and the matching BranchMark package version. Before publication, build and install the source tarball; do not assume the two `latest` tags are synchronized. Keep the published `0.1.1-rc.2` and `0.1.2-alpha.5` combinations explicitly pinned and do not mix them.
 
 BranchMark is a plugin Bundle that does not modify DSH source code. It saves important conversation excerpts as clips and uses the clip's source message as an attention fork point. You can create a child Session that inherits the source context or a standalone Session that receives only the selected knowledge. Clip text and source anchors remain immutable; notes and tags remain editable.
 
@@ -150,23 +150,24 @@ BranchMark installs into the DSH Web Profile as an npm Bundle. Saving clips, vie
 
 | npm channel | BranchMark | DeepSeek Harness | Use |
 | --- | --- | --- | --- |
-| `latest` | `0.1.1-rc.2` | `0.1.1-rc.2` | Default installation with the npm `latest` DSH release |
-| `alpha` | `0.1.2-alpha.5` | `0.1.2-alpha.5` | Current `main` with the newer DSH Client API |
+| Current source / target `latest` | `0.1.2-rc.1` | `0.1.2-rc.1` | Install the source tarball below until npm publication |
+| `alpha` | `0.1.2-alpha.5` | `0.1.2-alpha.5` | Published alpha compatibility line |
+| Legacy pinned pair | `0.1.1-rc.2` | `0.1.1-rc.2` | Maintained on `release/dsh-0.1.1-rc` |
 
-Both channels require Node.js `^22.19.0` or `>=24.0.0` and support only the DSH Web Profile. The BranchMark version must exactly match `dsh --version`.
+All combinations require Node.js `^22.19.0` or `>=24.0.0` and support only the DSH Web Profile. The BranchMark version must exactly match `dsh --version`.
 
-The default channel can use the npm `latest` tag directly. `@deepseek-ai/dsh@latest` and `dsh-branchmark@latest` must resolve to the same version. Verify the installation with `dsh --version`; if the versions differ, use the exact versions in the table above. The `alpha` channel continues to use exact versions so temporary prerelease-tag differences cannot install mismatched packages.
+Check the channels with `npm view @deepseek-ai/dsh dist-tags` and `npm view dsh-branchmark dist-tags`, then install an exact pair from the table. If the target BranchMark version is not published, install the source tarball below rather than substituting an older `latest` package.
 
 ### 1. Select and install a matching version
 
-Use the default `latest` channel:
+Install the version matching this source after confirming that `dsh-branchmark@0.1.2-rc.1` is published:
 
 ```sh
-npm install --global @deepseek-ai/dsh@latest
-dsh plugin --profile web add dsh-branchmark@latest
+npm install --global @deepseek-ai/dsh@0.1.2-rc.1
+dsh plugin --profile web add dsh-branchmark@0.1.2-rc.1
 ```
 
-Use the `alpha` channel that matches the current `main` branch:
+Use the published `alpha` pair:
 
 ```sh
 npm install --global @deepseek-ai/dsh@0.1.2-alpha.5
@@ -213,7 +214,7 @@ corepack enable
 pnpm install --frozen-lockfile
 pnpm run release:check
 pnpm run pack:bundle
-dsh plugin --profile web add ./dist/dsh-branchmark-0.1.2-alpha.5.tgz
+dsh plugin --profile web add ./dist/dsh-branchmark-0.1.2-rc.1.tgz
 ```
 
 Do not install through a Git URL, a GitHub source specifier, or `plugin add .`. The source repository does not commit compiled `lib/` output. Only the npm package and a locally built tarball contain the complete installable package.
@@ -231,6 +232,8 @@ Every entry point requires an explicit user selection or send action. Selecting 
 | Start an isolated task from focused knowledge | Clip-only | Creates a durable root Session without a DSH parent |
 | Manage parallel development branches | Relationship view and clip cards | Shows the Session tree, sources, and bidirectional usage relationships |
 | Confirm a small question temporarily | Ask in side | Creates a temporary quick-question tab that is not durable and does not enter the tree |
+
+The right-edge handle starts above the center to avoid DSH's centered turn navigation. Drag it vertically along the right edge; releasing a drag does not open the panel. This browser remembers its relative position and keeps it visible after resizing. Click to open, or focus it and use Up/Down for small moves and Home/End for the upper/lower edge.
 
 The right Dock provides Session, Project, Relationship, and Side Chat views. The project clip library supports full-text search, multiple tag filters, card and list layouts, pinning, within-group ordering, multi-select actions, and a recycle bin.
 
@@ -259,7 +262,7 @@ The official material for the DSH versions supported by BranchMark does not prov
 
 | DSH requirement | BranchMark implementation |
 | --- | --- |
-| The package has non-empty `name` and `version` fields and provides a resolvable runtime entry point | `dsh-branchmark@0.1.2-alpha.5` publishes compiled Host, Typert, Remote, and browser entry points |
+| The package has non-empty `name` and `version` fields and provides a resolvable runtime entry point | `dsh-branchmark@0.1.2-rc.1` includes compiled Host, Typert, Remote, and browser entry points |
 | `package.json` declares `dsh.bundle.patch`; otherwise `dsh plugin add` installs a dependency without activating a Profile layer | `packages/bundle/package.json` points to `./cordis.patch.yml` |
 | `cordis.patch.yml` inserts or overrides a real Loader row and uses a package name resolvable after installation | The Bundle patch inserts `branchmark-host` with module name `dsh-branchmark` |
 | A Web plugin exports `./client` and declares its browser entry point with `dsh.client.platform: "web"` | The Bundle exports the self-contained `lib/client.js` and declares the required Client injections |

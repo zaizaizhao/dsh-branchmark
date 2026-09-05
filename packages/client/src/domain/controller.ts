@@ -34,6 +34,8 @@ export interface BranchMarkDockSnapshot {
   readonly mode: BranchMarkDockMode
   readonly view: BranchMarkDockView
   readonly width: number
+  /** Fraction of the handle's available vertical travel; null uses default placement. */
+  readonly railPosition: number | null
   readonly launcher: BranchMarkLauncher | null
 }
 
@@ -41,6 +43,7 @@ export interface BranchMarkUiPreferences {
   readonly mode: BranchMarkDockMode
   readonly view: BranchMarkDockView
   readonly width: number
+  readonly railPosition: number | null
 }
 
 /** Local preference boundary; durable Clip content never passes through it. */
@@ -65,6 +68,7 @@ const DEFAULT_PREFERENCES: BranchMarkUiPreferences = Object.freeze({
   mode: 'rail',
   view: 'session',
   width: BRANCHMARK_DOCK_DEFAULT_WIDTH,
+  railPosition: null,
 })
 
 const DOCK_MODES = new Set<BranchMarkDockMode>(['hidden', 'rail', 'expanded'])
@@ -88,6 +92,9 @@ function readPreferences(store: BranchMarkUiPreferenceStore | undefined): Branch
     width: typeof value.width === 'number' && Number.isFinite(value.width)
       ? clampDockWidth(value.width)
       : DEFAULT_PREFERENCES.width,
+    railPosition: typeof value.railPosition === 'number' && Number.isFinite(value.railPosition)
+      ? Math.min(1, Math.max(0, value.railPosition))
+      : DEFAULT_PREFERENCES.railPosition,
   })
 }
 
@@ -162,6 +169,15 @@ export class BranchMarkUiController {
     const next = clampDockWidth(width)
     if (next === this.current.dock.width) return
     this.setDock({ ...this.current.dock, width: next })
+  }
+
+  /** Remember the handle's relative vertical position without changing Dock visibility.
+   * @param position - Fraction of available vertical travel.
+   */
+  setRailPosition(position: number): void {
+    const next = Math.min(1, Math.max(0, position))
+    if (next === this.current.dock.railPosition) return
+    this.setDock({ ...this.current.dock, railPosition: next })
   }
 
   openLauncher(
@@ -260,7 +276,7 @@ export class BranchMarkUiController {
   }
 
   private persistDock(dock: BranchMarkDockSnapshot): void {
-    this.preferences?.write({ mode: dock.mode, view: dock.view, width: dock.width })
+    this.preferences?.write({ mode: dock.mode, view: dock.view, width: dock.width, railPosition: dock.railPosition })
   }
 
   private publish(snapshot: BranchMarkUiSnapshot): void {

@@ -28,6 +28,7 @@ import {
 import { deriveCurrentLineage } from '../domain/lineage.ts'
 import { BranchMarkLauncherSheet } from './BranchMarkLauncher.tsx'
 import { BranchMarkLogo } from './BranchMarkLogo.tsx'
+import { DockHandle } from './DockHandle.tsx'
 import { ClipCollection } from './ClipCollection.tsx'
 import { SelectionToolbar, useChatSelection } from './SelectionToolbar.tsx'
 import { SideChatView } from './SideChat.tsx'
@@ -132,28 +133,6 @@ function useDockCounts(
     return () => { active = false }
   }, [client, revision, sessionId, workspaceId])
   return counts
-}
-
-function DockHandle({ count, running, disabled, controller }: {
-  readonly count: number
-  readonly running: boolean
-  readonly disabled: boolean
-  readonly controller: BranchMarkUiController
-}) {
-  return (
-    <button
-      type="button"
-      className="dbm-dock-handle"
-      aria-label="展开枝签 Dock"
-      title="展开枝签 Dock"
-      disabled={disabled}
-      onClick={() => { controller.reopenDock() }}
-    >
-      <BranchMarkLogo compact size={26} />
-      {count > 0 && <span className="dbm-dock-handle-count" aria-hidden="true">{count}</span>}
-      {running && <i />}
-    </button>
-  )
 }
 
 interface DockPlacement {

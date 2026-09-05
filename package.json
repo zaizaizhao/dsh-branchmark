@@ -1,6 +1,6 @@
 {
   "name": "dsh-branchmark-workspace",
-  "version": "0.1.2-alpha.5",
+  "version": "0.1.2-rc.1",
   "private": true,
   "description": "Excerpt-driven session branching and conversation lineage for DeepSeek Harness",
   "keywords": [
@@ -45,7 +45,7 @@
     "release:check": "pnpm run check && pnpm run verify:docs && pnpm run verify:release && pnpm exec publint packages/bundle && pnpm --dir packages/bundle publish --dry-run --access public --no-git-checks"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-typert-generator": "0.1.2-alpha.5",
+    "@deepseek-ai/dsh-typert-generator": "0.1.2-rc.1",
     "@types/node": "^22.20.0",
     "@types/react": "~18.3.1",
     "react": "^18.2.0",

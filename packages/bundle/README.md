@@ -23,24 +23,24 @@ Excerpt-driven session branching and conversation lineage for DeepSeek Harness.
 
 | BranchMark | DeepSeek Harness | Node.js | DSH surface |
 | --- | --- | --- | --- |
-| `0.1.2-alpha.5` (`alpha`) | `0.1.2-alpha.5` (`alpha`) | `^22.19.0 \|\| >=24.0.0` | Web profile |
+| `0.1.2-rc.1` (`latest` target) | `0.1.2-rc.1` (`latest` target) | `^22.19.0 \|\| >=24.0.0` | Web profile |
 
 DSH 仍处于预发布阶段。上表之外的组合没有经过兼容性验证；升级 DSH 前应在独立 profile 中重新完成安装与 UI smoke test。
 
-`@deepseek-ai/dsh@alpha` 与 `dsh-branchmark@alpha` 当前都解析为 `0.1.2-alpha.5`。安装说明使用精确版本，避免两个 dist-tag 在发布窗口中暂时不同步。
+本源码与 Bundle 面向 DSH `0.1.2-rc.1`；发布前使用源码 tarball 安装。安装说明使用精确版本，避免两个 dist-tag 在发布窗口中暂时不同步。
 
 ## 安装
 
-BranchMark 与目标 DSH 使用相同版本号。先安装 DSH alpha，再把同号 Bundle 加入 Web Profile：
+BranchMark 与目标 DSH 使用相同版本号。先安装目标 DSH，再把同号 Bundle 加入 Web Profile：
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.1.2-alpha.5
-dsh plugin --profile web add dsh-branchmark@0.1.2-alpha.5
+npm install --global @deepseek-ai/dsh@0.1.2-rc.1
+dsh plugin --profile web add dsh-branchmark@0.1.2-rc.1
 dsh --profile web --dump-config
 dsh --profile web
 ```
 
-`dsh --version` 必须输出 `0.1.2-alpha.5`，`--dump-config` 必须包含 `dsh-branchmark` 和 `branchmark-host`。不要把此包安装到 DSH `0.1.1-rc.2`；该版本使用 npm `latest` 中同号的 BranchMark `0.1.1-rc.2`。
+`dsh --version` 必须输出 `0.1.2-rc.1`，`--dump-config` 必须包含 `dsh-branchmark` 和 `branchmark-host`。不要把此包安装到 DSH `0.1.1-rc.2`；该版本使用精确固定的 BranchMark `0.1.1-rc.2`。
 
 卸载：
 
@@ -54,7 +54,7 @@ dsh plugin --profile web remove dsh-branchmark
 
 ## 使用
 
-在对话消息内选择连续文本，浮动工具条会提供四个入口。保存后可从右侧把手展开 BranchMark Dock：
+在对话消息内选择连续文本，浮动工具条会提供四个入口。右侧浮签默认位于中线上方，可沿右侧边缘上下拖动；松手不会打开面板，刷新后保留相对位置。单击展开；键盘聚焦后用 ↑/↓、Home/End 移动。保存后可从右侧把手展开 BranchMark Dock：
 
 1. “摘录到会话”保存当前 Session 的私有知识；“摘录到项目”显式提升为当前 Workspace 可复用的项目枝签。
 2. “关系”视图通过 DSH `parentId` 显示完整分叉树；枝签卡片列出使用该知识的正式衍生 Session。

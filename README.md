@@ -18,9 +18,9 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/dsh-branchmark"><img alt="npm latest 0.1.1-rc.2" src="https://img.shields.io/badge/npm_latest-0.1.1--rc.2-6D5C46"></a>
+  <a href="https://www.npmjs.com/package/dsh-branchmark"><img alt="npm latest" src="https://img.shields.io/npm/v/dsh-branchmark?label=npm%20latest&amp;color=6D5C46"></a>
   <a href="https://www.npmjs.com/package/dsh-branchmark?activeTab=versions"><img alt="npm alpha 0.1.2-alpha.5" src="https://img.shields.io/badge/npm_alpha-0.1.2--alpha.5-BD5745"></a>
-  <img alt="DeepSeek Harness alpha 0.1.2-alpha.5" src="https://img.shields.io/badge/DSH_alpha-0.1.2--alpha.5-405F52">
+  <img alt="DeepSeek Harness 0.1.2-rc.1" src="https://img.shields.io/badge/DSH-0.1.2--rc.1-405F52">
   <img alt="Node.js 22.19 or 24+" src="https://img.shields.io/badge/Node.js-%5E22.19_%7C_%3E%3D24-5C7A69">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-776D5E"></a>
 </p>
@@ -45,7 +45,7 @@
 </table>
 
 > [!IMPORTANT]
-> BranchMark 的发布版本与目标 DSH 完全同号。`dsh-branchmark@0.1.1-rc.2` 对应 npm `latest` 的 DSH `0.1.1-rc.2`；`dsh-branchmark@0.1.2-alpha.5` 对应 npm `alpha` 的 DSH `0.1.2-alpha.5`。两个通道使用不同的 DSH Client API，不要交叉安装。
+> 当前源码面向 DSH npm `latest` 的 `0.1.2-rc.1`，BranchMark 的目标包版本同为 `0.1.2-rc.1`。发布前可从源码构建 tarball 安装；不要假设两个包的 `latest` 标签已同步。旧的 `0.1.1-rc.2` 组合与 `0.1.2-alpha.5` 组合继续使用精确版本，不能交叉安装。
 
 BranchMark 是一个不修改 DSH 源码的插件 Bundle。它把会话消息中的关键片段保存为“枝签”，再以枝签所在消息为注意力分叉点，创建继承原上下文的子 Session，或只携带重点知识的独立 Session。枝签原文与来源锚点保持不可变，备注和标签可以编辑。
 
@@ -150,23 +150,24 @@ BranchMark 通过 npm Bundle 安装到 DSH Web Profile。保存枝签、查看�
 
 | npm 通道 | BranchMark | DeepSeek Harness | 用途 |
 | --- | --- | --- | --- |
-| `latest` | `0.1.1-rc.2` | `0.1.1-rc.2` | 默认安装；使用 DSH npm `latest` |
-| `alpha` | `0.1.2-alpha.5` | `0.1.2-alpha.5` | 当前 `main`；使用新版 DSH Client API |
+| 当前源码 / 目标 `latest` | `0.1.2-rc.1` | `0.1.2-rc.1` | npm 发布前使用下方源码 tarball 安装 |
+| `alpha` | `0.1.2-alpha.5` | `0.1.2-alpha.5` | 已发布的 alpha 兼容线 |
+| 旧版固定组合 | `0.1.1-rc.2` | `0.1.1-rc.2` | `release/dsh-0.1.1-rc` 维护线 |
 
-两个通道都要求 Node.js `^22.19.0` 或 `>=24.0.0`，并且只支持 DSH Web Profile。BranchMark 版本必须和 `dsh --version` 完全一致。
+所有组合都要求 Node.js `^22.19.0` 或 `>=24.0.0`，并且只支持 DSH Web Profile。BranchMark 版本必须和 `dsh --version` 完全一致。
 
-默认通道可以直接使用 npm `latest` 标签。`@deepseek-ai/dsh@latest` 与 `dsh-branchmark@latest` 必须解析为同一版本；安装后使用 `dsh --version` 验证，若版本不一致则改用上表中的精确版本。`alpha` 通道仍使用精确版本，避免预发布标签在发布窗口中暂时不同步。
+先用 `npm view @deepseek-ai/dsh dist-tags` 与 `npm view dsh-branchmark dist-tags` 核对通道；安装使用上表中的精确版本。目标 BranchMark 版本尚未发布时，使用下方源码 tarball 安装，不要用旧版 `latest` 替代。
 
 ### 1. 选择并安装同号版本
 
-使用默认 `latest` 通道：
+安装当前源码对应的版本（需先确认 `dsh-branchmark@0.1.2-rc.1` 已发布）：
 
 ```sh
-npm install --global @deepseek-ai/dsh@latest
-dsh plugin --profile web add dsh-branchmark@latest
+npm install --global @deepseek-ai/dsh@0.1.2-rc.1
+dsh plugin --profile web add dsh-branchmark@0.1.2-rc.1
 ```
 
-使用与当前 `main` 对应的 `alpha` 通道：
+使用已发布的 `alpha` 组合：
 
 ```sh
 npm install --global @deepseek-ai/dsh@0.1.2-alpha.5
@@ -213,7 +214,7 @@ corepack enable
 pnpm install --frozen-lockfile
 pnpm run release:check
 pnpm run pack:bundle
-dsh plugin --profile web add ./dist/dsh-branchmark-0.1.2-alpha.5.tgz
+dsh plugin --profile web add ./dist/dsh-branchmark-0.1.2-rc.1.tgz
 ```
 
 不要通过 Git URL、GitHub source specifier 或 `plugin add .` 安装。源码仓库不提交构建后的 `lib/`；npm 包和本地构建的 tarball 才是完整安装介质。
@@ -231,6 +232,8 @@ dsh plugin --profile web add ./dist/dsh-branchmark-0.1.2-alpha.5.tgz
 | 用重点知识开始隔离任务 | 仅携带枝签 | 创建无 DSH parent 的持久化根 Session |
 | 管理并行开发支线 | 关系视图与枝签卡片 | 查看 Session 树、来源和双向使用关系 |
 | 临时确认一个小问题 | Ask in side | 创建不入树、不持久化的快问快答标签 |
+
+右侧枝签浮签默认位于中线上方，避开 DSH 居中的轮次导航。按住浮签可沿右侧边缘上下拖动，松手不会误打开面板；位置在本浏览器中保存，窗口缩放后仍限制在可见范围内。单击展开，键盘聚焦后可用 ↑/↓ 微调、Home/End 移至上下边缘。
 
 右侧 Dock 提供“本会话”“项目”“关系”和“Side Chat”视图。项目枝签库支持全文搜索、多标签筛选、卡片/列表切换、置顶、同组排序、多选操作和回收站。
 
@@ -259,7 +262,7 @@ BranchMark 按目标版本 DSH 的官方 Bundle 机制分发。DSH 的[插件打
 
 | DSH 条件 | BranchMark 的实现 |
 | --- | --- |
-| 包必须有非空 `name` 和 `version`，并提供可解析的运行入口 | `dsh-branchmark@0.1.2-alpha.5` 发布预编译 Host、Typert、Remote 和浏览器入口 |
+| 包必须有非空 `name` 和 `version`，并提供可解析的运行入口 | `dsh-branchmark@0.1.2-rc.1` 交付预编译 Host、Typert、Remote 和浏览器入口 |
 | `package.json` 必须声明 `dsh.bundle.patch`，否则 `dsh plugin add` 只安装普通依赖，不激活 Profile 层 | `packages/bundle/package.json` 指向 `./cordis.patch.yml` |
 | `cordis.patch.yml` 必须插入或覆盖实际 Loader 行，并使用安装后可解析的包名 | Bundle patch 插入 `branchmark-host`，模块名为 `dsh-branchmark` |
 | Web 插件必须导出 `./client`，并以 `dsh.client.platform: "web"` 声明浏览器入口 | Bundle 导出自包含 `lib/client.js`，并声明所需 Client 注入项 |

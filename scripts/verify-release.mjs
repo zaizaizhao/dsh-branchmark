@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { access, readFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 
 const root = new URL('../', import.meta.url)
 const repositoryUrl = 'git+https://github.com/zaizaizhao/dsh-branchmark.git'
@@ -43,6 +44,12 @@ assert.equal(bundle.files.includes('lib'), false, 'the public package must not i
 
 const versions = [workspace, host, client, bundle].map(manifest => manifest.version)
 assert.deepEqual(versions, Array(4).fill(bundle.version), 'all workspace versions must match the public bundle')
+assert.equal(workspace.devDependencies['@deepseek-ai/dsh-typert-generator'], bundle.version, 'the generator must match the target DSH release')
+const bundleRequire = createRequire(new URL('packages/bundle/package.json', root))
+for (const name of Object.keys(bundle.peerDependencies).filter(name => name.startsWith('@deepseek-ai/dsh-'))) {
+  const installed = JSON.parse(await readFile(bundleRequire.resolve(`${name}/package.json`), 'utf8'))
+  assert.equal(installed.version, bundle.version, `${name} must match the target DSH release`)
+}
 
 const injectedPackages = bundle.dsh.client.inject
 assert.ok(Array.isArray(injectedPackages) && injectedPackages.length > 0)
@@ -86,7 +93,7 @@ const packageReadme = await readFile(new URL('packages/bundle/README.md', root),
 for (const text of [
   'dsh plugin --profile web add dsh-branchmark',
   'dsh plugin --profile web remove dsh-branchmark',
-  '0.1.2-alpha.5',
+  bundle.version,
   'clip_explorer',
   'SECURITY.md',
   'GitHub source specifier',
