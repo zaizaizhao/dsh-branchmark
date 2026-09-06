@@ -1,8 +1,10 @@
 # Changelog
 
-BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。公开 npm 版本与已验证的 DeepSeek Harness 版本完全同号，npm dist-tag 表示兼容通道。
+BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。每个公开 npm 版本声明经过验证的 DeepSeek Harness 目标，插件版本独立递增，npm dist-tag 表示分发通道。
 
 ## [Unreleased]
+
+## [0.1.2-rc.2] - 2026-09-06
 
 ### Added
 
@@ -17,6 +19,20 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 - 关系请求显式传入组织父 Session；Host 关系处理、Client 集合读取与操作、阅读弹窗、会话树和样式按职责拆分。
 - 卡片、启动器、会话树和新通知使用 DSH 的中文/英文文案命名空间；打包检查在无 Node 全局变量的环境中执行浏览器 factory。
 
+### Fixed
+
+- 刷新或重启后保留尚未提问分支的名称和可打开状态；无法读取的端点不会被重新创建。
+- Escape 关闭原生弹窗后保持 Dock 展开；浏览器产物不再要求 Node 的 `process` 全局变量。
+
+### Compatibility
+
+- BranchMark `0.1.2-rc.2` 固定使用 DSH `0.1.2-rc.1`；四份插件 manifest 同号，DSH peers 和 Typert generator 独立固定到兼容目标。
+- 新版本读取既有 `clip_explorer` 数据；旧关系可以缺省组织父字段。新空白关系模式不承诺旧插件可读，已有 Session 日志不执行迁移。
+
+### Documentation
+
+- 中英文 README 使用两张上下全宽排列的 1600×900 GIF，展示项目枝签整理和会话树继续分支。
+- 课程和包文档同步三种分支模式、键盘排序、回收站及重启恢复行为。
 
 ## [0.1.2-rc.1] - 2026-09-05
 

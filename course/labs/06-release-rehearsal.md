@@ -12,7 +12,7 @@ git status --short
 pnpm run release:check
 pnpm audit --prod --audit-level high
 pnpm run pack:bundle
-tar -tf dist/dsh-branchmark-0.1.2-rc.1.tgz
+tar -tf dist/dsh-branchmark-0.1.2-rc.2.tgz
 ```
 
 给记录附上退出状态与 tarball 路径。清单必须无 source maps、真实 Session 数据和私有工作区依赖；不要把上一次生成的旧包当作本次产物。dry-run 会检查包装内容，但不向 npm 发布。
@@ -41,7 +41,7 @@ tar -tf dist/dsh-branchmark-0.1.2-rc.1.tgz
 - 本地安装候选通过：指定 OS、浏览器和 provider 场景完成；可交维护者评审发布。
 - 暂停候选：存在 FAIL，或关键场景 BLOCKED；列出恢复条件。
 
-查询 npm 标签只用只读命令。当前源码 rc.1 尚未发布时，不能要求别人执行 npm 精确安装来完成本实验；正式发布及发布后的全新 npm 安装验收由 [RELEASING.md](../../RELEASING.md)另行执行。
+查询 npm 标签只用只读命令。实验使用尚未发布的源码变更时，应安装本次构建的 tarball；正式发布及发布后的全新 npm 安装验收由 [RELEASING.md](../../RELEASING.md)另行执行。
 
 ## 交付物
 

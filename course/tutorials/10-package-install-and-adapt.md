@@ -34,7 +34,7 @@ pnpm install --frozen-lockfile
 pnpm run check
 pnpm run verify:release
 pnpm run pack:bundle
-tar -tf dist/dsh-branchmark-0.1.2-rc.1.tgz
+tar -tf dist/dsh-branchmark-0.1.2-rc.2.tgz
 ```
 
 `check` 已包含构建，不必在同一次无修改验收中再把所有窄命令重复执行。`pack:bundle` 生成本次候选包；tarball 内应只有 manifest `files` 允许的 JS/DTS、patch、README、LICENSE 和 package.json，不包含 source maps、测试、凭据、真实 Session 数据或私有源码工作区。
@@ -52,7 +52,7 @@ BRANCHMARK_COURSE_HOME="$(mktemp -d)"
 npm install --prefix "$BRANCHMARK_COURSE_RUNTIME" @deepseek-ai/dsh@0.1.2-rc.1
 export PATH="$BRANCHMARK_COURSE_RUNTIME/node_modules/.bin:$PATH"
 dsh --version
-DSH_HOME="$BRANCHMARK_COURSE_HOME" dsh plugin --profile web add "$BRANCHMARK_COURSE_ROOT/dist/dsh-branchmark-0.1.2-rc.1.tgz"
+DSH_HOME="$BRANCHMARK_COURSE_HOME" dsh plugin --profile web add "$BRANCHMARK_COURSE_ROOT/dist/dsh-branchmark-0.1.2-rc.2.tgz"
 DSH_HOME="$BRANCHMARK_COURSE_HOME" dsh --profile web --dump-config
 DSH_HOME="$BRANCHMARK_COURSE_HOME" dsh --profile web --no-open --port 0
 ```

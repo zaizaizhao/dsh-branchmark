@@ -2,9 +2,9 @@
 
 本流程发布唯一的公开 package `dsh-branchmark`。`packages/host` 与 `packages/client` 是私有实现工作区，不得单独发布。
 
-BranchMark 的版本与目标 DSH 完全同号。npm `latest` 跟随 DSH `latest`，npm `alpha` 跟随 DSH `alpha`；发布命令必须显式指定预发布 dist-tag，禁止让 alpha 覆盖 `latest`。
+BranchMark 的版本独立于目标 DSH 递增。四份插件 manifest 必须同号；根 manifest 精确固定的 Typert generator 声明 DSH 目标，所有实际安装的 DSH peers 必须与该目标一致。当前组合为 BranchMark `0.1.2-rc.2` + DSH `0.1.2-rc.1`。发布命令显式指定 dist-tag，npm `alpha` 保留历史兼容线。
 
-维护分支按兼容通道而不是单个版本命名：`release/dsh-0.1.1-rc` 保留旧版维护线；`0.1.2-rc.1` 面向目标 `latest` 通道，`release/dsh-0.1.2-alpha` 保留已发布的 `0.1.2-alpha.5` 兼容线，精确发布快照使用 `v0.1.1-rc.2`、`v0.1.2-rc.1` 等 Git tag。`main` 合入当前可发布的最新通道；未发布的 DSH `master` 只在隔离适配工作区验证，直到上游给出新的 package version 与 release tag。
+维护分支按兼容通道而不是单个版本命名：`release/dsh-0.1.1-rc` 保留旧版维护线；`0.1.2-rc.2` 面向 DSH `0.1.2-rc.1` 的 `latest` 通道，`release/dsh-0.1.2-alpha` 保留已发布的 `0.1.2-alpha.5` 兼容线，精确发布快照使用 `v0.1.1-rc.2`、`v0.1.2-rc.1` 等 Git tag。`main` 合入当前可发布的最新通道；未发布的 DSH `master` 只在隔离适配工作区验证，直到上游给出新的 package version 与 release tag。
 
 ## 1. Release prerequisites
 
@@ -20,7 +20,7 @@ BranchMark 的版本与目标 DSH 完全同号。npm `latest` 跟随 DSH `latest
 npm view dsh-branchmark versions dist-tags --json
 ```
 
-首次发布前 `E404` 表示包名尚未占用。包存在后，目标版本必须不在 `versions` 中；本次目标为 `0.1.2-rc.1`。先发布到临时 `rc` 标签，完成 npm 安装验收后提升为 `latest`；`alpha` 保持已发布的 `0.1.2-alpha.5`。
+首次发布前 `E404` 表示包名尚未占用。包存在后，目标版本必须不在 `versions` 中；本次目标为 `0.1.2-rc.2`。先发布到临时 `rc` 标签，完成 npm 安装验收后提升为 `latest`；`alpha` 保持已发布的 `0.1.2-alpha.5`。
 
 ## 2. Build and inspect
 
@@ -39,7 +39,7 @@ pnpm run pack:bundle
 检查 tarball 只包含公开运行所需文件：
 
 ```sh
-tar -tf dist/dsh-branchmark-0.1.2-rc.1.tgz
+tar -tf dist/dsh-branchmark-0.1.2-rc.2.tgz
 pnpm --dir packages/bundle publish --dry-run --access public --no-git-checks
 ```
 
@@ -54,7 +54,7 @@ BRANCHMARK_SMOKE_HOME="$(mktemp -d)"
 BRANCHMARK_RUNTIME_DIR="$(mktemp -d)"
 npm install --prefix "$BRANCHMARK_RUNTIME_DIR" @deepseek-ai/dsh@0.1.2-rc.1
 export PATH="$BRANCHMARK_RUNTIME_DIR/node_modules/.bin:$PATH"
-DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh plugin --profile web add "$(pwd)/dist/dsh-branchmark-0.1.2-rc.1.tgz"
+DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh plugin --profile web add "$(pwd)/dist/dsh-branchmark-0.1.2-rc.2.tgz"
 DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh --profile web --dump-config
 DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh --profile web --no-open --port 0
 ```
@@ -65,7 +65,7 @@ DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh --profile web --no-open --port 0
 - 用户与助手消息的连续文本选择都出现四个操作；
 - 会话私有枝签只出现在来源 Session，“项目”只显示显式保存到项目的枝签；
 - Composer 只显示可移除的引用 Chip，发送前不出现完整正文，也不会自动发送；
-- 完整分叉、仅枝签、创建并打开、创建并发送都符合来源关系与 Composer 规则；
+- 完整分叉、仅枝签和空白分支符合上下文规则；创建并打开、创建并发送符合 Composer 规则，重启后未提问分支仍可见、可打开；
 - Side Chat 可选模型与思考强度，可停止、最小化、切换多个标签并在关闭后立即销毁；
 - 亮色、深色、窄屏和宽屏下 Dock、选区工具条与弹层没有遮挡或对比度问题；浮签可上下拖动、取消、刷新恢复且不会离开屏幕，拖后不会误展开；
 - 配置可用的测试 provider 后，至少完成一次摘要、一次普通回答和一次只读工具调用。
@@ -77,8 +77,8 @@ DSH_HOME="$BRANCHMARK_SMOKE_HOME" dsh --profile web --no-open --port 0
 确认工作树、版本和 tarball 与已评审内容一致后发布：
 
 ```sh
-npm publish ./dist/dsh-branchmark-0.1.2-rc.1.tgz --tag rc --access public
-npm view dsh-branchmark@0.1.2-rc.1 name version dist.tarball engines peerDependencies --json
+npm publish ./dist/dsh-branchmark-0.1.2-rc.2.tgz --tag rc --access public
+npm view dsh-branchmark@0.1.2-rc.2 name version dist.tarball engines peerDependencies --json
 npm view dsh-branchmark dist-tags --json
 ```
 
@@ -86,16 +86,16 @@ npm view dsh-branchmark dist-tags --json
 
 ```sh
 BRANCHMARK_NPM_SMOKE_HOME="$(mktemp -d)"
-DSH_HOME="$BRANCHMARK_NPM_SMOKE_HOME" dsh plugin --profile web add dsh-branchmark@0.1.2-rc.1
+DSH_HOME="$BRANCHMARK_NPM_SMOKE_HOME" dsh plugin --profile web add dsh-branchmark@0.1.2-rc.2
 DSH_HOME="$BRANCHMARK_NPM_SMOKE_HOME" dsh --profile web --dump-config
 DSH_HOME="$BRANCHMARK_NPM_SMOKE_HOME" dsh --profile web --no-open --port 0
 ```
 
-npm 安装验收通过后执行 `npm dist-tag add dsh-branchmark@0.1.2-rc.1 latest`。确认 `latest` 为 `0.1.2-rc.1`、`alpha` 仍为 `0.1.2-alpha.5`，再创建 annotated tag 与 GitHub Release：
+npm 安装验收通过后执行 `npm dist-tag add dsh-branchmark@0.1.2-rc.2 latest`。确认 `latest` 为 `0.1.2-rc.2`、`alpha` 仍为 `0.1.2-alpha.5`，再创建 annotated tag 与 GitHub Release：
 
 ```sh
-git tag -a v0.1.2-rc.1 -m "BranchMark 0.1.2-rc.1"
-git push origin v0.1.2-rc.1
+git tag -a v0.1.2-rc.2 -m "BranchMark 0.1.2-rc.2 (DSH 0.1.2-rc.1)"
+git push origin v0.1.2-rc.2
 ```
 
 GitHub Release 说明应从对应 `CHANGELOG.md` 版本节整理，并附上兼容 DSH 版本、安装命令、数据迁移说明和已知限制。

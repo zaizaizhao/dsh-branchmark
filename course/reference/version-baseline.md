@@ -1,8 +1,8 @@
 # 课程版本基线
 
-本页是课程的版本参考。主线只教一组可构建的依赖和 API，不要求读者在每个实验里选择 alpha、rc 或 master。注册表标签会移动，下表的 npm 状态是 2026-09-05 的查询快照，不是永久兼容承诺。
+本页是课程的版本参考。主线只教一组可构建的依赖和 API，不要求读者在每个实验里选择 alpha、rc 或 master。注册表标签会移动；源码版本与 DSH 兼容目标分别固定，安装前用本页命令核对注册表。
 
-课程源码中的三种分支模式和会话树对应本地未发布的 UI 变更；下面的 npm 版本仍是最近已发布基线，DSH 兼容目标保持 `0.1.2-rc.1`。
+课程中的三种分支模式、会话树和枝签交互对应 BranchMark `0.1.2-rc.2`，DSH 兼容目标为 `0.1.2-rc.1`。
 
 ## 源码与依赖目标
 
@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | DSH 目标 | `0.1.2-rc.1` | [workspace catalog](../../pnpm-workspace.yaml)及安装包声明 |
 | DSH release commit | `a66e4702047846cdaa10c66c9d3df3951f5ea70d` | [官方 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1) |
-| BranchMark 源码版本 | `0.1.2-rc.1` | [根 manifest](../../package.json)及三个 package manifest |
+| BranchMark 源码版本 | `0.1.2-rc.2` | [根 manifest](../../package.json)及三个 package manifest |
 | Node 实测工具链 | `24.19.0` | [.node-version](../../.node-version)；公开 engines 为 `^22.19.0 || >=24.0.0` |
 | pnpm | `11.7.0` | 根 manifest 的 `packageManager` |
 
@@ -20,13 +20,13 @@ DSH alpha.5 的 release commit `db6bdc3576c2d4e7c965e8e3ed0c2a731eed87f5` 与 rc
 
 ## npm 标签不等于本地源码
 
-| 查询对象 | 2026-09-05 的值 | 对学习的影响 |
+| 对象 | 版本或查询方式 | 对学习的影响 |
 | --- | --- | --- |
 | DSH `latest` / `next` | `0.1.2-rc.1` | 主线固定此版本，不依赖后续移动标签 |
 | DSH `alpha` | `0.1.2-alpha.5` | 与 rc.1 属于不同发布身份 |
-| BranchMark `latest` | `0.1.1-rc.2` | 不带版本安装取得旧插件，不是本课程源码 |
-| BranchMark `alpha` | `0.1.2-alpha.5` | 不包含本地 rc.1 的可拖动浮签 |
-| BranchMark 本地 rc.1 | 源码与本地 tarball；查询时尚无此 npm 版本 | 用本地 tarball 完成实验，不假设 npm 已发布 |
+| BranchMark 课程目标 | `0.1.2-rc.2` | 精确安装此版本或当前源码 tarball |
+| BranchMark `alpha` | `0.1.2-alpha.5` | 历史 alpha 兼容线，不包含本课程的会话树更新 |
+| BranchMark `latest` / `rc` | 用下方命令查询 | 标签可移动，课程安装仍指定精确版本 |
 
 只读刷新命令，在已准备 npm 的终端执行：
 
@@ -35,7 +35,7 @@ npm view @deepseek-ai/dsh dist-tags --json
 npm view dsh-branchmark versions dist-tags --json
 ```
 
-DSH 和 BranchMark 同号是本项目的发布策略，不是 npm 自动保证兼容。分支名不是版本证明；核对 checkout 的 manifest、Git SHA、lockfile 与最终产物。
+BranchMark 的四份 manifest 同号，DSH generator 和 peers 固定到独立的兼容目标。分支名不是版本证明；核对 checkout 的 manifest、Git SHA、lockfile 与最终产物。
 
 ## 四层版本证据
 
@@ -61,6 +61,6 @@ pnpm run verify:release
 
 ## 上游源码审计另开一条路径
 
-本课程的后续源码对照固定为 [`d347e70390`](https://github.com/deepseek-ai/deepseek-harness/tree/d347e70390)，即 Git 上的 `dsh-v0.1.3-alpha.1` 发布线快照。2026-09-05 查询的 npm 标签仍如上表；Git release、npm dist-tag 和本地运行进程是不同事实。
+本课程的后续源码对照固定为 [`d347e70390`](https://github.com/deepseek-ai/deepseek-harness/tree/d347e70390)，即 Git 上的 `dsh-v0.1.3-alpha.1` 发布线快照。Git release、npm dist-tag 和本地运行进程是不同事实。
 
 该目标包含 `SessionHandle` 和日志版本演进；当前 BranchMark 主线仍使用 `sessionPersistence.inspect()`。未来适配须同时检查日志读取和已保存 Clip 的来源身份，不能只把四个调用改名。[第 13 章](../tutorials/13-dsh-prerelease-upgrade.md)给出审计方法，[Session 身份参考](session-identity-and-migrations.md)解释数据风险。

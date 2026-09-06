@@ -48,13 +48,13 @@ export function checkCourse({ documents, manifests, nodeVersion }) {
   const row = label => baseline?.rows.find(cells => cells[0] === label)?.[1]
   const workspace = manifests.get('package.json')
   const version = workspace.version
-  if (row('DSH 目标') !== version || row('BranchMark 源码版本') !== version) failures.push('course baseline version must match workspace manifests')
+  const dshVersion = workspace.devDependencies['@deepseek-ai/dsh-typert-generator']
+  if (typeof dshVersion !== 'string' || row('DSH 目标') !== dshVersion || row('BranchMark 源码版本') !== version) failures.push('course baseline version must match the plugin and pinned DSH target')
   if (row('Node 实测工具链') !== nodeVersion || row('pnpm') !== workspace.packageManager.split('@')[1]) failures.push('course baseline toolchain must match pinned Node and pnpm')
   if (!/^[a-f\d]{40}$/u.test(row('DSH release commit') ?? '')) failures.push('course baseline needs a full DSH release commit')
   for (const [path, manifest] of manifests) {
     if (manifest.version !== version) failures.push(`${path}: version differs from the course baseline`)
   }
-  if (workspace.devDependencies['@deepseek-ai/dsh-typert-generator'] !== version) failures.push('course generator version differs from the target DSH')
 
   const edges = new Map()
   for (const [path, page] of pages) {

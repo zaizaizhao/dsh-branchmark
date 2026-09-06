@@ -101,9 +101,9 @@ rc.1 主线使用：
 
 ## 8. 发布与源码实验分开
 
-本项目的正式包版本跟随已发布 DSH 目标；发布步骤与可用 npm 通道只由 [RELEASING.md](../../RELEASING.md)维护。源码实验没有义务发到 npm，也不能把 master-compatible 产物伪装成 rc.1 包。
+本项目的正式包版本独立递增，并声明唯一的已发布 DSH 目标；发布步骤与可用 npm 通道只由 [RELEASING.md](../../RELEASING.md)维护。源码实验没有义务发到 npm，也不能把 master-compatible 产物伪装成 rc.1 包。
 
-若将来确需给外部测试者发 edge 包，应先单独确定发布身份、标签和对应 verifier 政策。当前检查要求同号依赖，不是把一个带 SHA 的版本字符串写进 package.json 就完成了发布设计。本课程不会创建 edge 标签或执行发布。
+若将来确需给外部测试者发 edge 包，应先单独确定发布身份、标签和对应 verifier 政策。当前检查要求四份插件 manifest 同号，并把 generator 和 DSH peers 固定到同一兼容目标；一个带 SHA 的包版本不能替代这些检查。本课程不会创建 edge 标签或执行发布。
 
 ## 9. 本章交付物
 

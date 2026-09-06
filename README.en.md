@@ -46,7 +46,7 @@ Full forks, clip-only Sessions, and blank branches carry different amounts of co
 </p>
 
 > [!IMPORTANT]
-> This source targets DSH npm `latest` version `0.1.2-rc.1` and the matching BranchMark package version. Before publication, build and install the source tarball; do not assume the two `latest` tags are synchronized. Keep the published `0.1.1-rc.2` and `0.1.2-alpha.5` combinations explicitly pinned and do not mix them.
+> BranchMark `0.1.2-rc.2` targets DSH `0.1.2-rc.1`. The plugin version and DSH compatibility target are maintained separately; install an exact verified pair from the table below. Keep the published `0.1.1-rc.2` and `0.1.2-alpha.5` combinations explicitly pinned and do not mix them.
 
 BranchMark is a plugin Bundle that does not modify DSH source code. It saves important conversation excerpts as clips and uses the clip's source message as an attention fork point. You can create a child Session that inherits the source context or a standalone Session that receives only the selected knowledge. Clip text and source anchors remain immutable; notes and tags remain editable.
 
@@ -141,21 +141,21 @@ BranchMark installs into the DSH Web Profile as an npm Bundle. Saving clips, vie
 
 | npm channel | BranchMark | DeepSeek Harness | Use |
 | --- | --- | --- | --- |
-| Current source / target `latest` | `0.1.2-rc.1` | `0.1.2-rc.1` | Install the source tarball below until npm publication |
+| Current source / `latest` | `0.1.2-rc.2` | `0.1.2-rc.1` | Session tree and Clip interaction update |
 | `alpha` | `0.1.2-alpha.5` | `0.1.2-alpha.5` | Published alpha compatibility line |
 | Legacy pinned pair | `0.1.1-rc.2` | `0.1.1-rc.2` | Maintained on `release/dsh-0.1.1-rc` |
 
-All combinations require Node.js `^22.19.0` or `>=24.0.0` and support only the DSH Web Profile. The BranchMark version must exactly match `dsh --version`.
+All combinations require Node.js `^22.19.0` or `>=24.0.0` and support only the DSH Web Profile. `dsh --version` must match the compatibility target for the installed BranchMark version.
 
-Check the channels with `npm view @deepseek-ai/dsh dist-tags` and `npm view dsh-branchmark dist-tags`, then install an exact pair from the table. If the target BranchMark version is not published, install the source tarball below rather than substituting an older `latest` package.
+Check the channels with `npm view @deepseek-ai/dsh dist-tags` and `npm view dsh-branchmark dist-tags`, then install an exact pair from the table. For unpublished source changes, use the tarball installation procedure below.
 
-### 1. Select and install a matching version
+### 1. Select and install a compatible pair
 
-Install the version matching this source after confirming that `dsh-branchmark@0.1.2-rc.1` is published:
+Install the current compatible pair:
 
 ```sh
 npm install --global @deepseek-ai/dsh@0.1.2-rc.1
-dsh plugin --profile web add dsh-branchmark@0.1.2-rc.1
+dsh plugin --profile web add dsh-branchmark@0.1.2-rc.2
 ```
 
 Use the published `alpha` pair:
@@ -182,7 +182,7 @@ dsh --version
 dsh --profile web --dump-config
 ```
 
-`dsh --version` must match the installed BranchMark version. The configuration output must contain both `dsh-branchmark` and `branchmark-host`. If the version differs or either entry is missing, remove the incorrect version and reinstall from the matching channel.
+`dsh --version` must match the DeepSeek Harness version in the table. The configuration output must contain both `dsh-branchmark` and `branchmark-host`. If the version differs or an entry is missing, reinstall the correct pair from the compatibility table.
 
 ### 3. Start DSH from the target project
 
@@ -205,7 +205,7 @@ corepack enable
 pnpm install --frozen-lockfile
 pnpm run release:check
 pnpm run pack:bundle
-dsh plugin --profile web add ./dist/dsh-branchmark-0.1.2-rc.1.tgz
+dsh plugin --profile web add ./dist/dsh-branchmark-0.1.2-rc.2.tgz
 ```
 
 Do not install through a Git URL, a GitHub source specifier, or `plugin add .`. The source repository does not commit compiled `lib/` output. Only the npm package and a locally built tarball contain the complete installable package.
@@ -256,7 +256,7 @@ The official material for the DSH versions supported by BranchMark does not prov
 
 | DSH requirement | BranchMark implementation |
 | --- | --- |
-| The package has non-empty `name` and `version` fields and provides a resolvable runtime entry point | `dsh-branchmark@0.1.2-rc.1` includes compiled Host, Typert, Remote, and browser entry points |
+| The package has non-empty `name` and `version` fields and provides a resolvable runtime entry point | `dsh-branchmark@0.1.2-rc.2` includes compiled Host, Typert, Remote, and browser entry points |
 | `package.json` declares `dsh.bundle.patch`; otherwise `dsh plugin add` installs a dependency without activating a Profile layer | `packages/bundle/package.json` points to `./cordis.patch.yml` |
 | `cordis.patch.yml` inserts or overrides a real Loader row and uses a package name resolvable after installation | The Bundle patch inserts `branchmark-host` with module name `dsh-branchmark` |
 | A Web plugin exports `./client` and declares its browser entry point with `dsh.client.platform: "web"` | The Bundle exports the self-contained `lib/client.js` and declares the required Client injections |
@@ -271,7 +271,7 @@ BranchMark release readiness:
 | `dsh.bundle.patch`, `cordis.patch.yml`, Web `./client`, and `dsh.client` declaration | Complete |
 | Node `22.19` / `24` CI, keyless tests, Bundle self-containment checks, and npm dry-run | Complete |
 | Isolated Profile tarball installation and `--dump-config` verification | Complete |
-| Matching npm `latest` and `alpha` releases | Complete |
+| Exact compatible pairs for npm `latest` and `alpha` | Complete |
 | GitHub `dsh-plugin` topic | Complete |
 
 </details>

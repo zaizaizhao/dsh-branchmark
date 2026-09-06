@@ -23,7 +23,7 @@ Excerpt-driven session branching and conversation lineage for DeepSeek Harness.
 
 | BranchMark | DeepSeek Harness | Node.js | DSH surface |
 | --- | --- | --- | --- |
-| `0.1.2-rc.1` | `0.1.2-rc.1` | `^22.19.0 \|\| >=24.0.0` | Web profile |
+| `0.1.2-rc.2` | `0.1.2-rc.1` | `^22.19.0 \|\| >=24.0.0` | Web profile |
 
 DSH 仍处于预发布阶段。上表之外的组合没有经过兼容性验证；升级 DSH 前应在独立 profile 中重新完成安装与 UI smoke test。
 
@@ -31,11 +31,11 @@ DSH 仍处于预发布阶段。上表之外的组合没有经过兼容性验证�
 
 ## 安装
 
-BranchMark 与目标 DSH 使用相同版本号。先安装目标 DSH，再把同号 Bundle 加入 Web Profile：
+先安装目标 DSH，再把兼容表中的 BranchMark Bundle 加入 Web Profile：
 
 ```sh
 npm install --global @deepseek-ai/dsh@0.1.2-rc.1
-dsh plugin --profile web add dsh-branchmark@0.1.2-rc.1
+dsh plugin --profile web add dsh-branchmark@0.1.2-rc.2
 dsh --profile web --dump-config
 dsh --profile web
 ```

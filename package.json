@@ -1,6 +1,6 @@
 {
   "name": "dsh-branchmark-workspace",
-  "version": "0.1.2-rc.1",
+  "version": "0.1.2-rc.2",
   "private": true,
   "description": "Excerpt-driven session branching and conversation lineage for DeepSeek Harness",
   "keywords": [
@@ -40,7 +40,7 @@
     "verify:bundle": "node --test scripts/verify-browser-bundle.spec.mjs && node scripts/verify-bundle.mjs",
     "verify:docs": "node scripts/verify-doc-links.mjs && pnpm run verify:course",
     "verify:course": "node --test scripts/verify-course.spec.mjs && node scripts/verify-course.mjs",
-    "verify:release": "node scripts/verify-release.mjs",
+    "verify:release": "node --test scripts/verify-release-versions.spec.mjs && node scripts/verify-release.mjs",
     "check": "pnpm run verify:brand && pnpm run typecheck && pnpm run test && pnpm run build && pnpm run verify:bundle",
     "pack:bundle": "pnpm run build:bundle && pnpm --dir packages/bundle pack --pack-destination ../../dist",
     "release:check": "pnpm run check && pnpm run verify:docs && pnpm run verify:release && pnpm exec publint packages/bundle && pnpm --dir packages/bundle publish --dry-run --access public --no-git-checks"

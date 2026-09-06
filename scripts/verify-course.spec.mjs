@@ -4,16 +4,17 @@ import { test } from 'node:test'
 import { checkCourse } from './verify-course.mjs'
 
 function fixture() {
-  const version = '0.1.2-rc.1'
+  const version = '0.1.2-rc.2'
+  const dshVersion = '0.1.2-rc.1'
   return {
     nodeVersion: '24.19.0',
     documents: new Map([
       ['course/README.md', '# Course\n\n[Baseline](reference/version-baseline.md)\n\n[Lesson](tutorials/example.md#目标与-code)\n'],
-      ['course/reference/version-baseline.md', `# Baseline\n\n| 项目 | 固定值 |\n| --- | --- |\n| DSH 目标 | ${version} |\n| BranchMark 源码版本 | ${version} |\n| Node 实测工具链 | 24.19.0 |\n| pnpm | 11.7.0 |\n| DSH release commit | ${'a'.repeat(40)} |\n`],
+      ['course/reference/version-baseline.md', `# Baseline\n\n| 项目 | 固定值 |\n| --- | --- |\n| DSH 目标 | ${dshVersion} |\n| BranchMark 源码版本 | ${version} |\n| Node 实测工具链 | 24.19.0 |\n| pnpm | 11.7.0 |\n| DSH release commit | ${'a'.repeat(40)} |\n`],
       ['course/tutorials/example.md', '# Lesson\n\n## 目标与 `code`\n\n```sh\npnpm run check\npnpm --filter dsh-branchmark-host test\n```\n'],
     ]),
     manifests: new Map([
-      ['package.json', { name: 'workspace', version, packageManager: 'pnpm@11.7.0', scripts: { check: 'test' }, devDependencies: { '@deepseek-ai/dsh-typert-generator': version } }],
+      ['package.json', { name: 'workspace', version, packageManager: 'pnpm@11.7.0', scripts: { check: 'test' }, devDependencies: { '@deepseek-ai/dsh-typert-generator': dshVersion } }],
       ['packages/host/package.json', { name: 'dsh-branchmark-host', version, scripts: { test: 'vitest run' }, exports: { './remote': { types: './lib/typert.remote-client.d.ts' } } }],
     ]),
   }
@@ -27,7 +28,8 @@ for (const [name, mutate, diagnostic] of [
   ['stale baseline', value => { value.documents.set('course/reference/version-baseline.md', value.documents.get('course/reference/version-baseline.md').replaceAll('0.1.2-rc.1', '0.1.2-alpha.5')) }, 'baseline version'],
   ['wrong Node', value => { value.nodeVersion = '22.19.0' }, 'toolchain'],
   ['wrong package version', value => { value.manifests.get('packages/host/package.json').version = 'old' }, 'version differs'],
-  ['wrong generator', value => { value.manifests.get('package.json').devDependencies['@deepseek-ai/dsh-typert-generator'] = 'old' }, 'generator version'],
+  ['wrong generator', value => { value.manifests.get('package.json').devDependencies['@deepseek-ai/dsh-typert-generator'] = 'old' }, 'baseline version'],
+  ['missing generator', value => { delete value.manifests.get('package.json').devDependencies['@deepseek-ai/dsh-typert-generator'] }, 'baseline version'],
   ['nonexistent generate script', value => { value.documents.set('course/tutorials/example.md', '# Lesson\n\n## 目标与 `code`\n\n```sh\npnpm --filter dsh-branchmark-host generate\n```\n') }, 'missing script'],
   ['nonexistent filter package', value => { value.documents.set('course/tutorials/example.md', '```sh\npnpm --filter missing test\n```') }, 'unknown package'],
   ['stale generated filename', value => { value.documents.set('course/tutorials/example.md', 'packages/host/lib/remote-map.d.ts') }, 'generated entry'],

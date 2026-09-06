@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { access, readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
+import { verifyReleaseVersions } from './verify-release-versions.mjs'
 
 const root = new URL('../', import.meta.url)
 const repositoryUrl = 'git+https://github.com/zaizaizhao/dsh-branchmark.git'
@@ -42,20 +43,26 @@ assert.ok(bundle.files.includes('lib/client.js'))
 assert.ok(bundle.files.includes('lib/types-*.d.ts'))
 assert.equal(bundle.files.includes('lib'), false, 'the public package must not include every build artifact')
 
-const versions = [workspace, host, client, bundle].map(manifest => manifest.version)
-assert.deepEqual(versions, Array(4).fill(bundle.version), 'all workspace versions must match the public bundle')
-assert.equal(workspace.devDependencies['@deepseek-ai/dsh-typert-generator'], bundle.version, 'the generator must match the target DSH release')
 const bundleRequire = createRequire(new URL('packages/bundle/package.json', root))
-for (const name of Object.keys(bundle.peerDependencies).filter(name => name.startsWith('@deepseek-ai/dsh-'))) {
+const installedDshVersions = {}
+for (const name of [
+  '@deepseek-ai/dsh-typert-generator',
+  ...Object.keys(bundle.peerDependencies).filter((name) => name.startsWith('@deepseek-ai/dsh-')),
+]) {
   const installed = JSON.parse(await readFile(bundleRequire.resolve(`${name}/package.json`), 'utf8'))
-  assert.equal(installed.version, bundle.version, `${name} must match the target DSH release`)
+  installedDshVersions[name] = installed.version
 }
+verifyReleaseVersions([workspace, host, client, bundle], installedDshVersions)
 
 const injectedPackages = bundle.dsh.client.inject
 assert.ok(Array.isArray(injectedPackages) && injectedPackages.length > 0)
 for (const name of injectedPackages) {
   assert.equal(typeof bundle.peerDependencies?.[name], 'string', `${name} must be a public peer`)
-  assert.equal(typeof bundle.devDependencies?.[name], 'string', `${name} must be available to the bundle build`)
+  assert.equal(
+    typeof bundle.devDependencies?.[name],
+    'string',
+    `${name} must be available to the bundle build`,
+  )
 }
 for (const name of Object.keys(bundle.peerDependencies)) {
   assert.deepEqual(
@@ -87,7 +94,7 @@ const requiredFiles = [
   'packages/bundle/README.md',
   'packages/bundle/cordis.patch.yml',
 ]
-await Promise.all(requiredFiles.map(path => access(new URL(path, root))))
+await Promise.all(requiredFiles.map((path) => access(new URL(path, root))))
 
 const packageReadme = await readFile(new URL('packages/bundle/README.md', root), 'utf8')
 for (const text of [
@@ -101,4 +108,6 @@ for (const text of [
   assert.ok(packageReadme.includes(text), `package README must document ${JSON.stringify(text)}`)
 }
 
-console.log('Verified BranchMark publication metadata, package boundaries, peer declarations, and release files.')
+console.log(
+  'Verified BranchMark publication metadata, package boundaries, peer declarations, and release files.',
+)
