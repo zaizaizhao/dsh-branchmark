@@ -10,11 +10,9 @@ The project and Session collections expose several per-Clip actions, but an alwa
 
 ## Decision
 
-Multi-selection renders one sticky command capsule. Opening it reveals six explicit commands: attach to Composer, create Side Chat, create a Session, toggle pin state, add tags, and move to trash. The tag input appears only after choosing the tag command. At narrow container widths the command labels become visually hidden while their accessible text remains available. Batch Composer attachment receives Clips in selection order and invokes the existing head insertion in reverse, so the final native Reference Chip order matches the user's selection and no action sends the draft.
+Batch Composer attachment receives Clips in selection order and invokes head insertion in reverse, so native Reference Chip order matches the selection without sending the draft. Card presentation and gesture handling are owned by the [Session tree and interaction note](2026-09-06-session-tree-and-clip-interactions.md).
 
 DSH persists each occurrence through its `clipboardText` projection and restores the draft without the process-local occurrence table. BranchMark's projection is `@branchmark:<ClipId>`. The Shell watches the current Composer for those tokens, resolves each id against the visible Session and project collections, and replaces matches from right to left through the public `insertReference()` API. This reconstructs native Chips without changing surrounding draft text; unresolved tokens remain visible instead of pretending to carry model context.
-
-Cards use a fixed collapsed reading height. Users can expand a card in place or open the immutable excerpt in a centered DSH Modal. Pin, drag, editing, and derivation controls remain outside the excerpt text. The drag handle is the only drag origin so text selection and card selection remain independent. The handle captures the pointer for the gesture, while window-level pointer-release and mouse-release listeners resolve the card beneath the final coordinates. The mouse listener covers hosts that synthesize a release without returning React's pointer event to the captured button. The active drag id lives in a synchronous gesture-local ref so the release handler can read it before React schedules another render.
 
 `Clip.pinnedAt` and `Clip.sortIndex` are optional fields in the existing `clip_explorer` version 1 domain. Existing records therefore remain valid without a storage migration. Pinned Clips sort before unpinned Clips; an unindexed record sorts before previously indexed records in its group and then uses creation time and id as stable fallbacks.
 
@@ -32,8 +30,8 @@ Reordering reuses `batchUpdate`. The request contains the complete active collec
 
 ## Consequences
 
-The collection keeps more vertical space for reading and presents one predictable batch entry on narrow and wide Dock widths. Long excerpts no longer determine the collapsed card size, while full text remains available without editing the immutable source. Manual order survives Host restarts and remains isolated by Workspace plus project or owner Session collection. Pointer capture keeps dragging stable across card descendants and the Dock's scrolling surface; keyboard users can still change pin state and use every command, but direct keyboard reordering is not provided in this version.
+Manual order survives Host restarts and stays isolated by Workspace plus project or owner Session collection. Independent pin state prevents ordering from silently moving records between groups. Draft-reference recovery preserves surrounding text and leaves unresolved tokens visible.
 
 ## Verification
 
-Host tests cover pin persistence, complete collection replacement order, and rejection of partial or cross-group requests without changing the saved order. Client tests cover the six-command capsule, selection-order Composer attachment, draft-mirror token recovery without changing surrounding text, cross-group drag rejection, and card reading, pin, and drag controls. The release checks build the generated Remote codecs and the self-contained browser Bundle, and the Web-profile smoke test covers the compact and narrow command presentations.
+Host tests cover pin persistence, complete collection replacement, and rejection of partial or cross-group orders. Client tests cover selection-order attachment, draft-mirror recovery, and cross-group rejection. Card and gesture evidence is maintained with the interaction owner.

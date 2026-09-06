@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
 import {
-  ToolCallId, createAssistantMessage, createToolResultMessage, createUserMessage, LlmAdapter,
+  ToolCallId,
+  createAssistantMessage,
+  createToolResultMessage,
+  createUserMessage,
+  LlmAdapter,
 } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, LlmModelInfo, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { remoteMethods } from '@deepseek-ai/dsh-typert-protocol'
@@ -53,9 +57,8 @@ class StrictSummaryAdapter extends LlmAdapter {
         return
       }
       const message = options.messages.length === 1 ? options.messages[0] : undefined
-      const providerSafe = message?.role === 'user'
-        && message.content.length === 1
-        && message.content[0]?.type === 'text'
+      const providerSafe =
+        message?.role === 'user' && message.content.length === 1 && message.content[0]?.type === 'text'
       if (!providerSafe) {
         yield {
           type: 'finish',
@@ -92,11 +95,15 @@ class StrictSummaryAdapter extends LlmAdapter {
   }
 }
 
-async function settledSideChat(h: TestHarness, id: Parameters<TestHarness['ctx']['branchmark']['getSideChat']>[0]['id']) {
+async function settledSideChat(
+  h: TestHarness,
+  id: Parameters<TestHarness['ctx']['branchmark']['getSideChat']>[0]['id'],
+) {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const result = h.ctx.branchmark.getSideChat({ id })
-    if (result.ok && result.value.status !== 'running' && result.value.status !== 'preparing') return result.value
-    await new Promise(resolve => setTimeout(resolve, 2))
+    if (result.ok && result.value.status !== 'running' && result.value.status !== 'preparing')
+      return result.value
+    await new Promise((resolve) => setTimeout(resolve, 2))
   }
   throw new Error('Side Chat did not settle')
 }
@@ -108,7 +115,7 @@ async function harness(): Promise<TestHarness> {
 }
 
 afterEach(async () => {
-  await Promise.all(harnesses.splice(0).map(value => value.dispose()))
+  await Promise.all(harnesses.splice(0).map((value) => value.dispose()))
 })
 
 function expectClip(result: Awaited<ReturnType<TestHarness['ctx']['branchmark']['create']>>): Clip {
@@ -170,10 +177,14 @@ describe('BranchMarkService', () => {
     const h = await harness()
     const source = transcript('source', h.projectRoot)
     await attach(h, source)
-    const clip = expectClip(await h.ctx.branchmark.create(request(h, source, {
-      note: 'Keep this decision',
-      tags: ['Architecture', ' architecture ', 'Fork'],
-    })))
+    const clip = expectClip(
+      await h.ctx.branchmark.create(
+        request(h, source, {
+          note: 'Keep this decision',
+          tags: ['Architecture', ' architecture ', 'Fork'],
+        }),
+      ),
+    )
 
     expect(clip).toMatchObject({
       workspaceId: h.workspace.id,
@@ -205,16 +216,24 @@ describe('BranchMarkService', () => {
     const source = transcript('source-mismatch', h.projectRoot)
     await attach(h, source)
 
-    await expect(h.ctx.branchmark.create(request(h, source, {
-      excerpt: 'different text',
-    }))).resolves.toEqual({ ok: false, error: { code: 'excerpt-mismatch' } })
-    await expect(h.ctx.branchmark.create(request(h, source, {
-      source: {
-        ...request(h, source).source,
-        kind: 'session-message',
-        turn: 2,
-      },
-    }))).resolves.toEqual({
+    await expect(
+      h.ctx.branchmark.create(
+        request(h, source, {
+          excerpt: 'different text',
+        }),
+      ),
+    ).resolves.toEqual({ ok: false, error: { code: 'excerpt-mismatch' } })
+    await expect(
+      h.ctx.branchmark.create(
+        request(h, source, {
+          source: {
+            ...request(h, source).source,
+            kind: 'session-message',
+            turn: 2,
+          },
+        }),
+      ),
+    ).resolves.toEqual({
       ok: false,
       error: { code: 'source-mismatch', sessionId: source.session.id, eventSeq: source.assistantEventSeq },
     })
@@ -264,7 +283,7 @@ describe('BranchMarkService', () => {
     expect(firstDrawer.value.clips).toEqual([])
     expect(secondDrawer.value.clips).toHaveLength(1)
     expect(secondDrawer.value.clips[0]?.ownerSessionId).toBe(second.session.id)
-    expect(library.value.clips.map(clip => clip.id)).toEqual([firstPrivate.id])
+    expect(library.value.clips.map((clip) => clip.id)).toEqual([firstPrivate.id])
   })
 
   it('supports note edits, trash recovery, and permanent deletion', async () => {
@@ -294,13 +313,15 @@ describe('BranchMarkService', () => {
       ownerSessionId: source.session.id,
     })
     if (!trash.ok) throw new Error(trash.error.code)
-    expect(trash.value.clips.map(item => item.id)).toEqual([clip.id])
+    expect(trash.value.clips.map((item) => item.id)).toEqual([clip.id])
 
     await h.ctx.branchmark.setStatus({ workspaceId: h.workspace.id, clipId: clip.id, status: 'active' })
-    await expect(h.ctx.branchmark.deleteForever({ workspaceId: h.workspace.id, clipId: clip.id }))
-      .resolves.toEqual({ ok: true, value: { deleted: true } })
-    await expect(h.ctx.branchmark.deleteForever({ workspaceId: h.workspace.id, clipId: clip.id }))
-      .resolves.toEqual({ ok: false, error: { code: 'clip-not-found', clipId: clip.id } })
+    await expect(
+      h.ctx.branchmark.deleteForever({ workspaceId: h.workspace.id, clipId: clip.id }),
+    ).resolves.toEqual({ ok: true, value: { deleted: true } })
+    await expect(
+      h.ctx.branchmark.deleteForever({ workspaceId: h.workspace.id, clipId: clip.id }),
+    ).resolves.toEqual({ ok: false, error: { code: 'clip-not-found', clipId: clip.id } })
   })
 
   it('prevalidates and applies batch tags, scope, and trash operations', async () => {
@@ -308,28 +329,30 @@ describe('BranchMarkService', () => {
     const source = transcript('batch', h.projectRoot)
     await attach(h, source)
     const first = expectClip(await h.ctx.branchmark.create(request(h, source)))
-    const second = expectClip(await h.ctx.branchmark.create(request(h, source, { excerpt: 'parent context' })))
+    const second = expectClip(
+      await h.ctx.branchmark.create(request(h, source, { excerpt: 'parent context' })),
+    )
     const tagged = await h.ctx.branchmark.batchUpdate({
       workspaceId: h.workspace.id,
       clipIds: [first.id, second.id],
       mutation: { kind: 'add-tags', tags: ['Review'] },
     })
     if (!tagged.ok) throw new Error(tagged.error.code)
-    expect(tagged.value.clips.map(clip => clip.tags)).toEqual([['review'], ['review']])
+    expect(tagged.value.clips.map((clip) => clip.tags)).toEqual([['review'], ['review']])
     const promoted = await h.ctx.branchmark.batchUpdate({
       workspaceId: h.workspace.id,
       clipIds: [first.id, second.id],
       mutation: { kind: 'set-scope', scope: 'project' },
     })
     if (!promoted.ok) throw new Error(promoted.error.code)
-    expect(promoted.value.clips.every(clip => clip.scope === 'project')).toBe(true)
+    expect(promoted.value.clips.every((clip) => clip.scope === 'project')).toBe(true)
     const trashed = await h.ctx.branchmark.batchUpdate({
       workspaceId: h.workspace.id,
       clipIds: [first.id, second.id],
       mutation: { kind: 'set-status', status: 'trashed' },
     })
     if (!trashed.ok) throw new Error(trashed.error.code)
-    expect(trashed.value.clips.every(clip => clip.status === 'trashed')).toBe(true)
+    expect(trashed.value.clips.every((clip) => clip.status === 'trashed')).toBe(true)
   })
 
   it('persists pin state and one complete order per visible Clip collection', async () => {
@@ -358,7 +381,7 @@ describe('BranchMarkService', () => {
       },
     })
     if (!reordered.ok) throw new Error(reordered.error.code)
-    expect(reordered.value.clips.map(clip => clip.sortIndex)).toEqual([0, 1, 2])
+    expect(reordered.value.clips.map((clip) => clip.sortIndex)).toEqual([0, 1, 2])
 
     const listed = h.ctx.branchmark.list({
       workspaceId: h.workspace.id,
@@ -366,29 +389,33 @@ describe('BranchMarkService', () => {
       ownerSessionId: source.session.id,
     })
     if (!listed.ok) throw new Error(listed.error.code)
-    expect(listed.value.clips.map(clip => clip.id)).toEqual([second.id, third.id, first.id])
+    expect(listed.value.clips.map((clip) => clip.id)).toEqual([second.id, third.id, first.id])
 
-    await expect(h.ctx.branchmark.batchUpdate({
-      workspaceId: h.workspace.id,
-      clipIds: [second.id, first.id],
-      mutation: {
-        kind: 'reorder',
-        scope: 'session',
-        ownerSessionId: source.session.id,
-      },
-    })).resolves.toEqual({
+    await expect(
+      h.ctx.branchmark.batchUpdate({
+        workspaceId: h.workspace.id,
+        clipIds: [second.id, first.id],
+        mutation: {
+          kind: 'reorder',
+          scope: 'session',
+          ownerSessionId: source.session.id,
+        },
+      }),
+    ).resolves.toEqual({
       ok: false,
       error: { code: 'invalid-request', message: 'reorder requires the complete active Clip collection' },
     })
-    await expect(h.ctx.branchmark.batchUpdate({
-      workspaceId: h.workspace.id,
-      clipIds: [first.id, second.id, third.id],
-      mutation: {
-        kind: 'reorder',
-        scope: 'session',
-        ownerSessionId: source.session.id,
-      },
-    })).resolves.toEqual({
+    await expect(
+      h.ctx.branchmark.batchUpdate({
+        workspaceId: h.workspace.id,
+        clipIds: [first.id, second.id, third.id],
+        mutation: {
+          kind: 'reorder',
+          scope: 'session',
+          ownerSessionId: source.session.id,
+        },
+      }),
+    ).resolves.toEqual({
       ok: false,
       error: { code: 'invalid-request', message: 'pinned Clips must remain before unpinned Clips' },
     })
@@ -399,16 +426,20 @@ describe('BranchMarkService', () => {
       ownerSessionId: source.session.id,
     })
     if (!unchanged.ok) throw new Error(unchanged.error.code)
-    expect(unchanged.value.clips.map(clip => clip.id)).toEqual([second.id, third.id, first.id])
+    expect(unchanged.value.clips.map((clip) => clip.id)).toEqual([second.id, third.id, first.id])
   })
 
   it('retains immutable Clip usage after the Clip is permanently deleted', async () => {
     const h = await harness()
     const source = transcript('fork-source', h.projectRoot)
     await attach(h, source)
-    const clip = expectClip(await h.ctx.branchmark.create(request(h, source, {
-      note: 'Carry this note',
-    })))
+    const clip = expectClip(
+      await h.ctx.branchmark.create(
+        request(h, source, {
+          note: 'Carry this note',
+        }),
+      ),
+    )
     const childId = SessionId('fork-child')
     const sourceEvents = source.session.snapshotEvents()
     const child = h.ctx.sessions.create(childId, {
@@ -428,6 +459,7 @@ describe('BranchMarkService', () => {
       derivedSessionId: childId,
       workspaceId: h.workspace.id,
       mode: 'full-fork',
+      parentSessionId: source.session.id,
       primaryClipId: clip.id,
       attachments: [{ clipId: clip.id, includeNote: true }],
     })
@@ -456,7 +488,7 @@ describe('BranchMarkService', () => {
     })
 
     await h.ctx.branchmark.deleteForever({ workspaceId: h.workspace.id, clipId: clip.id })
-    const relations = h.ctx.branchmark.listRelations({
+    const relations = await h.ctx.branchmark.listRelations({
       workspaceId: h.workspace.id,
       derivedSessionId: childId,
     })
@@ -472,7 +504,7 @@ describe('BranchMarkService', () => {
     const clip = expectClip(await h.ctx.branchmark.create(request(h, source, { note: 'Bring the note' })))
     const adapter = new SideChatAdapter()
     h.ctx.llm.registerAdapter(['test'], adapter)
-    const sessionsBefore = h.ctx.sessions.list().map(session => session.id)
+    const sessionsBefore = h.ctx.sessions.list().map((session) => session.id)
 
     const created = await h.ctx.branchmark.createSideChat({
       workspaceId: h.workspace.id,
@@ -495,13 +527,19 @@ describe('BranchMarkService', () => {
     expect(finished.status).toBe('idle')
     expect(finished.messages).toEqual([
       expect.objectContaining({ role: 'user', text: 'Explain this.' }),
-      expect.objectContaining({ role: 'assistant', text: 'A temporary answer that never entered the parent Session.' }),
+      expect.objectContaining({
+        role: 'assistant',
+        text: 'A temporary answer that never entered the parent Session.',
+      }),
     ])
     expect(adapter.requests).toHaveLength(1)
     expect(adapter.requests[0]?.messages.at(-1)?.content).toEqual([{ type: 'text', text: 'Explain this.' }])
-    expect(h.ctx.sessions.list().map(session => session.id)).toEqual(sessionsBefore)
+    expect(h.ctx.sessions.list().map((session) => session.id)).toEqual(sessionsBefore)
 
-    expect(h.ctx.branchmark.closeSideChat({ id: created.value.id })).toEqual({ ok: true, value: { destroyed: true } })
+    expect(h.ctx.branchmark.closeSideChat({ id: created.value.id })).toEqual({
+      ok: true,
+      value: { destroyed: true },
+    })
     expect(h.ctx.branchmark.getSideChat({ id: created.value.id })).toEqual({
       ok: false,
       error: { code: 'side-chat-not-found', id: created.value.id },
@@ -517,21 +555,29 @@ describe('BranchMarkService', () => {
     for (let turn = 2; turn <= 4; turn += 1) {
       source.session.append('turn/start', { turn })
       source.session.append('step/start', { turn, step: 1 })
-      source.session.append('user/message', createUserMessage({
-        source: { kind: 'user' },
-        content: [{ type: 'text', text: `Question ${String(turn)}` }],
-      }), { surfaceOp: 'append' })
+      source.session.append(
+        'user/message',
+        createUserMessage({
+          source: { kind: 'user' },
+          content: [{ type: 'text', text: `Question ${String(turn)}` }],
+        }),
+        { surfaceOp: 'append' },
+      )
       if (turn === 3) {
         const callId = ToolCallId('summary-boundary-call')
         const argumentsJson = '{"query":"context"}'
-        source.session.append('assistant/message', {
-          turn,
-          step: 1,
-          message: createAssistantMessage({
-            source: { provider: 'test', model: 'test' },
-            content: [{ type: 'tool-call', id: callId, name: 'search', arguments: argumentsJson }],
-          }),
-        }, { surfaceOp: 'append' })
+        source.session.append(
+          'assistant/message',
+          {
+            turn,
+            step: 1,
+            message: createAssistantMessage({
+              source: { provider: 'test', model: 'test' },
+              content: [{ type: 'tool-call', id: callId, name: 'search', arguments: argumentsJson }],
+            }),
+          },
+          { surfaceOp: 'append' },
+        )
         const call = source.session.append('tool/call', {
           turn,
           step: 1,
@@ -539,28 +585,35 @@ describe('BranchMarkService', () => {
           name: 'search',
           arguments: argumentsJson,
         })
-        source.session.append('tool/result', {
-          turn,
-          step: 1,
-          message: createToolResultMessage({
-            callId,
-            content: [{ type: 'text', text: 'Search result used by the final answer.' }],
-            isError: false,
-          }),
-        }, { surfaceOp: 'append', sourceEventSeqs: [call.seq] })
+        source.session.append(
+          'tool/result',
+          {
+            turn,
+            step: 1,
+            message: createToolResultMessage({
+              callId,
+              content: [{ type: 'text', text: 'Search result used by the final answer.' }],
+              isError: false,
+            }),
+          },
+          { surfaceOp: 'append', sourceEventSeqs: [call.seq] },
+        )
       }
-      assistantText = turn === 4
-        ? 'Final parent context for the selected Clip.'
-        : `Intermediate answer ${String(turn)}`
+      assistantText =
+        turn === 4 ? 'Final parent context for the selected Clip.' : `Intermediate answer ${String(turn)}`
       const assistant = createAssistantMessage({
         source: { provider: 'test', model: 'test' },
         content: [{ type: 'text', text: assistantText }],
       })
-      const event = source.session.append('assistant/message', {
-        turn,
-        step: 1,
-        message: assistant,
-      }, { surfaceOp: 'append' })
+      const event = source.session.append(
+        'assistant/message',
+        {
+          turn,
+          step: 1,
+          message: assistant,
+        },
+        { surfaceOp: 'append' },
+      )
       assistantMessageId = assistant.id
       assistantEventSeq = event.seq
       source.session.append('step/end', { turn, step: 1 })
@@ -568,21 +621,25 @@ describe('BranchMarkService', () => {
     }
     const expanded = { ...source, assistantMessageId, assistantEventSeq, assistantText }
     await attach(h, expanded)
-    const clip = expectClip(await h.ctx.branchmark.create(request(h, expanded, {
-      source: {
-        kind: 'session-message',
-        sessionId: source.session.id,
-        messageId: assistantMessageId,
-        eventSeq: assistantEventSeq,
-        turn: 4,
-        role: 'assistant',
-        range: {
-          start: assistantText.indexOf('parent context'),
-          end: assistantText.indexOf('parent context') + 'parent context'.length,
-        },
-        sessionTitleSnapshot: 'Summary source',
-      },
-    })))
+    const clip = expectClip(
+      await h.ctx.branchmark.create(
+        request(h, expanded, {
+          source: {
+            kind: 'session-message',
+            sessionId: source.session.id,
+            messageId: assistantMessageId,
+            eventSeq: assistantEventSeq,
+            turn: 4,
+            role: 'assistant',
+            range: {
+              start: assistantText.indexOf('parent context'),
+              end: assistantText.indexOf('parent context') + 'parent context'.length,
+            },
+            sessionTitleSnapshot: 'Summary source',
+          },
+        }),
+      ),
+    )
     const adapter = new StrictSummaryAdapter()
     h.ctx.llm.registerAdapter(['test'], adapter)
     const created = await h.ctx.branchmark.createSideChat({
@@ -614,7 +671,10 @@ describe('BranchMarkService', () => {
       clips: [{ clipId: clip.id, includeNote: false }],
     })
     if (!retry.ok) throw new Error(retry.error.code)
-    const retryAdmitted = h.ctx.branchmark.sendSideChat({ id: retry.value.id, text: 'Continue without summary.' })
+    const retryAdmitted = h.ctx.branchmark.sendSideChat({
+      id: retry.value.id,
+      text: 'Continue without summary.',
+    })
     if (!retryAdmitted.ok) throw new Error(retryAdmitted.error.code)
     const degraded = await settledSideChat(h, retry.value.id)
     expect(degraded.status).toBe('idle')
@@ -637,7 +697,7 @@ describe('BranchMarkService', () => {
     })
     if (!created.ok) throw new Error(created.error.code)
     const ready = await settledSideChat(h, created.value.id)
-    expect(ready.modelGroups[0]?.models.map(model => model.id)).toEqual(['test', 'alternate'])
+    expect(ready.modelGroups[0]?.models.map((model) => model.id)).toEqual(['test', 'alternate'])
 
     const selected = await h.ctx.branchmark.selectSideChatModel({
       id: created.value.id,

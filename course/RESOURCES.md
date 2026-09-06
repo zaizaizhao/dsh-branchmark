@@ -49,7 +49,7 @@
 - [BranchMark architecture](../docs/ARCHITECTURE.md)
   当前插件的架构参考。课程会展开其机制，但不复制整篇事实清单。
 - [紧凑批量命令与枝签排序 Agent Note](../.agents/notes/implemented/feature/2026-08-30-compact-batch-commands-and-clip-ordering.zh.md)
-  批量命令胶囊、固定高度卡片、置顶分组、完整集合重排和 Composer draft mirror 恢复的设计决策与验证证据。
+  置顶分组、完整集合重排和 Composer draft mirror 恢复的设计决策；卡片和会话树交互由[会话树设计记录](../.agents/notes/implemented/feature/2026-09-06-session-tree-and-clip-interactions.md)维护。
 - [DSH alpha.2 Client 能力集成 Agent Note](../.agents/notes/implemented/architecture/2026-08-31-dsh-alpha2-client-capability-integration.zh.md)
   Client 所有权和单版本策略的历史决策起点；该记录中的版本/旧验证不替代本课程 rc.1 基线与本次结果。
 - [BranchMark source tree](../packages)

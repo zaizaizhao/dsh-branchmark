@@ -9,10 +9,10 @@
 - 能解释 Host、Client、Bundle、Typert Remote、Session、Side Chat 与本地存储各自负责什么。
 - 能解释 DSH 为什么用 API Controller、UI adapter、target 与 Renderer 取代聚合 Client Runtime，并能据此为新插件状态选择唯一所有者。
 - 能从消息选区生成经 Host 校验的 Clip，并实现会话私有与项目全局两种可见性。
-- 能实现置顶分组、完整集合排序、固定高度卡片、专注阅读与紧凑批量命令，并说明哪些规则必须由 Host 验证。
+- 能实现置顶分组、完整集合排序、自然高度卡片、专注阅读与紧凑批量命令，并说明哪些规则必须由 Host 验证。
 - 能通过 DSH 原生 `ReferenceInsert` 把多条 Clip 按选择顺序加入 Composer，并从 draft mirror token 恢复未发送引用且绝不自动提交。
 - 能把浮签手势中的临时坐标与已提交布局偏好分开，完成单轴拖动、键盘定位、取消和组件清理，并用真实页面检查遮挡。
-- 能用 API Session Controller 的 `ISessions.fork` 与 `ISessions.create` 创建两类普通衍生会话，并正确处理父子 lineage、seed 和 Clip 快照。
+- 能用 API Session Controller 的 `ISessions.fork` 与 `ISessions.create` 创建三种模式的普通衍生会话，并正确处理父子 lineage、seed 和 Clip 快照。
 - 能直接使用 `ctx.llm.stream`、`BlockAssembler`、`ctx.fs` 与 `ctx.web` 实现一个关闭即销毁、只读的 Side Chat。
 - 能将 Host、浏览器 Client、Typert 产物打进一个 Bundle tarball，安装到未修改源码的 DSH Web profile，并完成可复现验收。
 - 能区分 npm dist-tag、Git release、源码、tarball、安装包与运行中服务；升级时检查 Session API 与已保存 Clip 的来源身份，不用编译通过替代数据验收。

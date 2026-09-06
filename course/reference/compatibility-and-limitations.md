@@ -27,7 +27,7 @@
 
 `ISessions.create` 创建新实体，Workspace 导航 helper 可以复用 blank Session；两者不能互换。缺少必需 API 时拒绝构建/装载，不通过复制 transcript 或调用导航来伪装 full-fork/clips-only。
 
-clips-only 仅有 recall 时可能受 DSH 空会话列表策略影响；以返回 id、关系和日志检查创建结果，不以侧边栏是否显示作为唯一证据。
+DSH 原生列表可能省略仅有 recall 或完全空白的会话。BranchMark 的关系读取会补齐这些端点的标题与可用性，点击时验证 Workspace 归属和日志可读性，再按现有 id 恢复原生绑定。原生列表尚无当前会话时，关系面板展示 Workspace 内已知关系，允许重新选择节点。
 
 ## full-fork 不是复制消息
 
@@ -43,7 +43,7 @@ full-fork 依赖 parent、seeded 位和精确 inherited cut；`session/end-seed`
 
 默认浮签在垂直中线上方 120 px，用户可沿右边缘上下拖动或用 ↑/↓、Home/End 定位，点击/Enter/Space 展开。布局偏好只属于当前浏览器 origin，不是 Workspace 数据。
 
-这不是自动避碰算法，用户仍可能把浮签移到其他 overlay 上；窗口高度小于把手时也无法保证整体可见。存储拒绝时内存内仍可用，但不承诺刷新恢复。卡片列表的直接键盘重排尚未提供，不要与浮签键盘定位混淆。
+这不是自动避碰算法，用户仍可能把浮签移到其他 overlay 上；窗口高度小于把手时也无法保证整体可见。存储拒绝时内存内仍可用，但不承诺刷新恢复。卡片排序使用独立的拖动把手；键盘用户可用空格提起、方向键移动、空格放下、Escape 取消。
 
 ## Web fetch 不是默认可用能力
 

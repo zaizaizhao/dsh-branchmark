@@ -1,4 +1,4 @@
-# Agent Note：紧凑批量命令与枝签排序
+# Agent Note: 紧凑批量命令与枝签排序
 
 Status: implemented
 
@@ -10,11 +10,9 @@ Status: implemented
 
 ## 决策
 
-多选后只渲染一个粘性命令胶囊。展开后提供六个显式命令：引用到 Composer、创建 Side Chat、创建 Session、切换置顶、追加标签和移入回收站。只有选择标签命令后才显示标签输入框。容器较窄时，命令文字在视觉上隐藏，但保留可访问文本。批量 Composer 引用按选择顺序接收枝签，并以相反顺序调用现有的头部插入，因此最终 DSH 原生 Reference Chip 顺序与用户选择一致，且任何引用动作都不会发送草稿。
+批量 Composer 引用按选择顺序接收枝签，并逆序调用头部插入，使原生 Reference Chip 顺序与选择顺序一致，且不发送草稿。卡片呈现与手势处理由[会话树与交互记录](2026-09-06-session-tree-and-clip-interactions.zh.md)维护。
 
 DSH 通过每个 occurrence 的 `clipboardText` 投影持久化引用，并在恢复 draft 时不携带进程内 occurrence table。BranchMark 的投影是 `@branchmark:<ClipId>`。Shell 观察当前 Composer 中的这些 token，从可见的会话与项目集合解析每个 id，再从右向左通过公开 `insertReference()` API 替换匹配项。这样可以在不改变周围草稿文字的情况下重建原生 Chip；无法解析的 token 保持可见，而不会伪装成携带模型上下文的有效引用。
-
-卡片使用固定的折叠阅读高度。用户可以在原卡片内展开，也可以在居中的 DSH Modal 中阅读不可变正文。置顶、拖拽、编辑和衍生关系控件均位于摘录正文之外。只有拖拽手柄可以启动拖拽，使文本选择和卡片选择互不干扰。手柄在整次手势中捕获指针，由 window 层的指针释放与鼠标释放监听器根据最终坐标解析下方卡片。鼠标监听器覆盖了某些宿主只合成释放事件、却不把 React 指针事件送回捕获按钮的情况。当前拖拽 id 保存在同步的手势局部 ref 中，因此释放处理器可以在 React 安排下一次渲染前读取它。
 
 `Clip.pinnedAt` 与 `Clip.sortIndex` 是既有 `clip_explorer` version 1 domain 中的可选字段，因此旧记录无需存储迁移即可继续读取。置顶枝签始终排在未置顶枝签之前；组内没有索引的记录排在已有索引的记录之前，之后以创建时间和 id 作为稳定回退顺序。
 
@@ -32,8 +30,8 @@ DSH 通过每个 occurrence 的 `clipboardText` 投影持久化引用，并在�
 
 ## 结果
 
-集合为正文阅读保留更多垂直空间，并在窄、宽 Dock 中都提供一个可预测的批量入口。长摘录不再决定折叠卡片尺寸，同时全文仍可阅读且不可修改。手动顺序可跨 Host 重启恢复，并按 Workspace 加项目集合或 owner Session 集合隔离。指针捕获让拖拽跨越卡片子元素和 Dock 滚动区时仍保持稳定；键盘用户仍可切换置顶并使用全部命令，但本版本不提供直接的键盘排序。
+手动顺序跨 Host 重启保留，并按 Workspace 加项目或 owner Session 集合隔离。独立置顶状态防止排序暗中改变分组。草稿引用恢复保留周围文字，无法解析的 token 继续可见。
 
 ## 验证
 
-Host 测试覆盖置顶持久化、完整集合替换顺序，以及局部或跨组请求在不改变已保存顺序的情况下被拒绝。Client 测试覆盖六项命令胶囊、按选择顺序写入 Composer、在不改变周围文字的情况下恢复 draft mirror token、跨组拖拽拒绝，以及卡片阅读、置顶和拖拽控件。发布检查构建生成的 Remote codec 和自包含浏览器 Bundle，Web profile smoke test 覆盖紧凑与窄宽度命令展示。
+Host 测试覆盖置顶持久化、完整集合替换以及局部和跨分组顺序拒绝。Client 测试覆盖按选择顺序引用、草稿镜像恢复和跨分组拒绝。卡片与手势验证由交互记录维护。

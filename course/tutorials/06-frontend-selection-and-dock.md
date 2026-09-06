@@ -95,9 +95,9 @@ DOM 只告诉我们可见文字与节点位置。`BranchMarkClient` 先通过 `c
 
 它既不展示其他 Session 的 session-scope Clips，也不混入项目 Clip。项目枝签视图只查 project scope，默认卡片网格，可切换列表；两者均支持正文/备注全文搜索、独立的 AND 多标签筛选、备注、标签、scope 提升、回收站和永久删除。Card 与 list 只是表现切换，不改变 query DTO。
 
-`ClipCard` 不允许编辑 excerpt/source，只允许编辑 note/tags。折叠卡片高度固定，长正文可在卡片内展开，也可进入 DSH Modal 专注阅读；这些阅读状态不写回 Clip。Side Chat 回答保存成 `temporary-answer` Clip 后可展示和加入后续上下文，但因为 `reopenable=false`、`forkable=false`，不能充当 full-fork primary。
+`ClipCard` 不允许编辑 excerpt/source，只允许编辑 note/tags。卡片随正文自然增高，超出阅读上限的长正文才显示展开入口；长正文可在卡片内展开，也可进入 DSH Modal 专注阅读；这些阅读状态不写回 Clip。Side Chat 回答保存成 `temporary-answer` Clip 后可展示和加入后续上下文，但因为 `reopenable=false`、`forkable=false`，不能充当 full-fork primary。
 
-多选状态使用有序 `selectedIds`，所以用户勾选顺序也是后续 Composer、Side Chat 与 Session attachments 的顺序。选择后只显示一个“处理 N 枚枝签”命令胶囊，展开提供六个显式动作：引用到输入框、Side Chat、新会话、置顶/取消置顶、加标签、移入回收站。标签输入框只在选择“加标签”后出现，窄 Dock 隐藏动作文字但保留可访问名称。
+多选状态使用有序 `selectedIds`，所以用户勾选顺序也是后续 Composer、Side Chat 与 Session attachments 的顺序。至少选择两枚枝签时显示多选工具栏，提供六个显式动作：引用到输入框、Side Chat、新会话、置顶/取消置顶、加标签、移入回收站。标签输入框只在选择“加标签”后出现，窄 Dock 允许按钮换行并保留可访问名称。
 
 active 且没有 search/tag filter 的集合才允许拖拽。Client 的 [`moveClipInCollection`](../../packages/client/src/domain/clip-order.ts) 先拒绝跨置顶组放置，再把完整集合 id 顺序提交给 Host；搜索结果、标签结果和回收站都禁用拖拽。拖拽只改变顺序，切换置顶必须是独立动作。
 
@@ -136,7 +136,7 @@ DSH 的 draft mirror 持久化每个 occurrence 的 `clipboardText`，BranchMark
 
 ## 10. Side Chat 与普通 Session 使用不同启动意图
 
-[`BranchMarkLauncherSheet`](../../packages/client/src/components/BranchMarkLauncher.tsx) 接收显式 `intent: 'side-chat' | 'session'`，不会把两套流程塞进一个可误选的表单。
+[`BranchMarkLauncherSheet`](../../packages/client/src/components/launcher/BranchMarkLauncher.tsx) 接收显式 `intent: 'side-chat' | 'session'`，不会把两套流程塞进一个可误选的表单。
 
 - Side Chat 只要求选择可恢复上下文的 primary Clip，然后创建临时 tab，等待用户在 Side Chat 输入框提问。所选 Clip 跨多个来源 Session 时必须显示 primary 选择；都来自一个来源时可直接选 eventSeq 最新的 forkable Clip。
 - Session 启动器提供 full-fork/clips-only、逐条备注开关、创建并打开与创建并发送。full-fork 的 primary 决定父 Session 和完整 turn 边界；clips-only 不设置 primary。
@@ -151,7 +151,7 @@ DSH 的 draft mirror 持久化每个 occurrence 的 `clipboardText`，BranchMark
 - 颜色优先引用 DSH CSS variables，并为缺失变量提供低风险 fallback。
 - Dock 宽度限制在 340–620 px，拖拽值由 controller clamp。
 - 可交互组件保留 keyboard button semantics、`aria-label`、disabled 与 focus state。
-- 长 excerpt 使用固定高度视觉裁切但不改 Host record；完整正文仍可在卡片内展开或 Modal 中读取。
+- 长 excerpt 超出阅读上限时折叠但不改 Host record；完整正文仍可在卡片内展开或 Modal 中读取。
 
 纯插件 UI 必须接受宿主 DOM/Slot 变化是适配成本，不能通过复制整个 DSH 页面来逃避依赖。
 
@@ -168,7 +168,7 @@ pnpm --filter dsh-branchmark-client test
 1. 选择一段含 `**强调**` 或 inline code 的回答并保存，Host 不返回 `excerpt-mismatch`。
 2. 一次选择跨两条消息，保存后出现两张卡片且 source message 不同。
 3. 本会话视图只看得到当前 session Clip；项目视图只看得到 project Clip，两个视图都看不到其他 session private Clip。
-4. 依次选择三条 Clip，通过命令胶囊引用到 Composer，确认原生 Chip 顺序与选择顺序一致、正文未展开且未自动发送；从 Popover 删除一枚 Chip 后，用户问题与相邻 Chip 仍保留。
+4. 依次选择三条 Clip，通过多选工具栏引用到 Composer，确认原生 Chip 顺序与选择顺序一致、正文未展开且未自动发送；从 Popover 删除一枚 Chip 后，用户问题与相邻 Chip 仍保留。
 5. 保留未发送引用并重新绑定或刷新对应 Composer，确认可解析 token 恢复为原生 Chip；删除其中一条 Clip 后再次恢复，确认该 token 保持可见而不是假装携带上下文。
 6. 在无筛选 active 集合内同组拖拽并重启 Host，确认顺序保留；尝试跨置顶组或在搜索结果中拖拽，确认不会发出持久化重排。
 7. 最小化再恢复时 Side Chat 与当前 view 仍在；刷新后只恢复布局偏好。Dock 避让、指针拖动和键盘验收继续做第 6A 章，不能用 Client 纯逻辑测试代替页面观察。
@@ -182,4 +182,4 @@ pnpm --filter dsh-branchmark-client test
 5. 为什么恢复多个 draft mirror token 必须从右向左执行？
 6. 为什么搜索、标签筛选和回收站视图必须禁用拖拽？
 
-接着完成[第 6A 章](06a-dock-interaction-and-preferences.md)与[实验 4](../labs/04-ordered-collection-and-reference-recovery.md)。然后进入[第 7 章](07-derived-sessions-and-lineage.md)，用这些显式选择创建两类普通 Session。
+接着完成[第 6A 章](06a-dock-interaction-and-preferences.md)与[实验 4](../labs/04-ordered-collection-and-reference-recovery.md)。然后进入[第 7 章](07-derived-sessions-and-lineage.md)，用这些显式选择创建三种模式的普通 Session。

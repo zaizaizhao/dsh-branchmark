@@ -78,7 +78,7 @@ Slot 的声明、owner props 与 inject face 以 DSH 源码为准：[`ui-layout`
 | `ctx.subagents` 与 `dsh-tool-subagent` | 产品需要可在普通侧边栏继续的 Session 分支，不是由父 agent 控制的子代理 activation |
 | `ctx.tools.register()` | Side Chat 的工具不是父 Session 工具目录的一部分；它们是临时调用中固定的 `ToolSchema[]` 和 Host-owned dispatch |
 | `ctx.agentLoop` | Side Chat 直接调用 `ctx.llm.stream`；普通 Session 的问题仍由 DSH 自己的 loop 处理 |
-| DSH 原生侧边栏 tree 修改 | 插件只读取 `SessionSummary.parentId` 并在自己的 Dock 投影关系 |
+| DSH 原生侧边栏 tree 修改 | 插件在自己的 Dock 合并 `SessionSummary.parentId` 与持久化组织关系，不修改 DSH 原生侧边栏 |
 | 自定义 persistence backend | Clip 使用 `storageDomain`，普通 Session 使用宿主配置的 persistence provider |
 | Shell、写文件、审批和权限升级 | Side Chat 被产品规则限制为最小只读工具集合 |
 

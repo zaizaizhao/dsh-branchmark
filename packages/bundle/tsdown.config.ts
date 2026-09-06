@@ -3,6 +3,7 @@ import { defineConfig } from 'tsdown'
 const PACKAGE_ID = 'dsh-branchmark'
 const CLIENT_EXTERNALS = [
   'react',
+  'react-dom',
   'react/jsx-runtime',
   '@deepseek-ai/cordis',
   '@deepseek-ai/dsh-api-session-controller/client',
@@ -51,6 +52,7 @@ export default defineConfig([
     outDir: 'lib',
     format: 'cjs',
     platform: 'browser',
+    define: { 'process.env.NODE_ENV': JSON.stringify('production') },
     target: 'es2024',
     fixedExtension: false,
     sourcemap: true,

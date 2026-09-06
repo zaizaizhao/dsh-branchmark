@@ -1,0 +1,26 @@
+[
+  {
+    "name": "打开会话：Session root",
+    "mode": "root",
+    "current": "page",
+    "label": "Session root当前会话"
+  },
+  {
+    "name": "打开会话：Session full",
+    "mode": "full-fork",
+    "current": null,
+    "label": "Session full完整分叉"
+  },
+  {
+    "name": "打开会话：Session clips",
+    "mode": "clips-only",
+    "current": null,
+    "label": "Session clips仅携带枝签"
+  },
+  {
+    "name": "打开会话：Session blank",
+    "mode": "blank",
+    "current": null,
+    "label": "Session blank空白分支"
+  }
+]

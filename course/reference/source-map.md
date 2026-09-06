@@ -12,7 +12,7 @@
 | Side Chat Remote | 同文件 | `createSideChat` 至 `closeSideChat` |
 | Clip CRUD/检索 | 同文件 | `create`, `list`, `update`, `setStatus`, `deleteForever`, `batchUpdate` |
 | 置顶、比较与完整集合重排 | 同文件 | `compareClips`, `update`, `batchUpdate` 的 `reorder` 分支 |
-| 衍生关系与 recall | 同文件 | `recordDerivedSession`, `listRelations` |
+| 衍生关系、Session 元数据与 recall | [`relations.ts`](../../packages/host/src/relations.ts) | `DerivedSessionStore.record`, `DerivedSessionStore.list` |
 | 来源与 fork 校验 | 同文件 | `resolvePersistedSource`, `matchesDerivedHeader`, `expectedForkInheritedEventCount` |
 | 公共 DTO 与 failures | [`packages/host/src/types.ts`](../../packages/host/src/types.ts) | `Clip`, `DerivedSessionRelation`, `SideChatSnapshot`, `ClipFailure` |
 | Zod/domain spec | [`packages/host/src/spec.ts`](../../packages/host/src/spec.ts) | `clipSchema`, `derivedSessionRecordSchema`, `branchMarkDomainSpec` |
@@ -33,10 +33,11 @@
 | 完整集合移动规则 | [`packages/client/src/domain/clip-order.ts`](../../packages/client/src/domain/clip-order.ts) | `moveClipInCollection` |
 | 父子树投影 | [`packages/client/src/domain/lineage.ts`](../../packages/client/src/domain/lineage.ts) | `deriveCurrentLineage` |
 | 选区监听与悬浮框 | [`packages/client/src/components/SelectionToolbar.tsx`](../../packages/client/src/components/SelectionToolbar.tsx) | `useChatSelection`, `SelectionToolbar` |
-| 集合、批量命令与卡片 | [`packages/client/src/components/ClipCollection.tsx`](../../packages/client/src/components/ClipCollection.tsx), [`BatchCommandCapsule.tsx`](../../packages/client/src/components/BatchCommandCapsule.tsx), [`ClipCard.tsx`](../../packages/client/src/components/ClipCard.tsx) | `ClipCollection`, `BatchCommandCapsule`, `ClipCard` |
-| Dock、引用恢复订阅与 Launcher intent | [`packages/client/src/components/BranchMarkShell.tsx`](../../packages/client/src/components/BranchMarkShell.tsx), [`BranchMarkLauncher.tsx`](../../packages/client/src/components/BranchMarkLauncher.tsx) | `BranchMarkShell`, `BranchMarkLauncherSheet` |
+| 集合、批量命令与卡片 | [`packages/client/src/components/clips/ClipCollection.tsx`](../../packages/client/src/components/clips/ClipCollection.tsx), [`ClipBatchActions.tsx`](../../packages/client/src/components/clips/ClipBatchActions.tsx), [`ClipCard.tsx`](../../packages/client/src/components/clips/ClipCard.tsx) | `ClipCollection`, `ClipBatchActions`, `ClipCard` |
+| Dock、引用恢复订阅与 Launcher intent | [`packages/client/src/components/BranchMarkShell.tsx`](../../packages/client/src/components/BranchMarkShell.tsx), [`BranchMarkLauncher.tsx`](../../packages/client/src/components/launcher/BranchMarkLauncher.tsx) | `BranchMarkShell`, `BranchMarkLauncherSheet` |
 | Side Chat tabs 与流式 UI | [`packages/client/src/components/SideChat.tsx`](../../packages/client/src/components/SideChat.tsx) | `SideChatModelPicker`, `SideChatMessage`, `SideChatView` |
-| Composer/header/sidebar entries | [`packages/client/src/components/EntryButtons.tsx`](../../packages/client/src/components/EntryButtons.tsx) | `BranchMarkSidebarButton`, `BranchMarkDrawerButton`, `BranchMarkLineageAction` |
+| Composer/header/sidebar entries | [`packages/client/src/components/EntryButtons.tsx`](../../packages/client/src/components/EntryButtons.tsx) | `BranchMarkSidebarButton`, `BranchMarkDrawerButton` |
+| 会话树与 header entry | [`LineageView.tsx`](../../packages/client/src/components/lineage/LineageView.tsx), [`LineageEntry.tsx`](../../packages/client/src/components/lineage/LineageEntry.tsx) | `LineageView`, `BranchMarkLineageAction` |
 | seed Conversation Node | [`packages/client/src/components/ForkDivider.tsx`](../../packages/client/src/components/ForkDivider.tsx) | `forkDividerDefinition`, `ForkDivider` |
 | 主题与布局 CSS | [`packages/client/src/client/styles.ts`](../../packages/client/src/client/styles.ts) | `CSS`, `installBranchMarkStyles` |
 

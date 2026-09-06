@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { createElement } from 'react'
+import { createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
@@ -11,7 +11,9 @@ import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { Clip, ClipId, SideChatId, SideChatSnapshot } from 'dsh-branchmark-host/types'
 import type { BranchMarkUiPreferences, ClipSelectionCandidate } from '../src/domain/controller.ts'
 import {
-  BRANCHMARK_DOCK_MAX_WIDTH, BRANCHMARK_DOCK_MIN_WIDTH, BranchMarkUiController,
+  BRANCHMARK_DOCK_MAX_WIDTH,
+  BRANCHMARK_DOCK_MIN_WIDTH,
+  BranchMarkUiController,
 } from '../src/domain/controller.ts'
 import {
   BRANCHMARK_REFERENCE_SOURCE,
@@ -27,10 +29,12 @@ import { SideChatPrimaryAction } from '../src/components/SideChat.tsx'
 import { referenceRemovalDrafts } from '../src/domain/reference-removal.ts'
 import { selectionCreateRequests, selectionToolbarPosition } from '../src/domain/selection-actions.ts'
 import { SelectionActions } from '../src/components/SelectionActions.tsx'
-import { BatchCommandCapsule } from '../src/components/BatchCommandCapsule.tsx'
-import { ClipCard } from '../src/components/ClipCard.tsx'
+import { ClipBatchActions } from '../src/components/clips/ClipBatchActions.tsx'
+import { ClipCard } from '../src/components/clips/ClipCard.tsx'
 import { BranchMarkLogo } from '../src/components/BranchMarkLogo.tsx'
 import { moveClipInCollection } from '../src/domain/clip-order.ts'
+import { BranchMarkTextContext } from '../src/components/shared/text.ts'
+import { zh } from '../src/locales/zh.ts'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   IconBranchOutline16: () => null,
@@ -44,6 +48,21 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   IconTrashOutline16: () => null,
   MarkdownText: () => null,
   Modal: () => null,
+  Menu: ({
+    anchor,
+    open,
+    items,
+  }: {
+    anchor: ReactNode
+    open: boolean
+    items: { id: string; label?: ReactNode }[]
+  }) =>
+    createElement(
+      'div',
+      null,
+      anchor,
+      open && items.map((item) => createElement('span', { key: item.id }, item.label)),
+    ),
 }))
 
 const workspaceId = 'workspace-1' as WorkspaceId
@@ -107,9 +126,7 @@ function sessionSummary(id: string, parentId?: SessionId): SessionSummary {
   }
 }
 
-function conversationSnapshot(
-  nodes: readonly (readonly [string, unknown])[],
-): ConversationSnapshot {
+function conversationSnapshot(nodes: readonly (readonly [string, unknown])[]): ConversationSnapshot {
   return {
     views: new Map([['chat', { nodes: new Map(nodes) }]]),
   } as unknown as ConversationSnapshot
@@ -122,10 +139,19 @@ describe('BranchMark browser domain', () => {
     const shell = readFileSync(new URL('../src/components/BranchMarkShell.tsx', import.meta.url), 'utf8')
     const handle = readFileSync(new URL('../src/components/DockHandle.tsx', import.meta.url), 'utf8')
     const entries = readFileSync(new URL('../src/components/EntryButtons.tsx', import.meta.url), 'utf8')
-    const launcher = readFileSync(new URL('../src/components/BranchMarkLauncher.tsx', import.meta.url), 'utf8')
-    const collection = readFileSync(new URL('../src/components/ClipCollection.tsx', import.meta.url), 'utf8')
-    const styles = readFileSync(new URL('../src/client/styles.ts', import.meta.url), 'utf8')
-    const asset = readFileSync(new URL('../../../assets/brand/branchmark-logo-threadbook-v4.svg', import.meta.url), 'utf8')
+    const launcher = readFileSync(
+      new URL('../src/components/launcher/BranchMarkLauncher.tsx', import.meta.url),
+      'utf8',
+    )
+    const collection = readFileSync(
+      new URL('../src/components/clips/ClipCollection.tsx', import.meta.url),
+      'utf8',
+    )
+    const styles = readFileSync(new URL('../src/client/styles/shell.ts', import.meta.url), 'utf8')
+    const asset = readFileSync(
+      new URL('../../../assets/brand/branchmark-logo-threadbook-v4.svg', import.meta.url),
+      'utf8',
+    )
 
     expect(full).toContain('data-branchmark-logo="threadbook"')
     expect(full).toContain('data-compact="false"')
@@ -136,7 +162,8 @@ describe('BranchMark browser domain', () => {
     expect(entries.match(/<BranchMarkLogo/g)).toHaveLength(2)
     expect(launcher.match(/<BranchMarkLogo/g)).toHaveLength(1)
     expect(collection.match(/<BranchMarkLogo/g)).toHaveLength(1)
-    for (const source of [shell, handle, entries, launcher, collection]) expect(source).not.toContain('IconArchiveOutline20')
+    for (const source of [shell, handle, entries, launcher, collection])
+      expect(source).not.toContain('IconArchiveOutline20')
     expect(asset).toContain('currentColor')
     expect(asset).not.toMatch(/#[\da-f]{3,8}/iu)
     expect(styles).toContain('stroke: currentColor')
@@ -205,7 +232,8 @@ describe('BranchMark browser domain', () => {
   })
 
   it('normalizes Remote transport and BranchMark business failures', async () => {
-    const list = vi.fn()
+    const list = vi
+      .fn()
       .mockResolvedValueOnce({
         ok: false,
         error: { code: 'gateway/internal', message: 'transport failed' },
@@ -233,7 +261,7 @@ describe('BranchMark browser domain', () => {
   })
 
   it('keeps Clip card controls from invoking the browser stop() global', () => {
-    const source = readFileSync(new URL('../src/components/ClipCard.tsx', import.meta.url), 'utf8')
+    const source = readFileSync(new URL('../src/components/clips/ClipCard.tsx', import.meta.url), 'utf8')
     expect(source).not.toContain('onClick={stop}')
   })
 
@@ -334,27 +362,31 @@ describe('BranchMark browser domain', () => {
     const client = new BranchMarkClient(context)
 
     expect(client.attachClipsToComposer(sessionId, clips)).toEqual({
-      inserted: clips.map(item => item.id),
+      inserted: clips.map((item) => item.id),
       duplicates: [],
       failed: [],
     })
-    expect(insertReference.mock.calls.map(call => call[0].label)).toEqual([
+    expect(insertReference.mock.calls.map((call) => call[0].label)).toEqual([
       '枝签 · gamma',
       '枝签 · beta',
       '枝签 · alpha',
     ])
-    expect(occurrences.map(item => parseClipReference(item.ref).clipId)).toEqual(clips.map(item => item.id))
+    expect(occurrences.map((item) => parseClipReference(item.ref).clipId)).toEqual(
+      clips.map((item) => item.id),
+    )
   })
 
   it('rehydrates persisted BranchMark clipboard tokens without replacing unrelated draft text', async () => {
     const token = `@branchmark:${clipId}`
     let draft = `Question before ${token} and after.`
     let draftRev = 4
-    const insertReference = vi.fn((reference: { label: string }, span: { start: number; end: number; draftRev: number }) => {
-      draft = `${draft.slice(0, span.start)}@${reference.label}${draft.slice(span.end)}`
-      draftRev += 1
-      return true
-    })
+    const insertReference = vi.fn(
+      (reference: { label: string }, span: { start: number; end: number; draftRev: number }) => {
+        draft = `${draft.slice(0, span.start)}@${reference.label}${draft.slice(span.end)}`
+        draftRev += 1
+        return true
+      },
+    )
     const scoped = {} as ClientContext
     const context = {
       sessions: { scope: () => scoped },
@@ -368,7 +400,7 @@ describe('BranchMark browser domain', () => {
       },
     } as unknown as ClientContext
     const client = new BranchMarkClient(context)
-    vi.spyOn(client, 'list').mockImplementation(async request => ({
+    vi.spyOn(client, 'list').mockImplementation(async (request) => ({
       clips: request.visibility === 'session-drawer' ? [clip()] : [],
       tags: [],
     }))
@@ -378,10 +410,11 @@ describe('BranchMark browser domain', () => {
       missing: [],
       failed: [],
     })
-    expect(insertReference).toHaveBeenCalledWith(
-      expect.objectContaining({ label: '枝签 · alpha' }),
-      { start: 'Question before '.length, end: 'Question before '.length + token.length, draftRev: 4 },
-    )
+    expect(insertReference).toHaveBeenCalledWith(expect.objectContaining({ label: '枝签 · alpha' }), {
+      start: 'Question before '.length,
+      end: 'Question before '.length + token.length,
+      draftRev: 4,
+    })
     expect(draft).toBe('Question before @枝签 · alpha and after.')
   })
 
@@ -397,9 +430,9 @@ describe('BranchMark browser domain', () => {
     await expect(source.codec?.serialize(withNote.ref, new AbortController().signal)).resolves.toMatch(
       /alpha[\s\S]*remember this/u,
     )
-    await expect(source.codec?.serialize(withoutNote.ref, new AbortController().signal)).resolves.not.toContain(
-      'remember this',
-    )
+    await expect(
+      source.codec?.serialize(withoutNote.ref, new AbortController().signal),
+    ).resolves.not.toContain('remember this')
     expect(list).toHaveBeenCalledWith({
       workspaceId,
       ownerSessionId: sessionId,
@@ -414,23 +447,27 @@ describe('BranchMark browser domain', () => {
       imageIds: [],
       draftRev: 1,
       phase: 'plain',
-      occurrences: [{
-        occurrenceId: 1,
-        source: BRANCHMARK_REFERENCE_SOURCE,
-        ref: reference.ref,
-        label: reference.label,
-        offset: 0,
-        length: reference.label.length + 1,
-      }],
+      occurrences: [
+        {
+          occurrenceId: 1,
+          source: BRANCHMARK_REFERENCE_SOURCE,
+          ref: reference.ref,
+          label: reference.label,
+          offset: 0,
+          length: reference.label.length + 1,
+        },
+      ],
       queue: [],
     }
-    const html = renderToStaticMarkup(createElement(BranchMarkDrawerButton, {
-      sessionId,
-      useInput: (selector: (state: InputState) => unknown) => selector(input),
-      inputActions: { setDraft: vi.fn() },
-      controller: new BranchMarkUiController(),
-      client: { workspaceForSession: () => workspaceId },
-    } as never))
+    const html = renderToStaticMarkup(
+      createElement(BranchMarkDrawerButton, {
+        sessionId,
+        useInput: (selector: (state: InputState) => unknown) => selector(input),
+        inputActions: { setDraft: vi.fn() },
+        controller: new BranchMarkUiController(),
+        client: { workspaceForSession: () => workspaceId },
+      } as never),
+    )
     expect(html).toContain('引用枝签')
     expect(html).toContain('<b>1</b>')
     expect(html).toContain('data-branchmark-logo="threadbook"')
@@ -453,31 +490,35 @@ describe('BranchMark browser domain', () => {
       while (start < maxCommon && previous[start] === next[start]) start += 1
       let suffix = 0
       const maxSuffix = maxCommon - start
-      while (suffix < maxSuffix && previous[previous.length - 1 - suffix] === next[next.length - 1 - suffix]) suffix += 1
+      while (suffix < maxSuffix && previous[previous.length - 1 - suffix] === next[next.length - 1 - suffix])
+        suffix += 1
       return { start, end: previous.length - suffix, insertedLength: next.length - suffix - start }
     }
     for (const next of referenceRemovalDrafts(draft, target)) {
       const range = diff(draft, next)
       const delta = range.insertedLength - (range.end - range.start)
-      occurrences = occurrences.flatMap(occurrence => {
+      occurrences = occurrences.flatMap((occurrence) => {
         if (occurrence.offset + occurrence.length <= range.start) return [occurrence]
         if (occurrence.offset >= range.end) return [{ ...occurrence, offset: occurrence.offset + delta }]
         return []
       })
       draft = next
     }
-    expect(occurrences.map(occurrence => occurrence.id)).toEqual([1, 3])
+    expect(occurrences.map((occurrence) => occurrence.id)).toEqual([1, 3])
     expect(draft).toBe(`${labels[0]} ${labels[2]} `)
   })
 
   it('renders the global Clip library entry with the same row-level navigation geometry as Settings', () => {
-    const html = renderToStaticMarkup(createElement(BranchMarkSidebarButton, {
-      wide: true,
-      useSessions: (selector: (value: { current: SessionId }) => unknown) => selector({ current: sessionId }),
-      useWorkspaces: (selector: (value: { items: readonly [] }) => unknown) => selector({ items: [] }),
-      controller: new BranchMarkUiController(),
-      client: { currentWorkspace: () => workspaceId },
-    } as never))
+    const html = renderToStaticMarkup(
+      createElement(BranchMarkSidebarButton, {
+        wide: true,
+        useSessions: (selector: (value: { current: SessionId }) => unknown) =>
+          selector({ current: sessionId }),
+        useWorkspaces: (selector: (value: { items: readonly [] }) => unknown) => selector({ items: [] }),
+        controller: new BranchMarkUiController(),
+        client: { currentWorkspace: () => workspaceId },
+      } as never),
+    )
     expect(html).toContain('class="dbm-sidebar-nav-row"')
     expect(html).toContain('data-branchmark-logo="threadbook"')
     expect(html).toContain('枝签')
@@ -529,26 +570,28 @@ describe('BranchMark browser domain', () => {
       excerpt: 'alpha',
       rect: { left: 2, top: 2, width: 30, height: 18 },
     }
-    expect(selectionToolbarPosition(
-      [candidate],
-      { width: 470, height: 40 },
-      { width: 800, height: 600 },
-    )).toEqual({ left: 10, top: 28, placement: 'below' })
-    expect(selectionToolbarPosition(
-      [{ ...candidate, rect: { left: 780, top: 200, width: 18, height: 18 } }],
-      { width: 470, height: 40 },
-      { width: 800, height: 600 },
-    )).toEqual({ left: 320, top: 152, placement: 'above' })
+    expect(
+      selectionToolbarPosition([candidate], { width: 470, height: 40 }, { width: 800, height: 600 }),
+    ).toEqual({ left: 10, top: 28, placement: 'below' })
+    expect(
+      selectionToolbarPosition(
+        [{ ...candidate, rect: { left: 780, top: 200, width: 18, height: 18 } }],
+        { width: 470, height: 40 },
+        { width: 800, height: 600 },
+      ),
+    ).toEqual({ left: 320, top: 152, placement: 'above' })
   })
 
   it('renders the four explicit selection actions in workflow order', () => {
-    const html = renderToStaticMarkup(createElement(SelectionActions, {
-      disabled: false,
-      onSaveSession: vi.fn(),
-      onSaveProject: vi.fn(),
-      onSideChat: vi.fn(),
-      onReference: vi.fn(),
-    }))
+    const html = renderToStaticMarkup(
+      createElement(SelectionActions, {
+        disabled: false,
+        onSaveSession: vi.fn(),
+        onSaveProject: vi.fn(),
+        onSideChat: vi.fn(),
+        onReference: vi.fn(),
+      }),
+    )
     expect(html).toContain('>摘录到会话</button>')
     expect(html).toContain('>摘录到项目</button>')
     expect(html).toContain('>Ask in side</button>')
@@ -559,30 +602,40 @@ describe('BranchMark browser domain', () => {
     expect(html).not.toContain('<svg')
   })
 
-  it('renders Scheme B as one compact batch command capsule with six explicit commands', () => {
-    const html = renderToStaticMarkup(createElement(BatchCommandCapsule, {
-      count: 3,
-      open: true,
-      tagEditorOpen: false,
-      allPinned: false,
-      canQuote: true,
-      onOpenChange: vi.fn(),
-      onQuote: vi.fn(),
-      onSideChat: vi.fn(),
-      onNewSession: vi.fn(),
-      onTogglePinned: vi.fn(),
-      onOpenTagEditor: vi.fn(),
-      onTrash: vi.fn(),
-    }))
-    expect(html).toContain('处理 3 枚枝签')
-    expect(html).toContain('引用到输入框')
-    expect(html).toContain('Side Chat')
-    expect(html).toContain('新会话')
-    expect(html).toContain('置顶')
-    expect(html).toContain('加标签')
-    expect(html).toContain('移入回收站')
-    expect(html).not.toContain('继续探索')
-    expect(html).not.toContain('placeholder="追加标签"')
+  it('renders compact primary batch actions and secondary metadata commands', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        BranchMarkTextContext.Provider,
+        {
+          value: (key, params) =>
+            String(zh[key as keyof typeof zh] ?? key).replace(/\{(\w+)\}/gu, (_, name) =>
+              String(params?.[name] ?? ''),
+            ),
+        },
+        createElement(ClipBatchActions, {
+          count: 3,
+          open: true,
+          tagEditorOpen: false,
+          tagValue: '',
+          allPinned: false,
+          canQuote: true,
+          onOpenChange: vi.fn(),
+          onQuote: vi.fn(),
+          onSideChat: vi.fn(),
+          onNewSession: vi.fn(),
+          onTogglePinned: vi.fn(),
+          onOpenTagEditor: vi.fn(),
+          onTrash: vi.fn(),
+          onClearSelection: vi.fn(),
+          onTagValueChange: vi.fn(),
+          onCloseTagEditor: vi.fn(),
+          onApplyTags: vi.fn(),
+        }),
+      ),
+    )
+    for (const label of ['已选择 3 枚', '引用', 'Side Chat', '创建新会话', '置顶', '添加标签', '移入回收站'])
+      expect(html).toContain(label)
+    expect(html).not.toContain('dbm-batch-capsule-trigger')
   })
 
   it('keeps drag reordering inside one pin group and returns the complete collection order', () => {
@@ -599,38 +652,47 @@ describe('BranchMark browser domain', () => {
     })
   })
 
-  it('renders fixed-card reading, pin, and drag controls without replacing the excerpt', () => {
-    const html = renderToStaticMarkup(createElement(ClipCard, {
-      clip: { ...clip(), excerpt: 'A very long immutable excerpt.' },
-      selected: false,
-      onSelect: vi.fn(),
-      onChanged: vi.fn(),
-      client: { relations: async () => ({ relations: [], usages: [] }) },
-      controller: new BranchMarkUiController(),
-      trash: false,
-      currentSessionId: sessionId,
-      draggable: true,
-      onDragStart: vi.fn(),
-      onDragOver: vi.fn(),
-      onDrop: vi.fn(),
-    } as never))
-    expect(html).toContain('展开正文')
-    expect(html).toContain('聚焦阅读')
-    expect(html).toContain('置顶')
-    expect(html).toContain('拖动枝签')
+  it('keeps primary card actions visible and metadata behind the labelled menu', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        BranchMarkTextContext.Provider,
+        {
+          value: (key) => String(zh[key as keyof typeof zh] ?? key),
+        },
+        createElement(ClipCard, {
+          clip: { ...clip(), excerpt: 'An immutable excerpt.' },
+          selected: false,
+          onSelect: vi.fn(),
+          client: {} as BranchMarkClient,
+          controller: new BranchMarkUiController(),
+          trash: false,
+          currentSessionId: sessionId,
+          dragHandle: createElement('button', null, '拖动枝签'),
+          relations: [],
+        }),
+      ),
+    )
+    for (const label of ['创建新会话', '引用', 'Side Chat', '更多操作', '拖动枝签'])
+      expect(html).toContain(label)
+    expect(html).not.toContain('移入回收站')
+    expect(html).not.toContain('编辑备注')
     expect(html).toContain('data-expanded="false"')
   })
 
   it('renders Side Chat send and stop as DSH Composer-style icon-only primary actions', () => {
-    const send = renderToStaticMarkup(createElement(SideChatPrimaryAction, {
-      mode: 'send',
-      disabled: true,
-      onClick: vi.fn(),
-    }))
-    const stop = renderToStaticMarkup(createElement(SideChatPrimaryAction, {
-      mode: 'stop',
-      onClick: vi.fn(),
-    }))
+    const send = renderToStaticMarkup(
+      createElement(SideChatPrimaryAction, {
+        mode: 'send',
+        disabled: true,
+        onClick: vi.fn(),
+      }),
+    )
+    const stop = renderToStaticMarkup(
+      createElement(SideChatPrimaryAction, {
+        mode: 'stop',
+        onClick: vi.fn(),
+      }),
+    )
     expect(send).toContain('class="dbm-side-primary"')
     expect(send).toContain('aria-label="发送消息"')
     expect(send).toContain('disabled=""')
@@ -642,9 +704,7 @@ describe('BranchMark browser domain', () => {
   it('keeps derived-Session Composers clean and sends only the user question through Session.prompt', async () => {
     const firstDerived = 'derived-open' as SessionId
     const secondDerived = 'derived-send' as SessionId
-    const create = vi.fn()
-      .mockResolvedValueOnce(firstDerived)
-      .mockResolvedValueOnce(secondDerived)
+    const create = vi.fn().mockResolvedValueOnce(firstDerived).mockResolvedValueOnce(secondDerived)
     const open = vi.fn()
     const setDraft = vi.fn()
     const conversationSend = vi.fn().mockResolvedValue(undefined)
@@ -678,6 +738,7 @@ describe('BranchMark browser domain', () => {
       workspaceId,
       clips: [clip()],
       mode: 'clips-only' as const,
+      parentSessionId: sessionId,
       includeNotes: new Set<ClipId>([clipId]),
     }
 
@@ -713,7 +774,9 @@ describe('BranchMark browser domain', () => {
     const writes: BranchMarkUiPreferences[] = []
     const controller = new BranchMarkUiController({
       read: () => undefined,
-      write: value => { writes.push(value) },
+      write: (value) => {
+        writes.push(value)
+      },
     })
     expect(controller.getSnapshot().dock).toMatchObject({ mode: 'rail', view: 'session', width: 430 })
     controller.openDock('project')
@@ -728,8 +791,13 @@ describe('BranchMark browser domain', () => {
     expect(controller.getSnapshot().dock.mode).toBe('hidden')
     controller.reopenDock()
     expect(controller.getSnapshot().dock).toMatchObject({ mode: 'expanded', view: 'project' })
-    expect(writes.at(-1)).toEqual({ mode: 'expanded', view: 'project', width: BRANCHMARK_DOCK_MIN_WIDTH, railPosition: null })
-    expect(writes.some(value => Object.hasOwn(value, 'clips'))).toBe(false)
+    expect(writes.at(-1)).toEqual({
+      mode: 'expanded',
+      view: 'project',
+      width: BRANCHMARK_DOCK_MIN_WIDTH,
+      railPosition: null,
+    })
+    expect(writes.some((value) => Object.hasOwn(value, 'clips'))).toBe(false)
   })
 
   it('projects the current Session lineage in stable pre-order with inherited branch colors', () => {
@@ -739,13 +807,16 @@ describe('BranchMark browser domain', () => {
     const childB = sessionSummary('child-b', root.id)
     const unrelated = sessionSummary('unrelated')
     const sessions = [root, childA, grandchild, childB, unrelated]
-    const byId = Object.fromEntries(sessions.map(session => [session.id, session])) as Record<SessionId, SessionSummary>
+    const byId = Object.fromEntries(sessions.map((session) => [session.id, session])) as Record<
+      SessionId,
+      SessionSummary
+    >
     const rows = deriveCurrentLineage(
       [root.id, childA.id, grandchild.id, childB.id, unrelated.id],
       byId,
       grandchild.id,
     )
-    expect(rows.map(row => [row.session.id, row.depth])).toEqual([
+    expect(rows.map((row) => [row.session.id, row.depth])).toEqual([
       [root.id, 0],
       [childA.id, 1],
       [grandchild.id, 2],
@@ -758,14 +829,19 @@ describe('BranchMark browser domain', () => {
 
   it('maps a visible completed DSH Chat node to the persisted message anchor and exact range', () => {
     const messageId = 'message-7' as MessageId
-    const snapshot = conversationSnapshot([['node-1', {
-      key: 'node-1',
-      kind: 'user',
-      id: messageId,
-      visibility: 'visible',
-      location: { kind: 'turn', turn: { turn: 4 } },
-      data: { seq: 11, content: [{ type: 'text', text: 'alpha beta alpha' }] },
-    }]])
+    const snapshot = conversationSnapshot([
+      [
+        'node-1',
+        {
+          key: 'node-1',
+          kind: 'user',
+          id: messageId,
+          visibility: 'visible',
+          location: { kind: 'turn', turn: { turn: 4 } },
+          data: { seq: 11, content: [{ type: 'text', text: 'alpha beta alpha' }] },
+        },
+      ],
+    ])
     const candidate = selectionCandidate({
       workspaceId,
       sessionId,
@@ -791,19 +867,24 @@ describe('BranchMark browser domain', () => {
   it('maps a rendered Markdown selection back to its exact durable source slice', () => {
     const messageId = 'message-markdown' as MessageId
     const markdown = 'Read the [official guide](https://example.com/guide) before continuing.'
-    const snapshot = conversationSnapshot([['node-markdown', {
-      key: 'node-markdown',
-      kind: 'assistant-step',
-      id: messageId,
-      visibility: 'visible',
-      location: { kind: 'turn', turn: { turn: 5 } },
-      data: {
-        status: 'settled',
-        turn: 5,
-        blocks: [{ kind: 'text', text: markdown }],
-        finalNode: { messageId, seq: 13 },
-      },
-    }]])
+    const snapshot = conversationSnapshot([
+      [
+        'node-markdown',
+        {
+          key: 'node-markdown',
+          kind: 'assistant-step',
+          id: messageId,
+          visibility: 'visible',
+          location: { kind: 'turn', turn: { turn: 5 } },
+          data: {
+            status: 'settled',
+            turn: 5,
+            blocks: [{ kind: 'text', text: markdown }],
+            finalNode: { messageId, seq: 13 },
+          },
+        },
+      ],
+    ])
     const candidate = selectionCandidate({
       workspaceId,
       sessionId,
@@ -823,19 +904,24 @@ describe('BranchMark browser domain', () => {
   it('maps a long DOM selection even when adjacent Markdown blocks contribute no whitespace', () => {
     const messageId = 'message-long-markdown' as MessageId
     const markdown = 'First paragraph.\n\nSecond paragraph with **bold** text.'
-    const snapshot = conversationSnapshot([['node-long-markdown', {
-      key: 'node-long-markdown',
-      kind: 'assistant-step',
-      id: messageId,
-      visibility: 'visible',
-      location: { kind: 'turn', turn: { turn: 6 } },
-      data: {
-        status: 'settled',
-        turn: 6,
-        blocks: [{ kind: 'text', text: markdown }],
-        finalNode: { messageId, seq: 15 },
-      },
-    }]])
+    const snapshot = conversationSnapshot([
+      [
+        'node-long-markdown',
+        {
+          key: 'node-long-markdown',
+          kind: 'assistant-step',
+          id: messageId,
+          visibility: 'visible',
+          location: { kind: 'turn', turn: { turn: 6 } },
+          data: {
+            status: 'settled',
+            turn: 6,
+            blocks: [{ kind: 'text', text: markdown }],
+            finalNode: { messageId, seq: 15 },
+          },
+        },
+      ],
+    ])
     const candidate = selectionCandidate({
       workspaceId,
       sessionId,

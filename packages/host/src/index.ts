@@ -4,20 +4,21 @@ import { randomUUID } from 'node:crypto'
 import { Buffer } from 'node:buffer'
 import { Context, Service } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
-import { createUserMessage, type Message } from '@deepseek-ai/dsh-llm'
-import { SessionLogOffset } from '@deepseek-ai/dsh-session'
+import type { Message } from '@deepseek-ai/dsh-llm'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SessionInspection } from '@deepseek-ai/dsh-session-persistence'
 import type { KvTable } from '@deepseek-ai/dsh-storage-domain'
 import { bindTypertRemote, Remote } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-workspace'
-import { branchMarkDomainSpec, type DerivedSessionRecord } from './spec.ts'
+import { branchMarkDomainSpec } from './spec.ts'
+import { DerivedSessionStore } from './relations.ts'
+import { rejected, success } from './result.ts'
 import type {
   BatchUpdateClipsRequest, BatchUpdateClipsResult, CancelSideChatResult,
   Clip, ClipFailure, ClipId, ClipRejected, ClipSource, ClipSourceInput, ClipSuccess,
-  ClipUsage, ClipUsageId, CreateClipRequest, CreateClipResult, DeleteClipRequest,
-  CreateSideChatRequest, CreateSideChatResult, DeleteClipResult, DerivedSessionRelation,
+  CreateClipRequest, CreateClipResult, DeleteClipRequest,
+  CreateSideChatRequest, CreateSideChatResult, DeleteClipResult,
   GetSideChatResult, ListClipsRequest, ListClipsResult,
   ListRelationsRequest, ListRelationsResult, RecordDerivedSessionRequest,
   RecordDerivedSessionResult, SendSideChatRequest, SendSideChatResult,
@@ -47,24 +48,12 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
-function success<T>(value: T): ClipSuccess<T> {
-  return Object.freeze({ ok: true, value })
-}
-
-function rejected(error: ClipFailure): ClipRejected {
-  return Object.freeze({ ok: false, error: Object.freeze(error) })
-}
-
 function now(): string {
   return new Date().toISOString()
 }
 
 function clipId(): ClipId {
   return randomUUID() as ClipId
-}
-
-function usageId(): ClipUsageId {
-  return randomUUID() as ClipUsageId
 }
 
 function byteLength(value: string): number {
@@ -131,7 +120,7 @@ export class BranchMarkService extends Service {
   private readonly config: Config
   readonly typertRemote = bindTypertRemote(this, 'branchmark')
   private clips?: KvTable<ClipId, Clip>
-  private derivedSessions?: KvTable<SessionId, DerivedSessionRecord>
+  private relations?: DerivedSessionStore
   private readonly sideChats: TemporarySideChatRuntime
 
   constructor(ctx: Context, config: Config) {
@@ -145,7 +134,7 @@ export class BranchMarkService extends Service {
     const domain = await this.ctx.storageDomain.open(branchMarkDomainSpec)
     this.ctx.effect(() => async () => { await domain.close() }, 'branchmark.domain')
     this.clips = domain.table('clips')
-    this.derivedSessions = domain.table('derived_sessions')
+    this.relations = new DerivedSessionStore(this.ctx, this.clips, domain.table('derived_sessions'))
     this.ctx.effect(() => () => { this.sideChats.destroy() }, 'branchmark.sideChats')
   }
 
@@ -473,133 +462,13 @@ export class BranchMarkService extends Service {
    */
   @Remote('recordDerivedSession')
   async recordDerivedSession(request: RecordDerivedSessionRequest): Promise<RecordDerivedSessionResult> {
-    if (this.requireDerivedSessions().get(request.derivedSessionId) !== undefined) {
-      return rejected({ code: 'derived-session-already-recorded', derivedSessionId: request.derivedSessionId })
-    }
-    if (request.attachments.length === 0) {
-      return rejected({ code: 'invalid-request', message: 'at least one Clip attachment is required' })
-    }
-    const attachmentIds = request.attachments.map(attachment => attachment.clipId)
-    if (new Set(attachmentIds).size !== attachmentIds.length) {
-      return rejected({ code: 'invalid-request', message: 'Clip attachments must be unique' })
-    }
-    const clips: Clip[] = []
-    for (const attachment of request.attachments) {
-      const clip = this.ownedClip(request.workspaceId, attachment.clipId)
-      if (!clip.ok) return clip
-      clips.push(clip.value)
-    }
-    const primary = request.primaryClipId === undefined
-      ? undefined
-      : clips.find(clip => clip.id === request.primaryClipId)
-    if ((request.mode === 'full-fork') !== (primary !== undefined)) {
-      return rejected({
-        code: 'invalid-request',
-        message: 'full-fork requires one attached primary Clip; clips-only forbids a primary Clip',
-      })
-    }
-    if (primary?.source.kind === 'temporary-answer' || primary?.source.forkable === false) {
-      return rejected({ code: 'invalid-request', message: 'the primary Clip is not eligible for full Fork' })
-    }
-    let inspection: SessionInspection
-    try {
-      inspection = await this.ctx.sessionPersistence.inspect(request.derivedSessionId)
-    } catch {
-      return rejected({ code: 'session-not-found', sessionId: request.derivedSessionId })
-    }
-    let expectedInheritedEventCount: SessionLogOffset | undefined
-    if (primary?.source.kind === 'session-message') {
-      let sourceInspection: SessionInspection
-      try {
-        sourceInspection = await this.ctx.sessionPersistence.inspect(primary.source.sessionId)
-      } catch {
-        return rejected({ code: 'session-not-found', sessionId: primary.source.sessionId })
-      }
-      expectedInheritedEventCount = this.expectedForkInheritedEventCount(sourceInspection.events, primary.source)
-      if (expectedInheritedEventCount === undefined) {
-        return rejected({ code: 'source-mismatch', sessionId: primary.source.sessionId, eventSeq: primary.source.eventSeq })
-      }
-    }
-    if (!this.matchesDerivedHeader(request.mode, inspection, primary?.source, expectedInheritedEventCount)) {
-      return rejected({ code: 'derived-session-mismatch', derivedSessionId: request.derivedSessionId })
-    }
-    const derivedSession = this.ctx.sessions.get(request.derivedSessionId)
-    if (derivedSession === undefined) {
-      return rejected({ code: 'derived-session-unavailable', derivedSessionId: request.derivedSessionId })
-    }
-    const timestamp = now()
-    const relation: DerivedSessionRelation = Object.freeze({
-      derivedSessionId: request.derivedSessionId,
-      workspaceId: request.workspaceId,
-      mode: request.mode,
-      ...(primary?.source.kind === 'session-message'
-        ? {
-          primaryClipId: primary.id,
-          sourceSessionId: primary.source.sessionId,
-          sourceMessageId: primary.source.messageId,
-          sourceEventSeq: primary.source.eventSeq,
-          sourceTurn: primary.source.turn,
-        }
-        : {}),
-      attachedClipIds: Object.freeze(attachmentIds),
-      createdAt: timestamp,
-    })
-    const usages = request.attachments.map((attachment, index): ClipUsage => {
-      const clip = clips[index]
-      if (clip === undefined) throw new Error('branchmark: attachment lookup lost its matching Clip')
-      return Object.freeze({
-        id: usageId(),
-        clipId: clip.id,
-        derivedSessionId: request.derivedSessionId,
-        excerptSnapshot: clip.excerpt,
-        ...(attachment.includeNote && clip.note !== undefined ? { noteSnapshot: clip.note } : {}),
-        createdAt: timestamp,
-      })
-    })
-    await this.requireDerivedSessions().put(request.derivedSessionId, {
-      relation,
-      usages: Object.freeze(usages),
-    })
-    derivedSession.append('user/message', createUserMessage({
-      source: { kind: 'plugin', plugin: 'dsh-branchmark', form: 'recall' },
-      content: [{
-        type: 'text',
-        text: [
-          'Selected Clip context for this derived Session:',
-          ...usages.flatMap((usage, index) => [
-            '',
-            `Clip ${String(index + 1)}:`,
-            usage.excerptSnapshot,
-            ...(usage.noteSnapshot === undefined ? [] : [`Note: ${usage.noteSnapshot}`]),
-          ]),
-        ].join('\n'),
-      }],
-    }), { surfaceOp: 'append' })
-    return success({ relation, usages: Object.freeze(usages) })
+    return this.requireRelations().record(request)
   }
 
-  /**
-   * Read bidirectional Clip-to-Session relations without resolving live Clip records.
-   * @param request - Workspace plus an optional Clip or derived Session filter.
-   * @returns retained immutable relations and usage snapshots.
-   */
+  /** Read retained relationships and Clip snapshots in the requested Workspace. */
   @Remote('listRelations')
-  listRelations(request: ListRelationsRequest): ListRelationsResult {
-    if (request.clipId === undefined && request.derivedSessionId === undefined) {
-      return rejected({ code: 'invalid-request', message: 'clipId or derivedSessionId is required' })
-    }
-    const records = [...this.requireDerivedSessions().entries()].map(([, record]) => record)
-    const relations = records.map(record => record.relation)
-      .filter(relation => relation.workspaceId === request.workspaceId)
-      .filter(relation => request.derivedSessionId === undefined
-        || relation.derivedSessionId === request.derivedSessionId)
-      .filter(relation => request.clipId === undefined
-        || relation.attachedClipIds.includes(request.clipId))
-    const relationIds = new Set(relations.map(relation => relation.derivedSessionId))
-    const usages = records.flatMap(record => record.usages)
-      .filter(usage => relationIds.has(usage.derivedSessionId))
-      .filter(usage => request.clipId === undefined || usage.clipId === request.clipId)
-    return success({ relations: Object.freeze(relations), usages: Object.freeze(usages) })
+  async listRelations(request: ListRelationsRequest): Promise<ListRelationsResult> {
+    return this.requireRelations().list(request)
   }
 
   private validateWorkspaceSession(
@@ -722,46 +591,14 @@ export class BranchMarkService extends Service {
       : success(clip)
   }
 
-  private matchesDerivedHeader(
-    mode: RecordDerivedSessionRequest['mode'],
-    inspection: SessionInspection,
-    source: SessionMessageClipSource | undefined,
-    expectedInheritedEventCount: SessionLogOffset | undefined,
-  ): boolean {
-    if (mode === 'clips-only') {
-      return inspection.meta.parentSession === undefined
-        && !inspection.meta.isSeeded
-        && inspection.inheritedEventCount === 0
-    }
-    return source !== undefined
-      && expectedInheritedEventCount !== undefined
-      && inspection.meta.parentSession === source.sessionId
-      && inspection.meta.isSeeded
-      && inspection.inheritedEventCount === expectedInheritedEventCount
-  }
-
-  private expectedForkInheritedEventCount(
-    events: readonly SessionEvent[],
-    source: SessionMessageClipSource,
-  ): SessionLogOffset | undefined {
-    const sourceIndex = events.findIndex(event => event.seq === source.eventSeq)
-    if (sourceIndex < 0) return undefined
-    const boundaryIndex = events.findIndex((event, index) => index >= sourceIndex
-      && event.type === 'turn/end' && event.data.turn === source.turn)
-    if (boundaryIndex < 0) return undefined
-    let cut = boundaryIndex + 1
-    while (cut < events.length && events[cut]?.type !== 'turn/start') cut += 1
-    return SessionLogOffset(cut)
-  }
-
   private requireClips(): KvTable<ClipId, Clip> {
     if (this.clips === undefined) throw new Error('branchmark: Clip table is not initialized')
     return this.clips
   }
 
-  private requireDerivedSessions(): KvTable<SessionId, DerivedSessionRecord> {
-    if (this.derivedSessions === undefined) throw new Error('branchmark: derived Session table is not initialized')
-    return this.derivedSessions
+  private requireRelations(): DerivedSessionStore {
+    if (this.relations === undefined) throw new Error('branchmark: derived Session store is not initialized')
+    return this.relations
   }
 }
 

@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { verifyBrowserBundle } from './verify-browser-bundle.mjs'
 
 const bundleRoot = new URL('../packages/bundle/', import.meta.url)
 const outputNames = ['index.js', 'typert.host.js', 'typert.remote-client.js', 'client.js']
-const outputs = await Promise.all(outputNames.map(async name => [
-  name,
-  await readFile(new URL(`lib/${name}`, bundleRoot), 'utf8'),
-]))
+const outputs = await Promise.all(
+  outputNames.map(async (name) => [name, await readFile(new URL(`lib/${name}`, bundleRoot), 'utf8')]),
+)
 
 for (const [name, source] of outputs) {
   assert.doesNotMatch(
@@ -24,6 +24,7 @@ assert.equal(typertModule.TYPERT.package, 'dsh-branchmark')
 assert.equal(typertModule.TYPERT.invocations.length, 14)
 
 const client = outputs.find(([name]) => name === 'client.js')?.[1]
+verifyBrowserBundle(client)
 assert.ok(client?.includes('window.__ModuleLoader__.load'), 'client.js is not a DSH browser module')
 assert.match(client ?? '', /ctx\.inject\(\["remote\.branchmark"\]/)
 assert.match(client ?? '', /registerSource/)
@@ -46,11 +47,10 @@ assert.doesNotMatch(client ?? '', /继续探索/)
 assert.match(client ?? '', /枝签/)
 assert.match(client ?? '', /dsh-branchmark\.ui\.v1/)
 assert.doesNotMatch(client ?? '', /保存到本会话/)
-assert.doesNotMatch(client ?? '', new RegExp([
-  ['摘录', '库'].join(''),
-  ['摘录', '·'].join(' '),
-  ['dce', ''].join('-'),
-].join('|')))
+assert.doesNotMatch(
+  client ?? '',
+  new RegExp([['摘录', '库'].join(''), ['摘录', '·'].join(' '), ['dce', ''].join('-')].join('|')),
+)
 assert.doesNotMatch(
   client ?? '',
   /onClick:\s*stop\s*[,}]/,
@@ -61,10 +61,13 @@ const manifest = JSON.parse(await readFile(new URL('package.json', bundleRoot), 
 assert.equal(manifest.name, 'dsh-branchmark')
 const workspace = JSON.parse(await readFile(new URL('../../package.json', bundleRoot), 'utf8'))
 assert.equal(manifest.version, workspace.version)
-assert.equal(manifest.description, 'Excerpt-driven session branching and conversation lineage for DeepSeek Harness')
-const exportTargets = Object.values(manifest.exports).flatMap((value) => (
-  typeof value === 'string' ? [value] : Object.values(value)
-))
+assert.equal(
+  manifest.description,
+  'Excerpt-driven session branching and conversation lineage for DeepSeek Harness',
+)
+const exportTargets = Object.values(manifest.exports).flatMap((value) =>
+  typeof value === 'string' ? [value] : Object.values(value),
+)
 for (const target of exportTargets) {
   assert.equal(typeof target, 'string')
   await readFile(new URL(target, bundleRoot))

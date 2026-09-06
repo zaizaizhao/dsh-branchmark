@@ -30,6 +30,7 @@
 | SessionSeq | rc.1 中指向一条已存在 Session event 的 branded number。Wire 与磁盘仍是普通 number，进入同进程领域后再验证并加 brand。 |
 | SessionLogOffset | rc.1 中指向日志间隙、读取 offset、事件总数或继承前缀长度的 branded number；它可以等于事件数，不能当作现存 event identity。 |
 | turn | DSH 从 `turn/start` 到 `turn/end` 的执行单位，可能包含多个 LLM step。full-fork 边界必须落在完整 turn 后。 |
+| blank | 独立的新 Session，只保留 BranchMark 组织父，不继承历史、不携带 Clip 或 recall。 |
 | full-fork | 调用 DSH 原生 fork，继承来源 Session 从开头到主要 Clip 所在完整 turn 的事件 seed，并产生 DSH parent lineage。 |
 | clips-only | 调用 DSH create 创建无 parent/seed 的新普通 Session，再把 Clip 使用快照作为 `recall` 消息写入日志。 |
 | derived Session | 经 full-fork 或 clips-only 流程创建、并有 BranchMark relation 的普通持久 Session。 |

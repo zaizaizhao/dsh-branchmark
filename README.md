@@ -27,22 +27,23 @@
 
 ## 交互演示
 
-左侧展示从重点摘录创建正式 Session、切换会话并沿 Session 树追溯来源；右侧展示不打断主线的临时 Side Chat，以及把值得保留的内容重新摘录为枝签。点击任一动图可以查看原尺寸。
+从一段值得保留的回答开始，把知识整理成枝签，再沿不同思路继续探索。下面两段演示来自实际运行的 DSH Web Profile，采用 2560×1440 工作区与 80% 缩放的大屏视角。每张动图独占一行，点击即可查看 1600×900 原图。
 
-<table>
-  <thead>
-    <tr>
-      <th width="50%">枝签、正式分叉与 Session 树</th>
-      <th width="50%">临时 Side Chat 与再摘录</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td width="50%" valign="top"><a href="assets/demo/branchmark-session-tree-and-derived-session-demo.gif"><img src="assets/demo/branchmark-session-tree-and-derived-session-demo.gif" width="100%" alt="BranchMark 从知识枝签创建正式 Session，并通过会话关系树切换和追溯来源"></a></td>
-      <td width="50%" valign="top"><a href="assets/demo/branchmark-side-chat-and-clipping-demo.gif"><img src="assets/demo/branchmark-side-chat-and-clipping-demo.gif" width="100%" alt="BranchMark 使用临时 Side Chat 快速探索，并把值得保留的内容重新摘录为枝签"></a></td>
-    </tr>
-  </tbody>
-</table>
+### 摘录重点，让好想法随时可用
+
+用备注和标签整理知识，按需要选择、排序或引用，让下一次提问从已有洞见开始。
+
+<p align="center">
+  <a href="assets/demo/branchmark-clips-and-organization-demo.gif"><img src="assets/demo/branchmark-clips-and-organization-demo.gif" width="100%" alt="BranchMark 在完整宽屏页面中整理知识枝签，展示自然高度卡片、多选操作和拖动排序"></a>
+</p>
+
+### 从一个想法，长出一棵会话树
+
+完整分叉、仅携带枝签、空白分支分别承载不同的上下文；展开全景，就能看清各条思路如何关联，点击节点即可继续对话。
+
+<p align="center">
+  <a href="assets/demo/branchmark-session-tree-and-derived-session-demo.gif"><img src="assets/demo/branchmark-session-tree-and-derived-session-demo.gif" width="100%" alt="BranchMark 在全景会话树中展示三种分支模式、多层关系和真实会话导航"></a>
+</p>
 
 > [!IMPORTANT]
 > 当前源码面向 DSH npm `latest` 的 `0.1.2-rc.1`，BranchMark 的目标包版本同为 `0.1.2-rc.1`。发布前可从源码构建 tarball 安装；不要假设两个包的 `latest` 标签已同步。旧的 `0.1.1-rc.2` 组合与 `0.1.2-alpha.5` 组合继续使用精确版本，不能交叉安装。
@@ -105,6 +106,7 @@ BranchMark 的核心对象不是额外的聊天窗口，而是从重点知识生
 | --- | --- | --- |
 | 完整分叉 | 主要枝签的来源 Session 从开头到来源消息完整轮次的历史，以及全部所选枝签和备注 | 带着原推理过程继续深入 |
 | 仅携带枝签 | 一个没有 DSH parent 的全新 Session，以及全部所选枝签和备注 | 只带重点知识，隔离父会话噪声 |
+| 空白分支 | 不继承历史、不携带枝签和备注的全新 Session | 保留组织关系，独立探索新想法 |
 
 多枚枝签来自不同 Session 时，你需要选择一个主要来源。主要来源只决定完整分叉继承哪条父会话链；其余枝签仍作为完整知识材料进入新 Session。
 
@@ -120,27 +122,16 @@ Side Chat 是注意力管理中的临时出口，不是 BranchMark 的主数据�
 
 ## Session 树与会话管理
 
-完整分叉直接使用 DSH 原生 Session fork。DSH `parentSession` 是父子关系的权威来源，BranchMark 的“关系”视图通过 `parentId` 投影当前 Session 所在的已知树。
+BranchMark 的会话树同时展示完整分叉、仅携带枝签和空白分支。根会话在上，子分支向下延伸；窄面板使用缩进布局，全景视图展示完整枝干。点击节点打开真实会话，“继续分支”默认创建空白分支。
 
-```text
-Session A：实现认证主流程
-├── Session B：从“权限模型”完整分叉
-│   └── Session D：从“缓存失效”再次完整分叉
-└── Session C：从“数据库迁移”完整分叉
-
-Session E：仅携带枝签创建
-└── 没有 DSH parent；通过 BranchMark 枝签使用关系连接来源知识
-```
-
-BranchMark 保留两种关系，并且不把它们混为一棵伪造的树：
-
-| 关系 | 权威数据 | 在界面中的作用 |
+| 关系 | 权威数据 | 界面含义 |
 | --- | --- | --- |
-| DSH Session lineage | `SessionHeader.parentSession` / Client `parentId` | 构成完整分叉的父子 Session 树 |
-| BranchMark 使用关系 | 衍生 Session、主要枝签、附加枝签和不可变使用快照 | 从枝签找到衍生 Session，从衍生 Session 跳回来源 |
-| Side Chat | 无持久关系 | 只作为临时快问快答标签 |
+| DSH 历史继承 | `SessionHeader.parentSession` / Client `parentId` | 完整分叉的原生父子关系 |
+| BranchMark 组织关系 | `DerivedSessionRelation.parentSessionId` 与 `mode` | 三种分支在同一棵树中的位置；线型说明携带方式 |
+| 枝签使用关系 | 附件标识与不可变 `ClipUsage` 快照 | 从枝签找到使用它的会话 |
+| Side Chat | 无持久关系 | 临时快问快答标签 |
 
-这种区分让会话管理保持真实：完整分叉表达“这个 Session 从父会话的某个完成轮次继续”；仅枝签表达“这个独立 Session 使用过这些知识”。两者都可追溯，但只有前者进入 DSH Session 树。
+仅枝签和空白分支拥有组织父会话，但没有 DSH 原生 parent，也不继承父历史。关系读取会补齐原生列表省略的未提问会话；刷新和 Host 重启后仍可找到并打开这些节点。不可读取的会话显示为不可用。旧记录缺少组织父标识时，不根据当前枝签猜测父会话。
 
 ## 快速开始
 
@@ -229,20 +220,23 @@ dsh plugin --profile web add ./dist/dsh-branchmark-0.1.2-rc.1.tgz
 | 把重点知识提供给其他 Session | 摘录到项目 | 枝签持久化，在当前 Workspace 的项目库显示 |
 | 保留当前主线，继续组织问题 | 引用到输入框 | 插入可移除的原生引用 Chip，绝不自动发送 |
 | 沿原讨论位置展开正式支线 | 完整分叉 | 创建有 DSH parent 的持久化子 Session |
-| 用重点知识开始隔离任务 | 仅携带枝签 | 创建无 DSH parent 的持久化根 Session |
+| 用重点知识开始隔离任务 | 仅携带枝签 | 新上下文只包含选中的摘录与备注，保留组织关联 |
+| 从新想法开始讨论 | 空白分支 | 不携带历史、摘录或备注，保留组织关联 |
 | 管理并行开发支线 | 关系视图与枝签卡片 | 查看 Session 树、来源和双向使用关系 |
 | 临时确认一个小问题 | Ask in side | 创建不入树、不持久化的快问快答标签 |
 
 右侧枝签浮签默认位于中线上方，避开 DSH 居中的轮次导航。按住浮签可沿右侧边缘上下拖动，松手不会误打开面板；位置在本浏览器中保存，窗口缩放后仍限制在可见范围内。单击展开，键盘聚焦后可用 ↑/↓ 微调、Home/End 移至上下边缘。
 
-右侧 Dock 提供“本会话”“项目”“关系”和“Side Chat”视图。项目枝签库支持全文搜索、多标签筛选、卡片/列表切换、置顶、同组排序、多选操作和回收站。
+右侧 Dock 提供“本会话”“项目”“关系”和“Side Chat”视图。卡片随正文和备注自然排布，提供紧凑的创建新会话、引用与 Side Chat 按钮；备注、标签、置顶和删除位于“更多操作”。选中至少两枚枝签才显示批量工具栏。回收站是搜索框右侧的独立按钮，支持恢复；删除与排序完成后可撤销。
+
+会话树把主节点放在上方，分支逐层向下展开；窄面板使用纵向层级，全景视图使用树枝连线。点击节点直接打开对应 DSH 会话，“继续分支”默认创建空白分支。完整分叉、仅携带枝签和空白分支分别使用实线、虚线和点线，组织关联不会修改 DSH 原生侧边栏的继承关系。
 
 ## 数据与权限
 
 BranchMark 把长期知识与关系留在 DSH 本地，把临时探索限制在当前 Host 进程中。
 
 - 枝签、备注、标签、排序、回收站、使用快照和衍生关系写入 DSH 本地 `storageDomain` 的 `clip_explorer` domain；插件不提供云同步，也不向作者控制的服务上传数据。
-- 完整分叉和仅枝签 Session 都使用 DSH 原生持久化；BranchMark 不复制或替代 DSH Session 日志。
+- 完整分叉、仅枝签和空白分支 Session 都使用 DSH 原生持久化；BranchMark 不复制或替代 DSH Session 日志。
 - 保存、搜索、组织枝签和查看关系不调用模型。只有用户发送问题后，所选枝签、启用的备注和恢复出的上下文才会进入当前 DSH provider 的请求。
 - Side Chat 的项目文件工具只读，但工具结果可能进入模型请求；Web 搜索和抓取遵循当前 DSH 部署的 provider 配置。
 - Workspace 和 Session 是当前的数据隔离键；Worktree 不是独立隔离边界。BranchMark 只支持 DSH Web Profile，也不会改变 DSH 原生侧边栏的会话层级。

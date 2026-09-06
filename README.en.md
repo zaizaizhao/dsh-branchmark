@@ -27,22 +27,23 @@
 
 ## Interactive demo
 
-The left demo creates a durable Session from an important excerpt, switches between Sessions, and traces the result through the Session tree. The right demo uses a temporary Side Chat without interrupting the main thread, then saves useful content as a clip. Select either animation to view it at full size.
+Start with an answer worth keeping, organize its insights into clips, and continue exploring different ideas. Both demonstrations use a running DSH Web Profile with a 2560×1440 workspace at 80% browser zoom. Each animation fills its own row; select it to view the original 1600×900 image.
 
-<table>
-  <thead>
-    <tr>
-      <th width="50%">Clips, durable forks, and the Session tree</th>
-      <th width="50%">Temporary Side Chat and follow-up clipping</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td width="50%" valign="top"><a href="assets/demo/branchmark-session-tree-and-derived-session-demo.gif"><img src="assets/demo/branchmark-session-tree-and-derived-session-demo.gif" width="100%" alt="BranchMark creates a durable Session from a clip, switches branches, and traces the source in the Session tree"></a></td>
-      <td width="50%" valign="top"><a href="assets/demo/branchmark-side-chat-and-clipping-demo.gif"><img src="assets/demo/branchmark-side-chat-and-clipping-demo.gif" width="100%" alt="BranchMark uses a temporary Side Chat and saves useful content as a reusable clip"></a></td>
-    </tr>
-  </tbody>
-</table>
+### Keep good ideas ready for the next question
+
+Organize knowledge with notes and tags, then select, reorder, or reference the clips you need to build on an existing insight.
+
+<p align="center">
+  <a href="assets/demo/branchmark-clips-and-organization-demo.gif"><img src="assets/demo/branchmark-clips-and-organization-demo.gif" width="100%" alt="BranchMark organizes knowledge clips in a full-width browser view, showing natural-height cards, multiple-selection actions, and drag sorting"></a>
+</p>
+
+### Grow one idea into a Session tree
+
+Full forks, clip-only Sessions, and blank branches carry different amounts of context. Open the overview to see how ideas connect, then select a node to continue its conversation.
+
+<p align="center">
+  <a href="assets/demo/branchmark-session-tree-and-derived-session-demo.gif"><img src="assets/demo/branchmark-session-tree-and-derived-session-demo.gif" width="100%" alt="BranchMark displays all three branch modes, multiple levels, and real Session navigation in the tree overview"></a>
+</p>
 
 > [!IMPORTANT]
 > This source targets DSH npm `latest` version `0.1.2-rc.1` and the matching BranchMark package version. Before publication, build and install the source tarball; do not assume the two `latest` tags are synchronized. Keep the published `0.1.1-rc.2` and `0.1.2-alpha.5` combinations explicitly pinned and do not mix them.
@@ -105,6 +106,7 @@ When you create a Session, first choose how much parent context the new task nee
 | --- | --- | --- |
 | Full fork | Complete turns from the primary clip's source Session, from the beginning through the source message, plus all selected clips and enabled notes | Continue with the original reasoning process |
 | Clip-only | A new Session without a DSH parent, plus all selected clips and enabled notes | Carry only focused knowledge and isolate parent-session noise |
+| Blank branch | A new Session with no inherited history, clips, or notes | Retain an organizational link while exploring a new idea independently |
 
 When selected clips come from different Sessions, choose one primary source. The primary source only determines which parent chain a full fork inherits; every other clip still enters the new Session as complete knowledge material.
 
@@ -120,27 +122,16 @@ Side Chat is a temporary outlet for attention, not BranchMark's primary data str
 
 ## Session tree and Session management
 
-A full fork uses the native DSH Session fork operation. DSH `parentSession` is the authoritative parent-child relationship, and BranchMark's Relationship view projects the known tree around the current Session from `parentId`.
+BranchMark's Session tree includes full forks, clip-only Sessions, and blank branches. Roots appear above their descendants; narrow panels use an indented outline, while the overview shows the branching layout. Clicking a node opens the real Session. “Continue branch” defaults to a blank branch.
 
-```text
-Session A: implement the authentication flow
-├── Session B: full fork from “permission model”
-│   └── Session D: full fork again from “cache invalidation”
-└── Session C: full fork from “database migration”
-
-Session E: created with clips only
-└── No DSH parent; BranchMark clip usage connects it to the source knowledge
-```
-
-BranchMark preserves two different relationship types and does not merge them into a fabricated tree:
-
-| Relationship | Authoritative data | UI purpose |
+| Relationship | Authoritative data | UI meaning |
 | --- | --- | --- |
-| DSH Session lineage | `SessionHeader.parentSession` / Client `parentId` | Builds the parent-child Session tree for full forks |
-| BranchMark usage relationship | Derived Session, primary clip, additional clips, and immutable usage snapshots | Finds derived Sessions from a clip and returns from a derived Session to its source |
-| Side Chat | No durable relationship | Exists only as a temporary quick-question tab |
+| DSH history inheritance | `SessionHeader.parentSession` / Client `parentId` | Native parentage for a full fork |
+| BranchMark organization | `DerivedSessionRelation.parentSessionId` and `mode` | Position of all three branch modes; line styles identify their context |
+| Clip usage | Attachment ids and immutable `ClipUsage` snapshots | Finds Sessions that used a clip |
+| Side Chat | No durable relationship | Temporary quick-question tabs |
 
-This distinction keeps Session management accurate. A full fork means that a Session continues from a completed turn in its parent. A clip-only Session means that an independent Session used the selected knowledge. Both remain traceable, but only the full fork enters the DSH Session tree.
+Clip-only and blank branches have an organizational parent without a native DSH parent or inherited history. Relationship reads resolve unprompted Sessions omitted from the native list, so these nodes remain discoverable and openable after refresh or Host restart. Unreadable Sessions appear unavailable. Older records without an organizational parent do not infer one from current clips.
 
 ## Quick start
 
@@ -229,20 +220,23 @@ Every entry point requires an explicit user selection or send action. Selecting 
 | Make focused knowledge available to other Sessions | Save to project | The clip is durable and appears in the current Workspace's project library |
 | Provide knowledge to the current Composer without leaving the main thread | Reference in Composer | Inserts removable native reference chips and never sends automatically |
 | Continue a durable branch from the original discussion point | Full fork | Creates a durable child Session with a DSH parent |
-| Start an isolated task from focused knowledge | Clip-only | Creates a durable root Session without a DSH parent |
+| Start an isolated task from focused knowledge | Clips only | Carries only selected excerpts and notes, with an organizational parent |
+| Explore a new idea | Blank branch | Carries no history, excerpts, or notes, with an organizational parent |
 | Manage parallel development branches | Relationship view and clip cards | Shows the Session tree, sources, and bidirectional usage relationships |
 | Confirm a small question temporarily | Ask in side | Creates a temporary quick-question tab that is not durable and does not enter the tree |
 
 The right-edge handle starts above the center to avoid DSH's centered turn navigation. Drag it vertically along the right edge; releasing a drag does not open the panel. This browser remembers its relative position and keeps it visible after resizing. Click to open, or focus it and use Up/Down for small moves and Home/End for the upper/lower edge.
 
-The right Dock provides Session, Project, Relationship, and Side Chat views. The project clip library supports full-text search, multiple tag filters, card and list layouts, pinning, within-group ordering, multi-select actions, and a recycle bin.
+The right Dock provides Session, Project, Relationship, and Side Chat views. Cards grow with their excerpts and notes and expose compact New session, Quote, and Side Chat buttons; editing, tagging, pinning, and deletion live in More actions. The batch toolbar appears only when at least two clips are selected. Trash is a separate button beside search and supports restoration; deletion and ordering provide Undo.
+
+The Session tree places roots above their descendants, using a vertical outline in the narrow Dock and curved branches in the overview. Clicking a node opens its real DSH Session; Continue branching defaults to a blank branch. Full forks, clips-only branches, and blank branches use solid, dashed, and dotted connections. Organizational links do not change the native DSH sidebar inheritance tree.
 
 ## Data and permissions
 
 BranchMark keeps durable knowledge and relationships in local DSH storage and limits temporary exploration to the current Host process.
 
 - Clips, notes, tags, ordering, recycle-bin state, usage snapshots, and derived relationships are stored in the local DSH `storageDomain` under the `clip_explorer` domain. The plugin provides no cloud synchronization and uploads no data to a service controlled by its author.
-- Full-fork and clip-only Sessions use native DSH persistence. BranchMark does not copy or replace DSH Session logs.
+- Full-fork, clips-only, and blank-branch Sessions use native DSH persistence. BranchMark does not copy or replace DSH Session logs.
 - Saving, searching, and organizing clips and viewing relationships do not call a model. Only after the user sends a question do selected clips, enabled notes, and reconstructed context enter a request to the configured DSH provider.
 - Side Chat project-file tools are read-only, but tool results can enter model requests. Web search and fetch behavior follows the current DSH deployment's provider configuration.
 - Workspace and Session are the current data-isolation keys; a Worktree is not a separate isolation boundary. BranchMark supports only the DSH Web Profile and does not modify the native DSH sidebar hierarchy.

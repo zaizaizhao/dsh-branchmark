@@ -3,9 +3,7 @@
 import { useSyncExternalStore } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
-import type {
-  Clip, ClipId, ClipSourceInput, SideChatId, SideChatSnapshot,
-} from 'dsh-branchmark-host/types'
+import type { Clip, ClipId, ClipSourceInput, SideChatId, SideChatSnapshot } from 'dsh-branchmark-host/types'
 
 export const BRANCHMARK_DOCK_DEFAULT_WIDTH = 430
 export const BRANCHMARK_DOCK_MIN_WIDTH = 340
@@ -19,7 +17,12 @@ export interface ClipSelectionCandidate {
   readonly ownerSessionId: SessionId
   readonly source: ClipSourceInput
   readonly excerpt: string
-  readonly rect: { readonly left: number; readonly top: number; readonly width: number; readonly height: number }
+  readonly rect: {
+    readonly left: number
+    readonly top: number
+    readonly width: number
+    readonly height: number
+  }
 }
 
 /** Inline launch flow rendered inside the expanded Dock. */
@@ -52,6 +55,12 @@ export interface BranchMarkUiPreferenceStore {
   write(value: BranchMarkUiPreferences): void
 }
 
+/** One reversible browser action, retained only for the current notification. */
+export interface BranchMarkUndoAction {
+  readonly label: string
+  readonly run: () => Promise<unknown>
+}
+
 export interface BranchMarkUiSnapshot {
   readonly dock: BranchMarkDockSnapshot
   readonly selection: readonly ClipSelectionCandidate[] | null
@@ -61,7 +70,12 @@ export interface BranchMarkUiSnapshot {
   }
   /** Invalidates active Clip queries after a mutation outside their component. */
   readonly clipsRevision: number
-  readonly toast: { readonly kind: 'success' | 'error'; readonly text: string; readonly nonce: number } | null
+  readonly toast: {
+    readonly kind: 'success' | 'error'
+    readonly text: string
+    readonly nonce: number
+    readonly undo?: BranchMarkUndoAction
+  } | null
 }
 
 const DEFAULT_PREFERENCES: BranchMarkUiPreferences = Object.freeze({
@@ -83,18 +97,22 @@ function readPreferences(store: BranchMarkUiPreferenceStore | undefined): Branch
   if (typeof candidate !== 'object' || candidate === null) return DEFAULT_PREFERENCES
   const value = candidate as Partial<BranchMarkUiPreferences>
   return Object.freeze({
-    mode: typeof value.mode === 'string' && DOCK_MODES.has(value.mode as BranchMarkDockMode)
-      ? value.mode as BranchMarkDockMode
-      : DEFAULT_PREFERENCES.mode,
-    view: typeof value.view === 'string' && DOCK_VIEWS.has(value.view as BranchMarkDockView)
-      ? value.view as BranchMarkDockView
-      : DEFAULT_PREFERENCES.view,
-    width: typeof value.width === 'number' && Number.isFinite(value.width)
-      ? clampDockWidth(value.width)
-      : DEFAULT_PREFERENCES.width,
-    railPosition: typeof value.railPosition === 'number' && Number.isFinite(value.railPosition)
-      ? Math.min(1, Math.max(0, value.railPosition))
-      : DEFAULT_PREFERENCES.railPosition,
+    mode:
+      typeof value.mode === 'string' && DOCK_MODES.has(value.mode as BranchMarkDockMode)
+        ? (value.mode as BranchMarkDockMode)
+        : DEFAULT_PREFERENCES.mode,
+    view:
+      typeof value.view === 'string' && DOCK_VIEWS.has(value.view as BranchMarkDockView)
+        ? (value.view as BranchMarkDockView)
+        : DEFAULT_PREFERENCES.view,
+    width:
+      typeof value.width === 'number' && Number.isFinite(value.width)
+        ? clampDockWidth(value.width)
+        : DEFAULT_PREFERENCES.width,
+    railPosition:
+      typeof value.railPosition === 'number' && Number.isFinite(value.railPosition)
+        ? Math.min(1, Math.max(0, value.railPosition))
+        : DEFAULT_PREFERENCES.railPosition,
   })
 }
 
@@ -144,7 +162,9 @@ export class BranchMarkUiController {
 
   readonly subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener)
-    return () => { this.listeners.delete(listener) }
+    return () => {
+      this.listeners.delete(listener)
+    }
   }
 
   readonly getSnapshot = (): BranchMarkUiSnapshot => this.current
@@ -208,12 +228,12 @@ export class BranchMarkUiController {
   }
 
   upsertSideChat(snapshot: SideChatSnapshot, activate = false): void {
-    const tabs = this.current.sideChats.tabs.some(tab => tab.id === snapshot.id)
-      ? this.current.sideChats.tabs.map(tab => tab.id === snapshot.id ? snapshot : tab)
+    const tabs = this.current.sideChats.tabs.some((tab) => tab.id === snapshot.id)
+      ? this.current.sideChats.tabs.map((tab) => (tab.id === snapshot.id ? snapshot : tab))
       : [...this.current.sideChats.tabs, snapshot]
     const sideChats = Object.freeze({
       tabs: Object.freeze(tabs),
-      activeId: activate ? snapshot.id : this.current.sideChats.activeId ?? snapshot.id,
+      activeId: activate ? snapshot.id : (this.current.sideChats.activeId ?? snapshot.id),
     })
     if (activate) {
       const dock = Object.freeze({
@@ -230,7 +250,7 @@ export class BranchMarkUiController {
   }
 
   activateSideChat(id: SideChatId): void {
-    if (!this.current.sideChats.tabs.some(tab => tab.id === id)) return
+    if (!this.current.sideChats.tabs.some((tab) => tab.id === id)) return
     const dock = Object.freeze({
       ...this.current.dock,
       mode: 'expanded' as const,
@@ -246,10 +266,9 @@ export class BranchMarkUiController {
   }
 
   removeSideChat(id: SideChatId): void {
-    const tabs = this.current.sideChats.tabs.filter(tab => tab.id !== id)
-    const activeId = this.current.sideChats.activeId === id
-      ? tabs.at(-1)?.id
-      : this.current.sideChats.activeId
+    const tabs = this.current.sideChats.tabs.filter((tab) => tab.id !== id)
+    const activeId =
+      this.current.sideChats.activeId === id ? tabs.at(-1)?.id : this.current.sideChats.activeId
     this.publish({
       ...this.current,
       sideChats: Object.freeze({
@@ -259,9 +278,12 @@ export class BranchMarkUiController {
     })
   }
 
-  notify(kind: 'success' | 'error', text: string): void {
+  notify(kind: 'success' | 'error', text: string, undo?: BranchMarkUndoAction): void {
     this.nonce += 1
-    this.publish({ ...this.current, toast: { kind, text, nonce: this.nonce } })
+    this.publish({
+      ...this.current,
+      toast: { kind, text, nonce: this.nonce, ...(undo === undefined ? {} : { undo }) },
+    })
   }
 
   dismissToast(nonce: number): void {
@@ -276,7 +298,12 @@ export class BranchMarkUiController {
   }
 
   private persistDock(dock: BranchMarkDockSnapshot): void {
-    this.preferences?.write({ mode: dock.mode, view: dock.view, width: dock.width, railPosition: dock.railPosition })
+    this.preferences?.write({
+      mode: dock.mode,
+      view: dock.view,
+      width: dock.width,
+      railPosition: dock.railPosition,
+    })
   }
 
   private publish(snapshot: BranchMarkUiSnapshot): void {
@@ -292,5 +319,5 @@ export function useBranchMarkUi(controller: BranchMarkUiController): BranchMarkU
 
 /** Return one Clip by id without widening the brand to a plain string. */
 export function clipById(clips: readonly Clip[], id: ClipId): Clip | undefined {
-  return clips.find(clip => clip.id === id)
+  return clips.find((clip) => clip.id === id)
 }

@@ -4,7 +4,7 @@
 
 Excerpt-driven session branching and conversation lineage for DeepSeek Harness.
 
-`dsh-branchmark` 是 BranchMark 的公开安装 Bundle。它为开发过程提供重点知识摘录、可追溯 Session 树和注意力分叉：主 Session 保持当前目标，枝签保存知识锚点，完整分叉沿来源上下文创建子 Session，仅枝签流程则用选定知识创建独立 Session。
+`dsh-branchmark` 是 BranchMark 的公开安装 Bundle。它为开发过程提供重点知识摘录、可追溯 Session 树和注意力分叉：主 Session 保持当前目标，枝签保存知识锚点，完整分叉沿来源上下文创建子 Session，仅枝签流程用选定知识创建独立 Session，空白分支仅保留会话之间的组织关联。
 
 源码、完整设计与开发文档位于 [`zaizaizhao/dsh-branchmark`](https://github.com/zaizaizhao/dsh-branchmark)。
 
@@ -12,9 +12,9 @@ Excerpt-driven session branching and conversation lineage for DeepSeek Harness.
 
 - 在已完成的用户或助手消息中选择文本，将重点知识保存为来源不可改写、备注和多标签可编辑的枝签。
 - 会话私有枝签与项目全局枝签严格分开展示，当前 Session 不读取其他 Session 的私有枝签。
-- 完整分叉恢复主要来源消息所在完整轮次及之前的上下文，并通过 DSH `parentId` 形成可导航的父子 Session 树。
-- 仅枝签流程从无 DSH parent 的空白 Session 开始，通过 BranchMark 使用关系保留所用枝签和来源，而不伪造父子 lineage。
-- 关系视图显示当前 Session 所在的 DSH 树；枝签卡片与衍生 Session 同时保留来源入口和双向使用关系。
+- 会话树合并 DSH 完整分叉关系和 BranchMark 的组织关系，以线型区分三种上下文模式；未提问分支在刷新后仍可读取和打开。
+- 仅枝签流程从无 DSH parent 的新 Session 开始，只写入选中的摘录与备注；空白分支不携带任何上下文。两者都保存独立的组织父关联。
+- 关系视图结合 DSH 完整分叉与 BranchMark 组织关联，从主节点向下显示会话树；点击节点打开会话，全景视图显示完整树枝。
 - 主输入框只显示 DSH 原生引用 Chip，用户显式发送时才把枝签正文和保留的备注加入模型上下文。
 - 右侧浮动 Dock 提供会话、项目、关系和 Side Chat 视图；项目枝签库支持搜索、多标签、卡片/列表、置顶、排序、多选和回收站。
 - Side Chat 只承担临时快问快答，不创建普通 Session、不进入关系树，关闭标签立即销毁。
@@ -57,10 +57,10 @@ dsh plugin --profile web remove dsh-branchmark
 在对话消息内选择连续文本，浮动工具条会提供四个入口。右侧浮签默认位于中线上方，可沿右侧边缘上下拖动；松手不会打开面板，刷新后保留相对位置。单击展开；键盘聚焦后用 ↑/↓、Home/End 移动。保存后可从右侧把手展开 BranchMark Dock：
 
 1. “摘录到会话”保存当前 Session 的私有知识；“摘录到项目”显式提升为当前 Workspace 可复用的项目枝签。
-2. “关系”视图通过 DSH `parentId` 显示完整分叉树；枝签卡片列出使用该知识的正式衍生 Session。
-3. “新会话”可选择完整分叉或仅携带枝签，并可选择打开空白 Composer，或输入问题后在后台创建并发送。
+2. “关系”视图显示已知的完整分叉、仅枝签和空白分支；实线、虚线和点线区分上下文模式。点击节点直接打开会话，“继续分支”默认从空白开始。
+3. 卡片的“创建新会话”可选择完整分叉、仅携带枝签或空白分支，并填写可选名称；可以创建并打开，或输入新问题后在后台创建并发送。
 4. “引用到输入框”只加入可移除的引用 Chip，绝不自动发送。
-5. 多选后打开“处理 N 枚枝签”胶囊；批量引用按勾选顺序加入 Composer，拖动排序只在未筛选的同一置顶分组内生效。
+5. 选中至少两枚枝签后显示批量工具栏；引用按勾选顺序加入 Composer。专用手柄支持指针拖动和 Space/方向键排序，Escape 取消；搜索、标签筛选与回收站禁止排序。回收站是搜索框右侧的独立按钮，删除与排序完成后可撤销。
 6. “Ask in side”创建当前 Host 内的临时快问快答标签，由用户输入问题后才发送，关闭后不保留 Session 或 lineage。
 
 ## 配置
@@ -93,9 +93,9 @@ Bundle patch 提供以下配置。Profile patch 覆盖该 Loader 条目时会替
 ## 已知限制
 
 - 只支持 DSH Web profile，不向 Headless 或 ACP surface 提供 UI。
-- 插件关系树不会改变 DSH 原生侧边栏的会话层级。
+- 插件关系树不会改变 DSH 原生侧边栏的会话层级。旧的仅枝签记录若没有组织父标识，不会被推测为某个会话的分支。
 - Workspace 和 Session 是当前隔离键；Worktree 不是独立隔离边界。
-- 创建衍生 Session 需要分别写入 BranchMark 关系记录与 DSH `recall` 日志，当前没有跨子系统事务。Host 在两次写入之间异常退出可能留下低概率部分提交；插件不提供自动对账修复。
+- 完整分叉与仅枝签需要分别写入 BranchMark 关系记录与 DSH `recall` 日志，当前没有跨子系统事务。Host 在两次写入之间异常退出可能留下低概率部分提交；插件不提供自动对账修复。
 - Side Chat 摘要或回答仍可能因为当前 provider、模型、网络或配额错误而失败；界面会保留错误信息，关闭标签前仍可重试。
 
 ## 支持与安全

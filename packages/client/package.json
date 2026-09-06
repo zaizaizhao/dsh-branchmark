@@ -71,6 +71,9 @@
     "@deepseek-ai/dsh-workspace": "catalog:"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-gfm": "^3.1.0",
     "micromark-extension-gfm": "^3.0.0"
@@ -96,12 +99,13 @@
     "@deepseek-ai/dsh-session": "catalog:",
     "@deepseek-ai/dsh-workspace": "catalog:",
     "@types/react": "catalog:",
+    "@types/react-dom": "^18.3.7",
     "dsh-branchmark-host": "workspace:^",
+    "happy-dom": "^20.14.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "happy-dom": "^20.14.0"
+    "vitest": "catalog:"
   }
 }

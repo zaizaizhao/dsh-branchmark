@@ -1,6 +1,6 @@
-# 实验 2：两类普通衍生 Session
+# 实验 2：三种模式的普通衍生 Session
 
-本实验要求你在最小 Clip 主干之上实现 full-fork 与 clips-only，并用实际 DSH Session header 和 event log 证明二者不同。重点不是做完整 UI，而是建立正确的持久化语义。
+本实验要求你在最小 Clip 主干之上实现 full-fork、clips-only 与 blank，并用实际 DSH Session header 和 event log 证明二者不同。重点不是做完整 UI，而是建立正确的持久化语义。
 
 ## 学习目标
 
@@ -16,14 +16,16 @@
 
 沿用实验 1 的 rc.1 基线，使用 `isSeeded + inspection.inheritedEventCount`。不要做多版本运行时探测；SessionHandle 是完成主线后的独立练习。
 
-## 任务 1：定义两种 mode
+## 任务 1：定义三种 mode
 
 请求 union 或跨字段 schema 必须表达：
 
 ```text
 full-fork → primaryClipId required
 clips-only → primaryClipId forbidden
-attachments → non-empty、unique、每条有 includeNote
+blank → primaryClipId forbidden、attachments empty
+full-fork / clips-only attachments → non-empty、unique、每条有 includeNote
+parentSessionId → required、与 child 不同、同 Workspace
 ```
 
 Relation 对 full-fork 保存 primary/source fields，对 clips-only 禁止这些字段。Usage 总是保存 excerpt snapshot，并只在 `includeNote=true` 且 note 存在时保存 note snapshot。
@@ -42,7 +44,7 @@ sessions.fork({
 })
 ```
 
-clips-only 调用 API Session Controller 的 `sessions.create({ workspaceId })`。两条路径创建后都调用 Host `recordDerivedSession`。
+clips-only 调用 API Session Controller 的 `sessions.create({ workspaceId })`。blank 同样创建新 Session，三条路径都调用 Host `recordDerivedSession`，显式记录组织父。
 
 检查点：spy 证明 clips-only 没有调用 fork，full-fork 没有调用 create；二者都不调用 Composer `insertReference()` 或 `setDraft()`，Clip 上下文只由后续 Host recall append 提供。
 
@@ -56,7 +58,7 @@ clips-only 调用 API Session Controller 的 `sessions.create({ workspaceId })`�
 
 ## 任务 4：写 relation、usage 与 recall
 
-先把 relation + usages 放进同一个 KV value，再向 child append plugin recall user message。Recall 正文按 attachment 顺序包含 excerpt 与被选择的 note。
+先把 relation + usages 放进同一个 KV value，有附件时再向 child append plugin recall user message；blank 没有 usages 或 recall，并拒绝已有模型上下文的 child。Recall 正文按 attachment 顺序包含 excerpt 与被选择的 note。
 
 检查点：读取 child events，最后的 recall source 为 `kind=plugin`、`plugin=dsh-branchmark`、`form=recall`；模型输入可以从 event log 重建，Composer draft 仍为空。
 
@@ -74,22 +76,21 @@ binding.session.prompt([{ type: 'text', text: question }], 'queue')
 
 ## 任务 6：Lineage 与 divider
 
-从 DSH `SessionSummary.parentId` 投影当前完整已知 tree；不要从 plugin relation 推 parent。注册 Conversation node 匹配 `session/end-seed`，仅 full-fork relation 渲染 divider，并提供打开 `sourceSessionId` 的动作。
+合并明确记录的组织父与 DSH `SessionSummary.parentId` 投影 tree，以 mode 区分三种上下文。旧记录没有组织父时不猜测。注册 Conversation node 匹配 `session/end-seed`，仅 full-fork relation 渲染 divider，并提供打开 `sourceSessionId` 的动作。
 
-检查点：full-fork 在父 branch 中；clips-only 不在；两个 child header action 分别显示“继承来源上下文”与“由摘录创建”。
+检查点：三种模式均在 BranchMark 树内，只有 full-fork 带 DSH 原生 parent。构造原生列表省略未提问分支的情形，读取端点元数据并恢复原 id 的绑定；缺失会话不得被重新创建。
 
 ## 必做验收矩阵
 
-| 行为 | full-fork | clips-only |
-| --- | --- | --- |
-| 新 Session id | 是 | 是 |
-| DSH `parentSession` | primary source Session | 无 |
-| DSH 精确 inherited cut | 截止 source 完整 turn | `0`/无继承 |
-| `session/end-seed` | 构造 seed 时可能出现 | 恢复已有日志也可能出现，不是无 parent 的判据 |
-| Plugin relation/usages | 是 | 是 |
-| Plugin recall | 是 | 是 |
-| Composer 初始为空 | 是 | 是 |
-| 可创建并后台发送 | 是 | 是 |
+| 行为 | full-fork | clips-only | blank |
+| --- | --- | --- | --- |
+| 新 Session id | 是 | 是 | 是 |
+| DSH `parentSession` | primary source | 无 | 无 |
+| 继承历史 | 截止 source 完整 turn | 无 | 无 |
+| Plugin 组织父 | primary source | 当前会话 | 当前会话 |
+| Plugin usage / recall | 有 | 有 | 无 |
+| Composer 初始为空 | 是 | 是 | 是 |
+| 刷新后树中可打开 | 是 | 是 | 是 |
 
 再验证：primary 来自第 2 轮时，第 3 轮不出现在 full-fork seed；跨来源附件只进入 recall，不改变 parent；永久删除三个 live Clip 后 relation usages 与两个 child transcript 仍在。
 
@@ -97,10 +98,10 @@ binding.session.prompt([{ type: 'text', text: question }], 'queue')
 
 ## 提示与对照源码
 
-Client launch 对照 [`domain/client.ts`](../../packages/client/src/domain/client.ts)，Host header 验证对照 [`recordDerivedSession`](../../packages/host/src/index.ts)，lineage 对照 [`domain/lineage.ts`](../../packages/client/src/domain/lineage.ts)，divider 对照 [`ForkDivider.tsx`](../../packages/client/src/components/ForkDivider.tsx)。
+Client launch 对照 [`domain/client.ts`](../../packages/client/src/domain/client.ts)，Host header 验证对照 [`DerivedSessionStore`](../../packages/host/src/relations.ts)，lineage 对照 [`domain/lineage.ts`](../../packages/client/src/domain/lineage.ts)，divider 对照 [`ForkDivider.tsx`](../../packages/client/src/components/ForkDivider.tsx)。
 
 若你发现需要复制父消息文本来实现 full-fork，请停下来重读 DSH [Session 文档](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/subsystems/session.md)；正确路径应由宿主 fork seed。
 
 ## 复盘
 
-画两棵图：一棵只包含 DSH parentId；一棵是 Clip→usage→derived Session 的插件关系。解释为什么它们相交但不等价，以及 clips-only 为什么只出现在第二棵图。
+画出 DSH 历史继承、BranchMark 组织关系和 Clip 使用关系。解释为何 blank 在组织树内却没有 parent header、usage 或 recall。

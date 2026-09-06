@@ -7,7 +7,7 @@
 | 检查 | 真实使用的对象 | 能证明 | 不能证明 |
 | --- | --- | --- | --- |
 | [Host spec](../../packages/host/tests/branchmark.spec.ts) | Cordis、Session、Workspace、JSON storage；受控 TestPersistence 和 LLM adapter | 来源校验、visibility、顺序、关系/recall、摘要请求、模型隔离 | 真实 JSONL provider、真实 FS/Web 工具、实际模型回答、进程崩溃恢复 |
-| [Client domain spec](../../packages/client/tests/domain.spec.ts) | Controller、纯适配函数、受控 DSH Client 对象 | selection range、Composer 顺序/恢复/CAS、两种 launch、lineage 与偏好 | 宿主 DOM、真实 draft 恢复时序、CSS 与焦点行为 |
+| [Client domain spec](../../packages/client/tests/domain.spec.ts) | Controller、纯适配函数、受控 DSH Client 对象 | selection range、Composer 顺序/恢复/CAS、三种 launch、lineage 与偏好 | 宿主 DOM、真实 draft 恢复时序、CSS 与焦点行为 |
 | [DockHandle spec](../../packages/client/tests/dock-handle.spec.ts) | Happy DOM 中挂载的真实组件 | 手势阈值、提交/回滚、点击抑制、keyboard、resize、存储失败、cleanup | 实际浏览器的捕获投递、触摸滚动、碰撞和像素布局 |
 | [Bundle spec](../../packages/bundle/tests/bundle.spec.ts) | package manifest、patch | 声明和单 Host row | bundle 内容能否独立解析 |
 | [verify-bundle](../../scripts/verify-bundle.mjs) | 构建后的 JS/DTS、ModuleLoader wrapper、Typert | 自包含、导出存在、生成 roster、安装包身份 | 真实 Slot 渲染和 provider 可用性 |
@@ -26,7 +26,7 @@ Host [helper](../../packages/host/tests/helpers.ts)中的 persistence 是 Map-ba
 | visibility 与排序 | 当前 session/project 分开、全量同组重排、筛选禁用、重启顺序保留 |
 | Composer | A/C/B 选择顺序、刷新恢复、删除单枚不破坏相邻引用、缺失 token 与发送拒绝 |
 | 浮签与 Dock | 默认避让、单轴移动、拖后不误开、键盘、取消/resize、同 origin 刷新、窄宽屏/深浅色 |
-| 两种 child | 中间 turn 的 parent/cut/recall、clips-only 无 parent、删除 Clip 后历史保留 |
+| 三种 child | full-fork 的 parent/cut/recall、clips-only 只有 recall、blank 无历史或 recall、重启后树节点可打开、删除 Clip 后历史保留 |
 | 生命周期 | 关闭 Side Chat 后不可 get，其他 tab 不受影响；区分关闭访问与请求停止 |
 | provider | 目录、首次摘要、回答、真实 tool-call/result、停止信号分别有证据 |
 

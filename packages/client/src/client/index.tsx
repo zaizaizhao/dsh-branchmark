@@ -2,6 +2,7 @@
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-api-gateway/client'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
 import type {} from '@deepseek-ai/dsh-api-workspace-controller/client'
@@ -15,10 +16,10 @@ import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
 import type { InputTriggerServiceContract } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import branchmarkRemote from 'dsh-branchmark-host/remote'
 import { installBranchMarkStyles } from './styles.ts'
+import { branchmarkDictionaries } from '../locales/index.ts'
 import { BranchMarkShell } from '../components/BranchMarkShell.tsx'
-import {
-  BranchMarkDrawerButton, BranchMarkLineageAction, BranchMarkSidebarButton,
-} from '../components/EntryButtons.tsx'
+import { BranchMarkDrawerButton, BranchMarkSidebarButton } from '../components/EntryButtons.tsx'
+import { BranchMarkLineageAction } from '../components/lineage/LineageEntry.tsx'
 import { ForkDivider, forkDividerDefinition } from '../components/ForkDivider.tsx'
 import { BranchMarkClient } from '../domain/client.ts'
 import { createBranchMarkInputTriggerSource } from '../domain/composer-reference.ts'
@@ -26,12 +27,20 @@ import { browserBranchMarkUiPreferenceStore, BranchMarkUiController } from '../d
 
 /** Required DSH services and additive UI seats. */
 export const inject = [
-  'slots', 'sessions', 'workspaces', 'remote', 'uiConversation', 'conversation', 'inputTriggers',
+  'slots',
+  'sessions',
+  'workspaces',
+  'remote',
+  'uiConversation',
+  'conversation',
+  'inputTriggers',
+  'locale',
 ]
 
 /** Mount the generated Remote contribution and every BranchMark UI entry. */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => installBranchMarkStyles(), 'branchmark: styles')
+  ctx.effect(() => ctx.locale.register('branchmark', branchmarkDictionaries), 'branchmark: dictionaries')
   ctx.effect(async () => await ctx.remote.$mount(branchmarkRemote), 'branchmark: Remote namespace')
   ctx.inject(['remote.branchmark'], (scope: ClientContext) => {
     const controller = new BranchMarkUiController(browserBranchMarkUiPreferenceStore(window.localStorage))
@@ -46,28 +55,64 @@ export function apply(ctx: ClientContext): void {
     )
     scope.uiConversation.events.register(forkDividerDefinition)
 
-    scope.slots.inject('shell.overlay', () => scope.slots.register({
-      name: 'shell.overlay', id: 'branchmark', order: 40,
-      inject: () => ({ controller, client }),
-    }, BranchMarkShell))
+    scope.slots.inject('shell.overlay', () =>
+      scope.slots.register(
+        {
+          name: 'shell.overlay',
+          id: 'branchmark',
+          order: 40,
+          locale: 'branchmark',
+          inject: () => ({ controller, client }),
+        },
+        BranchMarkShell,
+      ),
+    )
 
-    scope.slots.inject('sidebar.footer.action', () => scope.slots.register({
-      name: 'sidebar.footer.action', id: 'branchmark', order: 30,
-      inject: () => ({ controller, client }),
-    }, BranchMarkSidebarButton))
+    scope.slots.inject('sidebar.footer.action', () =>
+      scope.slots.register(
+        {
+          name: 'sidebar.footer.action',
+          id: 'branchmark',
+          order: 30,
+          inject: () => ({ controller, client }),
+        },
+        BranchMarkSidebarButton,
+      ),
+    )
 
-    scope.slots.inject('conversation.input.left', () => scope.slots.register({
-      name: 'conversation.input.left', id: 'branchmark', order: 40,
-      inject: () => ({ controller, client }),
-    }, BranchMarkDrawerButton))
+    scope.slots.inject('conversation.input.left', () =>
+      scope.slots.register(
+        {
+          name: 'conversation.input.left',
+          id: 'branchmark',
+          order: 40,
+          inject: () => ({ controller, client }),
+        },
+        BranchMarkDrawerButton,
+      ),
+    )
 
-    scope.slots.inject('conversation.session.header.actions', () => scope.slots.register({
-      name: 'conversation.session.header.actions', id: 'branchmark-lineage', order: -10,
-      inject: () => ({ controller, client }),
-    }, BranchMarkLineageAction))
+    scope.slots.inject('conversation.session.header.actions', () =>
+      scope.slots.register(
+        {
+          name: 'conversation.session.header.actions',
+          id: 'branchmark-lineage',
+          order: -10,
+          locale: 'branchmark',
+          inject: () => ({ controller, client }),
+        },
+        BranchMarkLineageAction,
+      ),
+    )
 
-    scope.slots.inject('conversation.chat.node', () => scope.slots.register({
-      name: 'conversation.chat.node', key: 'clip-fork-divider',
-    }, ForkDividerEntry))
+    scope.slots.inject('conversation.chat.node', () =>
+      scope.slots.register(
+        {
+          name: 'conversation.chat.node',
+          key: 'clip-fork-divider',
+        },
+        ForkDividerEntry,
+      ),
+    )
   })
 }

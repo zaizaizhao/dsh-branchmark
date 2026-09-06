@@ -12,7 +12,7 @@
 - 会话级 Clip 仅在所属会话可见；项目级 Clip 跨会话可见。
 - 原文与来源不可编辑，note/tags/scope/pinned 可变；支持回收站、永久删除和持久顺序。
 - 选区能处理渲染 Markdown，同消息连续选择一条、跨消息拆分。
-- 多选只占一个紧凑命令入口；卡片固定折叠高度，可展开或专注阅读且不修改正文。
+- 至少选择两枚时才显示多选工具栏；卡片采用自然高度，可展开或专注阅读且不修改正文。
 - 显式 Clip 按选择顺序成为 Composer 原生引用，draft 恢复后可重建 Chip，但任何动作都不自动发送。
 - full-fork 从 primary Clip 所在完整 turn 派生；clips-only 是无 parent 的新 Session。
 - relation/usages 双向可查，删除 Clip 不改变已创建 child。
@@ -64,7 +64,7 @@ Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 No
 
 先注册五个 Slot 的占位组件与一个不提供候选项的 Input Trigger source，确认每个 render site 和 reference codec 正确，再实现一个共享 `BranchMarkUiController`。加入 Chat row 发现、ConversationSnapshot anchor、exact range 和 Markdown projection，最后接保存浮层与两个 library views。
 
-不要一开始写完整视觉样式。先用 Client pure tests证明 candidate，Host 再次证明 source；最后增加主题、grid/list、search/tags、resize、rail/hidden 和 accessibility。多选用有序 id 保存勾选顺序，只渲染一个可展开的六项命令胶囊；固定高度卡片把置顶、拖拽、编辑和衍生关系控件放在不可变正文之外，并提供卡片内展开与 DSH Modal 专注阅读。
+不要一开始写完整视觉样式。先用 Client pure tests证明 candidate，Host 再次证明 source；最后增加主题、grid/list、search/tags、resize、rail/hidden 和 accessibility。多选用有序 id 保存勾选顺序，至少选择两枚时渲染六项多选工具栏；自然高度卡片把置顶、拖拽、编辑和衍生关系控件放在不可变正文之外，并提供卡片内展开与 DSH Modal 专注阅读。
 
 检查点：普通、重复文本、链接/强调、跨消息、未完成 assistant 各有明确结果；真实 UI 不挡住宿主其他 overlay；localStorage 中没有 Clip 正文；搜索、标签筛选和回收站禁用拖拽，跨置顶组放置不会发送 Remote。
 
@@ -82,13 +82,13 @@ Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 No
 
 对应动手任务见[实验 4](../labs/04-ordered-collection-and-reference-recovery.md)。
 
-## 8. 完成两类普通 Session
+## 8. 完成三种模式的普通 Session
 
 先实现 clips-only `sessions.create({ workspaceId })`，验证无 parent/seed，再实现 full-fork `sessions.fork({ atSeq })`。Host `recordDerivedSession` 必须读取 child header 与精确 inherited cut，并按当前 DSH 算法核对 full-fork seed；具体字段和读取入口服从你在第 2 节固定的目标版本。
 
 写入 relation/usages 后 append `form=recall` user message；创建模式 open child，创建并发送模式调用 child binding `SessionFace.prompt(..., 'queue')`。实现 `listRelations`、Header marker、DSH parentId lineage tree 与 `session/end-seed` divider。
 
-检查点：两类 child 都有 recall 且 Composer 空白；只有 full-fork 有 DSH parent；从父中间 turn 分叉不会带入后续 turn；删除 Clip 后 child 与 usage snapshot 不变。
+另实现 blank：记录组织父但不携带附件、不继承历史、不追加 recall。检查点：full-fork 与 clips-only 有 recall，三类 child 的 Composer 都保持空白；只有 full-fork 有 DSH parent；从父中间 turn 分叉不会带入后续 turn；删除 Clip 后 child 与 usage snapshot 不变。
 
 对应动手任务见[实验 2](../labs/02-derived-session.md)。
 
@@ -144,10 +144,10 @@ Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 No
 
 1. 在第 2 轮 assistant 回答中选择 Markdown 文本，保存为 session Clip并加 note。
 2. 提升另一条为 project Clip，在新 Session 的项目视图中证明可见，而本会话视图仍不混入它。
-3. 依次多选三条，展开命令胶囊；切换置顶并在组内拖拽，重启后证明顺序保留。
+3. 依次多选三条，确认仅在第二条选中后出现工具栏；切换置顶并在组内拖拽，重启后证明顺序保留。
 4. 把同三条按选择顺序引用到 Composer，保留一个问题后重新绑定；展示原生 Chip 恢复、逐条移除和绝不自动发送。
 5. 选 primary + 第二条 Clip，full-fork 到第 2 轮，创建但不发送；展示 parent tree、divider、recall 和空 Composer。
-6. 用相同 Clip clips-only 并创建并发送；展示它没有 parent。
+6. 用相同 Clip 创建 clips-only，确认只有 recall；从树节点继续空白分支，确认没有历史和 recall。重启 Host，证明两种未提问分支仍在树内并可打开。
 7. 沿右边缘拖动浮签，展示拖后不展开、键盘定位、同 origin 刷新恢复；再启动两个 Side Chat，一个换模型、一个调用 project search，最小化后恢复。
 8. 停止一个回答，关闭另一个，保存第一条临时回答为 Clip。
 9. 删除原 Clip，展示两个普通 child 不受影响且 relation usage 仍可读；未发送引用无法伪装成有效上下文。

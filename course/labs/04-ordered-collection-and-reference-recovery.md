@@ -84,7 +84,7 @@ Client 多选状态使用 `ClipId[]`，新勾选追加到末尾，取消勾选�
 
 实现一个纯函数接收当前完整展示集合、source id 与 target id。两个 id 缺失时返回稳定错误；两条 Clip 的 `pinnedAt` 存在性不同则返回 `pin-group-mismatch`；成功时返回包含全部 id 的替换顺序。只有 active、无 search、无 tag filter 的集合启用拖拽，回收站也禁用。
 
-UI 多选后只显示一个紧凑命令入口，展开后提供引用到 Composer、Side Chat、新 Session、切换置顶、追加标签和回收站六项命令。标签编辑器只在用户选择标签命令后出现。固定高度卡片的拖拽必须由专用手柄启动，不能让用户选择正文时意外重排。
+UI 至少选择两枚枝签时显示多选工具栏，提供引用到 Composer、Side Chat、新 Session、切换置顶、追加标签和回收站六项命令。标签编辑器只在用户选择标签命令后出现。自然高度卡片的拖拽必须由专用手柄启动，不能让用户选择正文时意外重排。
 
 检查点：Client 纯测试证明同组移动返回完整顺序、跨组拒绝；真实 Browser 中搜索或筛选后没有可用拖拽手柄；拖拽正文不会启动排序。
 
@@ -150,7 +150,7 @@ DSH 恢复 draft 时可留下 `@branchmark:<ClipId>`，但新的浏览器进程�
 - Host comparator、update 与 reorder：[`packages/host/src/index.ts`](../../packages/host/src/index.ts)。
 - Client 完整集合移动：[`clip-order.ts`](../../packages/client/src/domain/clip-order.ts)。
 - Client Composer 插入与恢复：[`domain/client.ts`](../../packages/client/src/domain/client.ts)、[`composer-reference.ts`](../../packages/client/src/domain/composer-reference.ts)。
-- 命令胶囊、集合与卡片：[`BatchCommandCapsule.tsx`](../../packages/client/src/components/BatchCommandCapsule.tsx)、[`ClipCollection.tsx`](../../packages/client/src/components/ClipCollection.tsx)、[`ClipCard.tsx`](../../packages/client/src/components/ClipCard.tsx)。
+- 多选工具栏、集合与卡片：[`ClipBatchActions.tsx`](../../packages/client/src/components/clips/ClipBatchActions.tsx)、[`ClipCollection.tsx`](../../packages/client/src/components/clips/ClipCollection.tsx)、[`ClipCard.tsx`](../../packages/client/src/components/clips/ClipCard.tsx)。
 - 设计决策：[紧凑批量命令与枝签排序 Agent Note](../../.agents/notes/implemented/feature/2026-08-30-compact-batch-commands-and-clip-ordering.zh.md)。
 
 ## 复盘

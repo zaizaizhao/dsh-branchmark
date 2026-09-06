@@ -1,10 +1,10 @@
 # 第 7 章：普通衍生 Session 与父子层级
 
-本章实现两个持久化去向：完整继承来源历史的 full-fork，以及只携带显式 Clip 的 clips-only。完成后，你应能从 DSH Session header 证明父子关系、把 Clip recall 写入模型可见日志、支持“创建并打开”和“创建并发送”，并说明插件关系为什么不能冒充 DSH lineage。
+本章实现三种持久化模式：完整继承来源历史的 full-fork、只携带显式 Clip 的 clips-only，以及不携带上下文的 blank。完成后，你应能从 DSH Session header 证明父子关系、把 Clip recall 写入模型可见日志、支持“创建并打开”和“创建并发送”，并说明插件关系为什么不能冒充 DSH lineage。
 
 本章使用 rc.1：`SessionHeader.isSeeded` 表示继承前缀存在，`SessionInspection.inheritedEventCount` 表示精确长度。事件身份、读取成本和 marker 的区别见[Session 身份参考](../reference/session-identity-and-migrations.md)，不在主线混入后续版本的 handle API。
 
-## 1. 先画清三种对象
+## 1. 先画清四种对象
 
 ```text
 full-fork ordinary Session
@@ -15,12 +15,16 @@ clips-only ordinary Session
   no DSH parentSession, isSeeded=false, inheritedEventCount=0
   plugin relation + immutable Clip usages + recall message
 
+blank ordinary Session
+  no DSH parentSession, no seed, no Clip usages, no recall
+  plugin organizational parent only
+
 Side Chat
   no SessionId, no SessionHeader, no durable event log
   Host-memory context only
 ```
 
-三者都可以回答问题，但持久化、恢复和层级语义完全不同。DSH 的 subagent 也不在这条路径中：subagent 是 agent loop 内的委派能力，不会创建本插件的普通 UI Session 或 Side Chat tab。
+四者都可以回答问题，但持久化、恢复和层级语义完全不同。DSH 的 subagent 也不在这条路径中：subagent 是 agent loop 内的委派能力，不会创建本插件的普通 UI Session 或 Side Chat tab。
 
 ## 2. full-fork 从主要 Clip 的来源开始
 
@@ -74,15 +78,17 @@ Browser 完成 fork 后调用 `recordDerivedSession`。Host 不能因为调用�
 sessionId = await ctx.sessions.create({ workspaceId })
 ```
 
-该接口总是创建一个新 Session；Workspace UI 的 `connectWorkspace` 则可以复用 blank Session，两者不能互换。Host 随后验证 clips-only child 没有 `parentSession`、`isSeeded` 为 false，并且 `inheritedEventCount` 为 0。升级策略见[兼容性限制](../reference/compatibility-and-limitations.md)。
+不指定 `sessionId` 时，该接口创建一个新 Session；Workspace UI 的 `connectWorkspace` 则可以复用 blank Session，两者不能互换。Host 随后验证 clips-only child 没有 `parentSession`、`isSeeded` 为 false，并且 `inheritedEventCount` 为 0。升级策略见[兼容性限制](../reference/compatibility-and-limitations.md)。
 
 DSH 把“严格创建领域实体”和“为导航寻找或复用可显示 Session”分给不同所有者，可以避免一个方便的 UI helper 同时承担两个矛盾语义。BranchMark 选择 `ISessions.create`，因此测试可以直接证明返回的是新 Session，而不是从 UI 状态反推是否发生了复用。
+
+空白分支同样调用不带 id 的 `sessions.create`，但 attachments 必须为空。Host 还拒绝已有模型上下文的 child，只保存组织关系，不追加 recall。Launcher 的标题与新问题都是用户可选输入，旧枝签和备注不会进入 blank 的模型请求。
 
 ## 6. Relation、usage 与 recall 各自解决什么
 
 Host 验证 child 后构造一个 `DerivedSessionRecord`：
 
-- `relation` 回答 child 是哪种模式、primary 是谁、附件有哪些。
+- `relation` 回答 child 的组织父、模式、primary 与附件。新请求显式提供 `parentSessionId`；full-fork 的组织父必须等于 primary 的来源。
 - `usages` 冻结每条 Clip 当时的 excerpt 与用户选择携带的 note。
 - Session `user/message` recall 让模型能够看到这些材料，并符合 DSH “model-visible 必须 logged”的规则。
 
@@ -95,7 +101,7 @@ derivedSession.append('user/message', createUserMessage({
 }), { surfaceOp: 'append' })
 ```
 
-它被写进普通 Session log，而不是塞入一个前端隐藏变量。Composer 仍保持空白，让用户自己提出问题。
+有附件时，recall 写入普通 Session log。blank 不追加该消息。Composer 保持空白，让用户自己提出问题。
 
 ## 7. 当前跨系统提交不是一个事务
 
@@ -107,22 +113,24 @@ relation/usages 在同一 KV value 内原子提交，但 storage domain 与 Sess
 
 Launcher 支持两个完成动作：
 
-- 创建：先创建/分叉、记录 relation 与 recall，然后 `sessions.open(sessionId)` 跳到 child；用户在空 Composer 输入问题。
+- 创建：先创建/分叉、记录 relation 和所选附件的 recall，然后 `sessions.open(sessionId)` 跳到 child；用户在空 Composer 输入问题。
 - 创建并发送：Launcher 弹出问题输入框；完成 relation/recall 后取得 child binding，调用 `binding.session.prompt(..., 'queue')`。它不必先切换页面，任务会直接在后台运行。
 
 `queue` 是明确提交策略。prompt 失败时 child 与已记录上下文仍存在；当前 `launch()` 直接传播错误，没有统一的部分成功 DTO。先读取关系和 child，不能盲目重试整条流程创建重复会话，也不能自动删除可能已有内容的 child。改善部分成功提示属于独立实现任务。
 
 ## 9. 双向关系与删除后的可追溯性
 
-`listRelations` 至少要求 `clipId` 或 `derivedSessionId`。按 Clip 查询可列出所有使用它的 child；按 child 查询可恢复所有附件及 snapshot。永久删除 live Clip 不级联删除 relation/usages，已经创建的 Session 也不受影响。
+`listRelations` 可读取整个 Workspace，也可以按 `clipId` 或 `derivedSessionId` 缩小范围。按 Clip 查询可列出所有使用它的 child；按 child 查询可恢复所有附件及 snapshot。永久删除 live Clip 不级联删除 relation/usages，已经创建的 Session 也不受影响。
 
 这就是“双向关联”的准确含义：导航和审计可以双向查找；它不是把两边生命周期绑在一起，也不让删除来源修改历史 child。
 
-## 10. 父子会话树只读 DSH `parentId`
+## 10. 组织关系与 DSH 历史继承
 
-[`deriveCurrentLineage`](../../packages/client/src/domain/lineage.ts) 从 DSH `SessionSummary.parentId` 找当前 Session 的已知 root，再遍历 children。每个 root 的第一层 child 决定稳定分支色，后代继承颜色；缺失 parent 或 cycle 时保留当前 Session 为 root，避免 UI 消失。
+[`deriveCurrentLineage`](../../packages/client/src/domain/lineage.ts) 优先读取明确记录的 `parentSessionId`，旧 full-fork 可复用 `sourceSessionId`，其余原生会话使用 DSH `parentId`。这种投影描述组织关系；`mode` 与线型分别表达完整历史、只有枝签或空白上下文。缺少父标识的旧 clips-only 不根据 Clip owner 猜测组织父。
 
-clips-only relation 不产生 `parentId`，所以不会成为 DSH tree 的 child；它只显示“由摘录创建”的插件标记。不要拿 `sourceSessionId` 或 Clip owner 猜一个 parent，否则 UI 会陈述一个 Host header 中不存在的事实。
+[`DerivedSessionStore.list`](../../packages/host/src/relations.ts) 的 `includeSessions: true` 分支读取关系端点的日志，用 DSH `foldSessionTitle` 折叠标题，只返回元数据。原生列表省略未提问会话时，这些端点仍能显示；日志缺失或不可读时禁用节点。Client 打开未列出的节点前检查 Workspace 归属与可读性，再调用带现有 `sessionId` 的公开 `sessions.create` 恢复客户端绑定，最后 `open`。该打开路径与不带 id 的新建路径分开。
+
+窄 Dock 使用缩进树，全景使用从上向下的分支布局。当前会话尚不可见时，面板展示 Workspace 已知关系供用户选择。
 
 ## 11. 继承横幅与跳回来源
 
@@ -137,7 +145,7 @@ clips-only relation 不产生 `parentId`，所以不会成为 DSH tree 的 child
 
 点击分隔条调用 `sessions.open(sourceSessionId)`。分隔位置来自已匹配的 `session/end-seed`，不是数 DOM 消息；当前 definition 匹配这类 marker，不证明它是唯一 fork 切点。二次 fork 与恢复生命周期需要专门测试，见[兼容性限制](../reference/compatibility-and-limitations.md)。
 
-Header action 同样先查 relation：full-fork 显示“继承来源上下文”，clips-only 显示“由摘录创建”，点击后打开 lineage view。
+Header action 同样先查 relation，以“完整分叉”“仅携带枝签”或“空白分支”标识实际上下文模式，点击后打开会话树。
 
 ## 12. full-fork 的选择规则
 
@@ -154,14 +162,15 @@ pnpm --filter dsh-branchmark-client test
 pnpm --filter dsh-branchmark-host test
 ```
 
-在真实 DSH 中完成两个验收：
+在真实 DSH 中完成三种模式验收：
 
 1. 从父会话中间一条已完成消息 full-fork，确认 child header 的 parent 是父 Session、seed 截止该完整 turn、分隔条可跳回来源、Composer 初始为空但模型 log 已有 Clip recall。
-2. 以相同 Clip 创建 clips-only，确认 child 没有 parent、没有 inherited prefix，仍有 recall 与 plugin relation，且不会出现在父会话的 DSH lineage branch 中。
+2. 以相同 Clip 创建 clips-only，确认 child 没有 parent、没有 inherited prefix，仍有 recall 与 plugin relation，在 BranchMark 树中通过组织父连接来源，但不产生 DSH 原生 parent。
+3. 从当前节点继续 blank 分支，确认组织关系存在，child 没有继承历史、附件或 recall；重启 Host 后仍能在树中打开同一个 id。
 
 再删除原 Clip，确认两个 child transcript 和 usage snapshot 不变。
 
-如果 clips-only 只有插件 recall、还没有正式提问，DSH 的空会话列表策略可能不展示它。先用返回的 Session id、插件关系和 Host 日志检查，不要以侧边栏没卡片直接判定创建失败。
+DSH 原生列表会省略部分未提问会话。BranchMark 通过关系端点元数据保留它们；验证必须包含重启后打开，仅验证首次创建不足以证明恢复。
 
 ## 14. 检索练习
 

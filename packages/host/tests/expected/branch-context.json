@@ -1,0 +1,44 @@
+[
+  {
+    "mode": "full-fork",
+    "nativeParent": "source",
+    "inheritsHistory": true,
+    "parent": "source",
+    "attachedClips": 1,
+    "messages": [
+      {
+        "role": "user",
+        "text": "How should this work?"
+      },
+      {
+        "role": "assistant",
+        "text": "Keep the parent context, then branch at this complete turn."
+      },
+      {
+        "role": "user",
+        "text": "Selected Clip context for this derived Session:\n\nClip 1:\nparent context\nNote: A selected note"
+      }
+    ]
+  },
+  {
+    "mode": "clips-only",
+    "nativeParent": null,
+    "inheritsHistory": false,
+    "parent": "source",
+    "attachedClips": 1,
+    "messages": [
+      {
+        "role": "user",
+        "text": "Selected Clip context for this derived Session:\n\nClip 1:\nparent context\nNote: A selected note"
+      }
+    ]
+  },
+  {
+    "mode": "blank",
+    "nativeParent": null,
+    "inheritsHistory": false,
+    "parent": "source",
+    "attachedClips": 0,
+    "messages": []
+  }
+]

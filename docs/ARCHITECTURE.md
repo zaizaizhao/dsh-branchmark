@@ -6,6 +6,7 @@
 dsh-branchmark (Bundle)
 ├── dsh-branchmark-host
 │   ├── BranchMarkService（Typed Remote）
+│   ├── DerivedSessionStore（组织关联与上下文校验）
 │   ├── clip_explorer storage domain
 │   └── TemporarySideChatRuntime
 └── dsh-branchmark-client
@@ -27,7 +28,7 @@ dsh-branchmark (Bundle)
 | Composer 枝签入口 | `conversation.input.left` |
 | 未发送 Clip 引用 | `ReferenceInsert` + `InputTriggerSource.codec` |
 | 衍生关系入口 | `conversation.session.header.actions` |
-| Clip 反向打开衍生会话 | `listRelations` Remote + `ctx.sessions.open` |
+| Clip 反向打开衍生会话 | `listRelations` 元数据读取 + `BranchMarkClient.openRelatedSession` |
 | Fork seed 分隔线 | `conversation.chat.node` + 现有 `session/end-seed` 事件 |
 | 完整分叉 | Session Controller 的 `ctx.sessions.fork` |
 | 全新普通 Session | Session Controller 的 `ctx.sessions.create` |
@@ -58,7 +59,9 @@ Domain 名称为 `clip_explorer`，schema version 为 1。这个内部持久化�
 - 一条不可变 `DerivedSessionRelation`；
 - 按附件顺序排列的全部 `ClipUsage` 快照。
 
-关系与使用快照通过一个 KV `put` 原子提交，避免关系存在但使用快照缺失。永久删除 Clip 不触碰该表。
+关系与使用快照通过一个 KV `put` 原子提交，避免关系存在但使用快照缺失。新关系请求显式携带 `parentSessionId`，完整分叉的组织父必须等于其主要 Clip 的来源；仅枝签和空白分支以该字段记录组织关联，不写入 DSH `parentSession`。空白分支的附件和使用快照均为空。永久删除 Clip 不触碰该表。
+
+`DerivedSessionStore` 负责父子 Workspace 归属、DSH header 与历史校验、并发去重和记录查询。`listRelations({ includeSessions: true })` 逐个 inspect 关系端点，通过 DSH `foldSessionTitle` 返回标题和可用性，不传输日志正文。Client 将其与 Workspace 内的原生列表合并；未列出的可读会话通过指定现有 id 的 `sessions.create` 接口恢复绑定后打开，缺失记录拒绝打开。已有关系记录的 `parentSessionId` 保持可选读取；缺少该字段时，只能复用已记录的完整分叉来源或 DSH 原生 parent，不能根据现有 Clip 猜测旧的组织父。
 
 ## 来源验证
 
@@ -84,7 +87,7 @@ Client 把来源消息的事件序号交给原生 Fork。DSH 将边界推进到�
 
 - `parentSession` 必须等于主要来源 Session；
 - `isSeeded` 必须为 true，`inheritedEventCount` 必须精确等于按上述规则计算的 cut；
-- 仅枝签 Session 必须没有 `parentSession`，`isSeeded` 必须为 false，`inheritedEventCount` 必须为 0。
+- 仅枝签与空白分支必须没有 `parentSession`，`isSeeded` 必须为 false，`inheritedEventCount` 必须为 0；空白分支还必须没有已追加的消息内容。
 
 因此插件不会把一次失败或错误边界的 Fork 伪装成成功关系。
 
@@ -130,7 +133,11 @@ Side Chat 的工具 schema 是固定常量，不从父 Session 的工具目录�
 
 `BranchMarkUiController` 保存 Dock 的三种显示模式（`hidden`、`rail`、`expanded`）、当前视图、宽度、内嵌启动流程、DOM 选区、Toast 和 Side Chat 浏览器镜像。`rail` 只渲染右侧中线上方随 DSH 明暗主题切换的单色线装本 Logo 浮签、数量角标与运行状态点，不占据全高；`expanded` 在标题区继续使用同一品牌标志，并通过宿主稳定的 `data-conversation-scroll` 与 `data-composer-seat` 锚点计算上下安全区，始终作为 `shell.overlay` 中的浮层显示。插件不设置宿主会话根节点的宽度、属性或 CSS 变量。Dock 没有 backdrop，宽度限制为 340–620px；Escape 先关闭内嵌启动流程，再最小化为把手。
 
-Client 组件按交互职责分开：`SelectionToolbar` 观察 DOM 选区并编排四个显式动作，`ClipCollection` 拥有查询、筛选、选择顺序和拖拽编排，`BatchCommandCapsule` 提供窄宽度优先的六项批量命令，`ClipCard` 拥有单枚枝签的元数据、固定高度阅读、卡片内展开、聚焦阅读和衍生关系，`BranchMarkLauncherSheet` 分别呈现 Side Chat 或普通 Session 启动流程，`BranchMarkShell` 只组合 Dock、关系树、选区工具条和 Toast。`BranchMarkClient` 是浏览器侧唯一的 DSH 集成模块，集中处理 API Session/Workspace Controller、UI Conversation binding、Composer admission 和 Typed Remote；视图组件不读取这些服务的内部投影。会话或项目范围的请求映射与工具条定位由 `domain/selection-actions.ts` 纯函数决定，`domain/clip-order.ts` 负责拒绝跨置顶组拖动，避免把持久化规则藏在视图事件中。
+`components/clips/` 分开集合读取、异步操作、排序和卡片呈现；`useClipCollection` 统一读取 active、trash 和关系，再按当前 scope 严格过滤，过期请求不会覆盖切换后的会话。卡片使用自然高度，长正文才显示展开入口；更多操作和阅读弹窗复用 DSH primitives，多选工具栏只在至少两枚选中时出现。`SortableClips` 使用 dnd-kit 的指针/键盘传感器、分组碰撞检测和拖动预览；完整集合与置顶分组约束仍由 `domain/clip-order.ts` 和 Host 验证。
+
+`components/lineage/` 组合插件关系与 DSH Session 列表；`domain/lineage.ts` 计算当前家族，`domain/lineage-layout.ts` 计算窄面板层级或全景树坐标。节点调用 `client.openRelatedSession`，读取缺失的原生绑定后打开已有身份，实线、虚线和点线分别表示完整分叉、仅枝签和空白分支。`components/launcher/` 拥有上下文选择与可选名称；“继续分支”用空 Clip 集合打开启动器，并默认选择空白分支。`BranchMarkShell` 只组合 Dock、选区、各视图与通知。
+
+`BranchMarkClient` 是浏览器侧的 DSH 集成模块，集中处理 Session/Workspace Controller、Conversation binding、Composer admission 和 Typed Remote。`locales/` 向 DSH 注册 `branchmark` 文案命名空间，新的卡片、启动器、树和通知通过 Slot 的 `t` 更新语言；`client/styles/` 按功能持有样式并统一安装。删除和排序的撤销回调只保留在当前浏览器通知中，不写入布局偏好。
 
 浏览器 `localStorage` 只保存 Dock 显示模式、视图、宽度和浮签的相对垂直位置。`DockHandle` 使用 Pointer Capture 限制同一指针的上下拖动，松手时写入位置偏好；取消或窗口缩放时放弃未提交位移。默认位置位于中线上方 120px，旧偏好缺少 `railPosition` 时使用默认位置。Clip、备注、标签、关系、Side Chat 消息和 Composer 内容不会写入该存储。durable Clip 与普通衍生 Session 仍分别由 Host storage domain 和 DSH Session 恢复。
 
@@ -152,7 +159,7 @@ DSH 的公开 `InputActions.setDraft()` 只接受完整新 draft，并通过公�
 
 `branchmark` Input Trigger source 不向 `@` 菜单提供候选项，只拥有这些程序化引用的 codec。提交时 `codec.serialize()` 重新从会话私有集合与项目集合读取 Clip，校验它仍处于 active 状态，再生成可读模型上下文。缺失、回收站或格式无效会拒绝序列化；DSH 保留 draft 与 Chip 并阻止发送。该过程不使用内部 XML 标签，也不会由引用动作自动提交。
 
-衍生 Session 不走上述 Composer 表示。Host 在校验新 Session header 与衍生关系后，将 Clip 使用快照渲染为 `source.kind=plugin, form=recall` 的 `user/message` 并追加到 Session surface。创建并打开时 Composer 保持空白；创建并发送时 Client 只把用户问题交给公开的 `SessionFace.prompt()`。枝签上下文因而对模型可见、由日志恢复、在 UI 中显示为可折叠回忆行，同时不成为用户可误改的输入框正文。
+携带枝签的衍生 Session 不走上述 Composer 表示。Host 在校验新 Session header 与衍生关系后，将 Clip 使用快照渲染为 `source.kind=plugin, form=recall` 的 `user/message` 并追加到 Session surface。创建并打开时 Composer 保持空白；创建并发送时 Client 只把用户问题交给公开的 `SessionFace.prompt()`。枝签上下文因而对模型可见、由日志恢复、在 UI 中显示为可折叠回忆行，同时不成为用户可误改的输入框正文。空白分支不创建 recall；只有用户之后显式输入的问题才成为新的消息。
 
 ## 已知兼容性边界
 

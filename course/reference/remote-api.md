@@ -38,10 +38,10 @@ DSH 当前 Remote 设计本身只要求外层 `RemoteResult<T>`，并用一个 m
 
 | Remote | 请求 | 成功值 | 写入 |
 | --- | --- | --- | --- |
-| `recordDerivedSession` | child、Workspace、mode、primary、attachments | `{ relation, usages }` | 一个 `derived_sessions.put`，随后 child Session append recall |
-| `listRelations` | Workspace 加 `clipId` 或 `derivedSessionId` | `{ relations, usages }` | 无 |
+| `recordDerivedSession` | child、Workspace、`parentSessionId`、mode、primary、attachments | `{ relation, usages }` | 一个 `derived_sessions.put`；有附件时才追加 recall |
+| `listRelations` | Workspace，可选 `clipId`、`derivedSessionId`、`includeSessions` | `{ relations, usages, sessions }` | 无 |
 
-`recordDerivedSession` 不创建 Session。Browser 必须先调用 DSH `fork` 或 `create`；Host 再检查 child header 与请求 mode 是否一致。关系记录不可覆盖，重复 child id 返回 `derived-session-already-recorded`。
+`recordDerivedSession` 不创建 Session。Browser 必须先调用 DSH `fork` 或 `create`；Host 再检查 child header 与请求 mode 是否一致。三种模式均要求同 Workspace 内不同于 child 的组织父。`blank` 禁止附件和已有模型上下文；`full-fork` 要求 primary 与原生父一致。`includeSessions: true` 返回关系端点的 `{ sessionId, title?, nativeParentId?, available }`，缺失或不可读的端点仍保留为 `available: false`；不指定时 `sessions` 为空。关系记录不可覆盖，并发或重复 child id 返回 `derived-session-already-recorded`。
 
 ## 临时 Side Chat
 
@@ -71,7 +71,7 @@ Side Chat snapshot 是缩窄 wire projection，不包含隐藏来源上下文、
 | `invalid-request` | 文本、标签、集合或 mode 违反规则 | 展示 message，不要自动改写语义后重试 |
 | `clip-not-found` | Clip 不存在或不在 Workspace | 刷新集合 |
 | `derived-session-already-recorded` | child 已有不可变关系 | 读取现有关系，不覆盖 |
-| `derived-session-mismatch` | DSH child header 不符合 full-fork/clips-only | 保留失败证据并核对 child，不自动删除可能已有内容的会话 |
+| `derived-session-mismatch` | DSH child header 或内容不符合所选分支模式 | 保留失败证据并核对 child，不自动删除可能已有内容的会话 |
 | `derived-session-unavailable` | child 未挂载到 Host Session Store | 等待/诊断创建绑定，不能只写关系表 |
 | `side-chat-not-found` | tab 已关闭或 Host 重启 | Browser 移除 tab |
 | `side-chat-busy` | 同一个 tab 已有回答运行 | 等待或先 cancel |

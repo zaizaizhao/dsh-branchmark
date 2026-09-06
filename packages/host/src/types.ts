@@ -148,10 +148,10 @@ export type BatchClipMutation =
   | { readonly kind: 'set-status'; readonly status: 'active' | 'trashed' }
   | { readonly kind: 'set-pinned'; readonly pinned: boolean }
   | {
-    readonly kind: 'reorder'
-    readonly scope: 'session' | 'project'
-    readonly ownerSessionId?: SessionId
-  }
+      readonly kind: 'reorder'
+      readonly scope: 'session' | 'project'
+      readonly ownerSessionId?: SessionId
+    }
 
 /** Batch metadata operation used by the project library selection bar. */
 export interface BatchUpdateClipsRequest {
@@ -182,10 +182,15 @@ export interface ClipUsage {
 }
 
 /** Plugin-owned semantics associated with a DSH ordinary Session. */
+export type DerivedSessionMode = 'full-fork' | 'clips-only' | 'blank'
+
+/** Persisted organizational link; only full-fork also inherits DSH history. */
 export interface DerivedSessionRelation {
   readonly derivedSessionId: SessionId
   readonly workspaceId: WorkspaceId
-  readonly mode: 'full-fork' | 'clips-only'
+  readonly mode: DerivedSessionMode
+  /** Organizational parent. Older records may only carry a full-fork source. */
+  readonly parentSessionId?: SessionId
   readonly primaryClipId?: ClipId
   readonly sourceSessionId?: SessionId
   readonly sourceMessageId?: MessageId
@@ -195,11 +200,13 @@ export interface DerivedSessionRelation {
   readonly createdAt: string
 }
 
-/** Record the immutable Clip snapshot after DSH creates an ordinary Session. */
+/** Record a new Session's relationship and any immutable Clip snapshots. */
 export interface RecordDerivedSessionRequest {
   readonly derivedSessionId: SessionId
   readonly workspaceId: WorkspaceId
-  readonly mode: 'full-fork' | 'clips-only'
+  readonly mode: DerivedSessionMode
+  /** Explicit organizational parent; full-fork must match its primary Clip's source. */
+  readonly parentSessionId: SessionId
   readonly primaryClipId?: ClipId
   readonly attachments: readonly ClipAttachmentSelection[]
 }
@@ -210,17 +217,30 @@ export interface RecordDerivedSessionValue {
   readonly usages: readonly ClipUsage[]
 }
 
-/** Query either side of the Clip-to-Session relationship. */
+/** Query a Workspace's relationships, optionally restricted to a Clip or Session. */
 export interface ListRelationsRequest {
   readonly workspaceId: WorkspaceId
   readonly clipId?: ClipId
   readonly derivedSessionId?: SessionId
+  /** Resolve related Session titles and availability, including unprompted branches. */
+  readonly includeSessions?: boolean
+}
+
+/** Read-only metadata for a retained relationship endpoint. */
+export interface RelatedSessionSummary {
+  readonly sessionId: SessionId
+  readonly title?: string
+  readonly nativeParentId?: SessionId
+  /** False when the Session is missing, unreadable, or outside the Workspace. */
+  readonly available: boolean
 }
 
 /** Matching relations and retained usage snapshots. */
 export interface ListRelationsValue {
   readonly relations: readonly DerivedSessionRelation[]
   readonly usages: readonly ClipUsage[]
+  /** Empty unless the request explicitly includes Session metadata. */
+  readonly sessions: readonly RelatedSessionSummary[]
 }
 
 /** Create one non-durable Side Chat from explicitly selected Clips. */

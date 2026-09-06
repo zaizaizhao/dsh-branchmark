@@ -1,4 +1,3 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority.
-2026-08-30-compact-batch-commands-and-clip-ordering.md: cb9381af8fb39d2180259b4496a105140401d89d
-2026-08-30-compact-batch-commands-and-clip-ordering.zh.md: f007d20e275da6e07af2fb0e8ff235576c653038
+# Bilingual-pair consistency record. Both languages carry equal authority.
+2026-08-30-compact-batch-commands-and-clip-ordering.md: 999d22a8d3a8760046be08deb04e0757330f44b8
+2026-08-30-compact-batch-commands-and-clip-ordering.zh.md: 462da415bfd7875df6810e1e2d31b9a842ed034d

@@ -11,20 +11,33 @@ import type { InputState } from '@deepseek-ai/dsh-client-ui-conversation/client'
 // Type-only: merges this plugin's generated Remote namespace into DSH's client transport.
 import type {} from 'dsh-branchmark-host/remote'
 import type {
-  Clip, ClipAttachmentSelection, ClipId, CreateClipRequest, ListClipsRequest,
-  ListClipsValue, ListRelationsRequest, ListRelationsValue, RecordDerivedSessionValue,
-  CreateSideChatRequest, SideChatId, SideChatSnapshot,
+  Clip,
+  ClipAttachmentSelection,
+  ClipId,
+  CreateClipRequest,
+  ListClipsRequest,
+  ListClipsValue,
+  ListRelationsRequest,
+  ListRelationsValue,
+  RecordDerivedSessionValue,
+  CreateSideChatRequest,
+  SideChatId,
+  SideChatSnapshot,
   SideChatModelSelection,
-  BatchUpdateClipsRequest, BatchUpdateClipsValue,
-  ClipRejected, ClipSuccess,
+  BatchUpdateClipsRequest,
+  BatchUpdateClipsValue,
+  ClipRejected,
+  ClipSuccess,
+  DerivedSessionMode,
 } from 'dsh-branchmark-host/types'
-import {
-  BRANCHMARK_REFERENCE_SOURCE, clipReferenceInsert, parseClipReference,
-} from './composer-reference.ts'
+import { BRANCHMARK_REFERENCE_SOURCE, clipReferenceInsert, parseClipReference } from './composer-reference.ts'
 
 /** Business rejection from a successful Typed Remote transport call. */
 export class BranchMarkClientError extends Error {
-  constructor(readonly code: string, message: string) {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
     super(message)
     this.name = 'BranchMarkClientError'
   }
@@ -59,8 +72,9 @@ export class BranchMarkClient {
   constructor(private readonly ctx: ClientContext) {}
 
   workspaceForSession(sessionId: SessionId): WorkspaceId | undefined {
-    return this.ctx.workspaces.list.getSnapshot().items
-      .find(workspace => workspace.sessionIds.includes(sessionId))?.workspaceId
+    return this.ctx.workspaces.list
+      .getSnapshot()
+      .items.find((workspace) => workspace.sessionIds.includes(sessionId))?.workspaceId
   }
 
   currentWorkspace(): WorkspaceId | undefined {
@@ -91,9 +105,7 @@ export class BranchMarkClient {
 
   sessionSnapshot(sessionId: SessionId) {
     const binding = this.ctx.sessions.binding(sessionId)
-    return binding === undefined
-      ? undefined
-      : this.ctx.uiConversation.binding(binding).snapshot.getSnapshot()
+    return binding === undefined ? undefined : this.ctx.uiConversation.binding(binding).snapshot.getSnapshot()
   }
 
   /** Insert one compact native reference at the start of the current Composer draft. */
@@ -115,10 +127,11 @@ export class BranchMarkClient {
       }
     })
     if (duplicate) return 'duplicate'
-    const inserted = input.insertReference(
-      clipReferenceInsert(clip, includeNote),
-      { start: 0, end: 0, draftRev: snapshot.draftRev },
-    )
+    const inserted = input.insertReference(clipReferenceInsert(clip, includeNote), {
+      start: 0,
+      end: 0,
+      draftRev: snapshot.draftRev,
+    })
     return inserted ? 'inserted' : 'busy'
   }
 
@@ -171,13 +184,15 @@ export class BranchMarkClient {
       this.list({ workspaceId, ownerSessionId: sessionId, visibility: 'session-drawer' }),
       this.list({ workspaceId, visibility: 'project-library' }),
     ])
-    if (lists.every(result => result.status === 'rejected')) {
+    if (lists.every((result) => result.status === 'rejected')) {
       const first = lists[0]
       throw first.status === 'rejected' ? first.reason : new Error('枝签引用恢复失败。')
     }
-    const clips = new Map(lists.flatMap(result => (
-      result.status === 'fulfilled' ? result.value.clips : []
-    )).map(clip => [clip.id, clip]))
+    const clips = new Map(
+      lists
+        .flatMap((result) => (result.status === 'fulfilled' ? result.value.clips : []))
+        .map((clip) => [clip.id, clip]),
+    )
     const inserted: ClipId[] = []
     const missing: ClipId[] = []
     const failed: ClipId[] = []
@@ -192,10 +207,11 @@ export class BranchMarkClient {
         failed.unshift(token.id)
         continue
       }
-      const accepted = input.insertReference(
-        clipReferenceInsert(clip, clip.note !== undefined),
-        { start: token.start, end: token.end, draftRev: snapshot.draftRev },
-      )
+      const accepted = input.insertReference(clipReferenceInsert(clip, clip.note !== undefined), {
+        start: token.start,
+        end: token.end,
+        draftRev: snapshot.draftRev,
+      })
       if (accepted) inserted.unshift(token.id)
       else failed.unshift(token.id)
     }
@@ -237,19 +253,24 @@ export class BranchMarkClient {
       }
       running = true
       attemptedDraft = draft
-      void this.rehydrateComposerReferences(sessionId, workspaceId).then((result) => {
-        if (disposed) return
-        if (result.inserted.length > 0) onRecovered(result)
-        if (result.failed.length > 0) attemptedDraft = undefined
-      }, (error: unknown) => {
-        if (!disposed) onError(error)
-      }).finally(() => {
-        running = false
-        if (pending) {
-          pending = false
-          recover()
-        }
-      })
+      void this.rehydrateComposerReferences(sessionId, workspaceId)
+        .then(
+          (result) => {
+            if (disposed) return
+            if (result.inserted.length > 0) onRecovered(result)
+            if (result.failed.length > 0) attemptedDraft = undefined
+          },
+          (error: unknown) => {
+            if (!disposed) onError(error)
+          },
+        )
+        .finally(() => {
+          running = false
+          if (pending) {
+            pending = false
+            recover()
+          }
+        })
     }
     const unsubscribe = input.state.subscribe(recover)
     recover()
@@ -275,7 +296,9 @@ export class BranchMarkClient {
     return this.unwrap(await this.ctx.remote.branchmark.setStatus(request))
   }
 
-  async deleteForever(request: Parameters<ClientContext['remote']['branchmark']['deleteForever']>[0]): Promise<void> {
+  async deleteForever(
+    request: Parameters<ClientContext['remote']['branchmark']['deleteForever']>[0],
+  ): Promise<void> {
     this.unwrap(await this.ctx.remote.branchmark.deleteForever(request))
   }
 
@@ -318,15 +341,19 @@ export class BranchMarkClient {
   async launch(input: {
     readonly workspaceId: WorkspaceId
     readonly clips: readonly Clip[]
-    readonly mode: 'full-fork' | 'clips-only'
+    readonly mode: DerivedSessionMode
+    readonly parentSessionId: SessionId
+    readonly title?: string
     readonly primaryClipId?: ClipId
     readonly includeNotes: ReadonlySet<ClipId>
     readonly question?: string
   }): Promise<{ readonly sessionId: SessionId }> {
-    if (input.clips.length === 0) throw remoteError('invalid-request', '请至少选择一枚枝签。')
-    const primary = input.primaryClipId === undefined
-      ? undefined
-      : input.clips.find(clip => clip.id === input.primaryClipId)
+    if (input.mode !== 'blank' && input.clips.length === 0)
+      throw remoteError('invalid-request', '请至少选择一枚枝签。')
+    const primary =
+      input.primaryClipId === undefined
+        ? undefined
+        : input.clips.find((clip) => clip.id === input.primaryClipId)
     let sessionId: SessionId
     if (input.mode === 'full-fork') {
       if (primary?.source.kind !== 'session-message' || !primary.source.forkable) {
@@ -341,29 +368,64 @@ export class BranchMarkClient {
       sessionId = await this.ctx.sessions.create({ workspaceId: input.workspaceId })
     }
 
-    const attachments: ClipAttachmentSelection[] = input.clips.map(clip => ({
-      clipId: clip.id,
-      includeNote: input.includeNotes.has(clip.id),
-    }))
+    const attachments: ClipAttachmentSelection[] = (input.mode === 'blank' ? [] : input.clips).map(
+      (clip) => ({
+        clipId: clip.id,
+        includeNote: input.includeNotes.has(clip.id),
+      }),
+    )
     await this.recordDerived({
       derivedSessionId: sessionId,
       workspaceId: input.workspaceId,
       mode: input.mode,
+      ...(input.mode === 'full-fork' && primary?.source.kind === 'session-message'
+        ? { parentSessionId: primary.source.sessionId }
+        : { parentSessionId: input.parentSessionId }),
       ...(input.mode === 'full-fork' && primary !== undefined ? { primaryClipId: primary.id } : {}),
       attachments,
     })
+    if (input.title?.trim()) {
+      const binding = this.ctx.sessions.binding(sessionId)
+      if (binding === undefined)
+        throw remoteError('session-unavailable', '新会话已创建，但尚未建立客户端绑定。')
+      const renamed = await binding.session.rename(input.title.trim())
+      if (!renamed.ok) throw remoteError(renamed.error.code, renamed.error.message)
+    }
     if (input.question === undefined) {
       this.ctx.sessions.open(sessionId)
       return { sessionId }
     }
     const binding = this.ctx.sessions.binding(sessionId)
-    if (binding === undefined) throw remoteError('session-unavailable', '新会话已经创建，但客户端尚未建立其绑定。')
+    if (binding === undefined)
+      throw remoteError('session-unavailable', '新会话已经创建，但客户端尚未建立其绑定。')
     const result = await binding.session.prompt([{ type: 'text', text: input.question }], 'queue')
     if (!result.ok) throw remoteError(result.error.code, result.error.message)
     return { sessionId }
   }
 
   openSession(sessionId: SessionId): void {
+    this.ctx.sessions.open(sessionId)
+  }
+
+  /** Adopt a persisted related Session omitted from DSH's unprompted-session list.
+   * @param sessionId - Retained relationship endpoint to open.
+   * @param workspaceId - Workspace whose membership and readable log must still exist.
+   * @returns Completion after the existing identity is selected in the native client.
+   */
+  async openRelatedSession(sessionId: SessionId, workspaceId: WorkspaceId): Promise<void> {
+    if (this.workspaceForSession(sessionId) !== workspaceId) {
+      throw remoteError(
+        'session-outside-workspace',
+        this.failureMessage({ code: 'session-outside-workspace' }),
+      )
+    }
+    if (this.ctx.sessions.list.getSnapshot().byId[sessionId] === undefined) {
+      const related = await this.relations({ workspaceId, includeSessions: true })
+      if (!related.sessions.some((session) => session.sessionId === sessionId && session.available)) {
+        throw remoteError('session-not-found', this.failureMessage({ code: 'session-not-found' }))
+      }
+      await this.ctx.sessions.create({ workspaceId, sessionId })
+    }
     this.ctx.sessions.open(sessionId)
   }
 
@@ -375,28 +437,44 @@ export class BranchMarkClient {
 
   private unwrap<T>(transport: BranchMarkTransport<T>): T {
     if (!transport.ok) throw remoteError(transport.error.code, transport.error.message)
-    if (!transport.value.ok) throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
+    if (!transport.value.ok)
+      throw remoteError(transport.value.error.code, this.failureMessage(transport.value.error))
     return transport.value.value
   }
 
   private failureMessage(error: { readonly code: string; readonly message?: string }): string {
     if (error.message !== undefined) return error.message
     switch (error.code) {
-      case 'workspace-not-found': return '项目不存在或已经被移除。'
-      case 'session-not-found': return '来源会话不存在或无法读取。'
-      case 'session-outside-workspace': return '来源会话不属于当前项目。'
-      case 'source-not-found': return '来源消息已经不存在。'
-      case 'source-mismatch': return '来源消息已变化，请重新选择枝签。'
-      case 'excerpt-mismatch': return '选区无法映射到消息原文，请缩小选区后重试。'
-      case 'clip-not-found': return '枝签不存在或已经删除。'
-      case 'derived-session-already-recorded': return '该衍生会话已经记录过枝签关系。'
-      case 'derived-session-mismatch': return '新会话的 DSH 分叉事实与主要来源不一致。'
-      case 'derived-session-unavailable': return '新会话当前未挂载，无法写入枝签上下文。'
-      case 'side-chat-not-found': return 'Side Chat 已关闭或宿主已经重启。'
-      case 'side-chat-busy': return 'Side Chat 正在回答，请等待或先取消。'
-      case 'side-chat-model-unavailable': return error.message ?? '所选模型当前不可用。'
-      case 'side-chat-context-unavailable': return '无法从主要来源的完整轮次重建 Side Chat 上下文。'
-      default: return error.code
+      case 'workspace-not-found':
+        return '项目不存在或已经被移除。'
+      case 'session-not-found':
+        return '来源会话不存在或无法读取。'
+      case 'session-outside-workspace':
+        return '来源会话不属于当前项目。'
+      case 'source-not-found':
+        return '来源消息已经不存在。'
+      case 'source-mismatch':
+        return '来源消息已变化，请重新选择枝签。'
+      case 'excerpt-mismatch':
+        return '选区无法映射到消息原文，请缩小选区后重试。'
+      case 'clip-not-found':
+        return '枝签不存在或已经删除。'
+      case 'derived-session-already-recorded':
+        return '该衍生会话已经记录过枝签关系。'
+      case 'derived-session-mismatch':
+        return '新会话的 DSH 分叉事实与主要来源不一致。'
+      case 'derived-session-unavailable':
+        return '新会话当前未挂载，无法写入枝签上下文。'
+      case 'side-chat-not-found':
+        return 'Side Chat 已关闭或宿主已经重启。'
+      case 'side-chat-busy':
+        return 'Side Chat 正在回答，请等待或先取消。'
+      case 'side-chat-model-unavailable':
+        return error.message ?? '所选模型当前不可用。'
+      case 'side-chat-context-unavailable':
+        return '无法从主要来源的完整轮次重建 Side Chat 上下文。'
+      default:
+        return error.code
     }
   }
 }
