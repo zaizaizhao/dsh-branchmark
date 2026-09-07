@@ -103,3 +103,7 @@ Bundle patch 提供以下配置。Profile patch 覆盖该 Loader 条目时会替
 普通缺陷和功能建议请提交到 [GitHub Issues](https://github.com/zaizaizhao/dsh-branchmark/issues)。安全问题不要公开披露，请遵循 [`SECURITY.md`](https://github.com/zaizaizhao/dsh-branchmark/blob/main/SECURITY.md)。提交日志或截图前请移除 API key、凭据文件内容和其他秘密。
 
 BranchMark 使用 [MIT License](https://github.com/zaizaizhao/dsh-branchmark/blob/main/LICENSE)。
+
+## 社区
+
+[LINUX DO](https://linux.do/) — 真诚、友善、团结、专业的技术交流社区。

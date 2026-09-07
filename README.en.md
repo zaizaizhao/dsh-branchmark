@@ -304,3 +304,7 @@ pnpm run release:check
 `check` covers type checks, keyless tests, builds, and Bundle self-containment verification. `release:check` adds documentation checks, public-package metadata checks, publint, and an npm dry-run. Keyless checks do not make real provider requests; a release candidate must still complete the isolated Web Profile smoke test in [RELEASING.md](RELEASING.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing. Report ordinary defects and feature requests through [GitHub Issues](https://github.com/zaizaizhao/dsh-branchmark/issues). See [CHANGELOG.md](CHANGELOG.md) for version changes. BranchMark uses the [MIT License](LICENSE).
+
+## Community
+
+[LINUX DO](https://linux.do/) — A technology community built on sincerity, friendliness, solidarity, and professionalism.

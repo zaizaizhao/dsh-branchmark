@@ -304,3 +304,7 @@ pnpm run release:check
 `check` 覆盖类型检查、keyless 测试、构建和 Bundle 自包含检查；`release:check` 继续检查文档、公开包元数据、publint 和 npm dry-run。真实 provider 请求不进入 keyless 检查，发布候选仍需按 [RELEASING.md](RELEASING.md) 在独立 Web Profile 中完成 smoke test。
 
 参与开发请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。普通缺陷和功能建议提交到 [GitHub Issues](https://github.com/zaizaizhao/dsh-branchmark/issues)；版本变化记录在 [CHANGELOG.md](CHANGELOG.md)。BranchMark 使用 [MIT License](LICENSE)。
+
+## 社区
+
+[LINUX DO](https://linux.do/) — 真诚、友善、团结、专业的技术交流社区。
