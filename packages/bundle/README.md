@@ -50,7 +50,7 @@ dsh plugin --profile web remove dsh-branchmark
 
 安装或卸载后需要重启对应 Profile。卸载不会删除 `clip_explorer` 本地 storage domain，因此已有枝签不会随 package 一起被静默清除。
 
-不要使用 Git URL、GitHub source specifier 或源码目录直接安装。源码仓库不提交 `lib/`，也不运行 `prepare` 等安装生命周期脚本；npm 包和仓库内 `pnpm run pack:bundle` 生成的 tarball 才包含可执行产物。源码构建步骤见项目的 [快速开始](https://github.com/zaizaizhao/dsh-branchmark#快速开始)。
+不要使用 Git URL、GitHub source specifier 或源码目录直接安装。源码仓库不提交 `lib/`，也不运行 `prepare` 等安装生命周期脚本；npm 包和仓库内 `pnpm run pack:bundle` 生成的 tarball 才包含可执行产物。源码构建步骤见 [安装教程](https://github.com/zaizaizhao/dsh-branchmark/blob/main/course/tutorials/10-package-install-and-adapt.md)。
 
 ## 使用
 
