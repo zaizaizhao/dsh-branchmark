@@ -37,7 +37,7 @@ catalog:
   '@deepseek-ai/dsh-web': 0.1.2-rc.1
   '@deepseek-ai/dsh-workspace': 0.1.2-rc.1
   '@deepseek-ai/schemastery': 3.18.2
-  '@types/node': ^22.20.0
+  '@types/node': ^22.20.4
   '@types/react': ~18.3.1
   react: ^18.2.0
   react-dom: ^18.2.0
