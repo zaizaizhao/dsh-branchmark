@@ -44,7 +44,7 @@ catalog:
   tsdown: ^0.22.2
   typescript: ^6.0.3
   vitest: ^4.1.8
-  zod: ^4.4.3
+  zod: ^4.6.5
 
 minimumReleaseAgeExclude:
   - '@deepseek-ai/cordis@4.0.2'
