@@ -32,7 +32,7 @@ pnpm --filter dsh-branchmark-client exec vitest run tests/dock-handle.spec.ts
 
 ## 任务 5：安装 tarball 后做真实验收
 
-实验执行者按[第 10 章](../tutorials/10-package-install-and-adapt.md)启动隔离 rc.1 Web profile。使用普通测试 Workspace，记录浏览器、viewport、origin 和插件版本。
+实验执行者按[第 10 章](../tutorials/10-package-install-and-adapt.md)启动隔离当前基线Web profile。使用普通测试 Workspace，记录浏览器、viewport、origin 和插件版本。
 
 | 输入 | 可观察结果 |
 | --- | --- |

@@ -4,13 +4,15 @@ import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import LlmRuntime, { createAssistantMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
+import LocalFileSystem from '@deepseek-ai/dsh-fs-local'
 import SessionStore, {
-  SESSION_FORMAT_VERSION, Session, SessionId, type SessionEvent, type SessionHeader,
+  SESSION_FORMAT_VERSION, Session, SessionId, SessionLogOffset, type SessionHeader,
 } from '@deepseek-ai/dsh-session'
 import SessionPersistence, {
   SessionPersistenceRevision,
+  SessionPersistenceNotFoundError,
   type SessionInspection,
-  type SessionLocation,
+  type SessionAccess, type SessionHandle,
   type SessionPersistenceSnapshot,
 } from '@deepseek-ai/dsh-session-persistence'
 import Storage from '@deepseek-ai/dsh-storage'
@@ -33,47 +35,65 @@ export interface TranscriptFixture {
 
 /** Minimal persistence provider whose logical records are controlled by each test. */
 export class TestPersistence extends SessionPersistence {
-  override readonly supportsRawArtifacts = false
   static inject = ['sessions']
 
   readonly records = new Map<SessionId, SessionInspection>()
 
-  locate(_meta: SessionHeader): SessionLocation | undefined { return undefined }
-  create(_meta: SessionHeader): Promise<void> { return Promise.resolve() }
-  append(_id: SessionId, _events: readonly SessionEvent[]): Promise<void> { return Promise.resolve() }
+  opened = 0
+  closed = 0
+
+  async create(header: SessionHeader): Promise<SessionHandle> {
+    this.records.set(header.id, { meta: header, inheritedEventCount: SessionLogOffset(0), events: [] })
+    return this.open(header.id, 'write')
+  }
+
+  async open(id: SessionId, access: SessionAccess): Promise<SessionHandle> {
+    const record = await this.inspect(id)
+    this.opened += 1
+    let closed = false
+    const close = async (): Promise<void> => {
+      if (!closed) { closed = true; this.closed += 1 }
+    }
+    return {
+      id, access, header: record.meta, inheritedEventCount: record.inheritedEventCount,
+      read: async (offset = 0, length) => {
+        if (closed) throw new Error('test read handle is closed')
+        const current = this.records.get(id)
+        return { eventState: 'detached', events: current?.events.slice(offset, length === undefined ? undefined : offset + length) ?? [] }
+      },
+      append: async events => {
+        if (closed || access !== 'write') throw new Error('test handle is not writable')
+        const current = this.records.get(id)
+        if (current === undefined) throw new Error('test session disappeared')
+        this.records.set(id, { ...current, events: [...current.events, ...events] })
+      },
+      flush: async () => {}, close, [Symbol.asyncDispose]: close,
+    }
+  }
 
   inspect(id: SessionId): Promise<SessionInspection> {
     const record = this.records.get(id)
     return record === undefined
-      ? Promise.reject(new Error(`test persistence: session '${id}' not found`))
+      ? Promise.reject(new SessionPersistenceNotFoundError(id))
       : Promise.resolve(record)
   }
 
-  load(id: SessionId): Promise<SessionInspection> {
-    return this.inspect(id)
-  }
-
-  readFrom(id: SessionId, fromSeq: number): Promise<SessionInspection> {
+  async stat(id: SessionId): Promise<SessionPersistenceSnapshot | undefined> {
     const record = this.records.get(id)
-    return record === undefined
-      ? Promise.reject(new Error(`test persistence: session '${id}' not found`))
-      : Promise.resolve({
-          meta: record.meta,
-          inheritedEventCount: record.inheritedEventCount,
-          events: record.events.filter(event => event.seq >= fromSeq),
-        })
-  }
-
-  list(): Promise<SessionHeader[]> {
-    return Promise.resolve([...this.records.values()].map(record => record.meta))
-  }
-
-  listSnapshots(): Promise<SessionPersistenceSnapshot[]> {
-    return Promise.resolve([...this.records.values()].map((record, index) => ({
+    return record === undefined ? undefined : {
       header: record.meta,
-      revision: SessionPersistenceRevision(`test:${String(index)}:${String(record.events.length)}`),
-    })))
+      revision: SessionPersistenceRevision(`test:${String(record.events.length)}`),
+    }
   }
+
+  async list(): Promise<SessionPersistenceSnapshot[]> {
+    return [...this.records.values()].map(record => ({
+      header: record.meta,
+      revision: SessionPersistenceRevision(`test:${String(record.events.length)}`),
+    }))
+  }
+
+  async flush(): Promise<void> {}
 
   persist(session: Session): void {
     this.records.set(session.id, {
@@ -97,7 +117,7 @@ export interface TestHarness {
 }
 
 /** Compose BranchMark over real DSH Session, Workspace, and JSON storage services. */
-export async function createHarness(): Promise<TestHarness> {
+export async function createHarness(beforePlugin?: (harness: Omit<TestHarness, 'dispose'>) => Promise<void>): Promise<TestHarness> {
   const root = await mkdtemp(join(tmpdir(), 'dsh-branchmark-test-'))
   const projectRoot = join(root, 'project')
   const storageRoot = join(root, 'storage')
@@ -106,7 +126,7 @@ export async function createHarness(): Promise<TestHarness> {
   try {
     await ctx.plugin(SessionStore)
     await ctx.plugin(LlmRuntime)
-    ctx.provide('fs', {} as never)
+    await ctx.plugin(LocalFileSystem, { cwd: projectRoot })
     await ctx.plugin(WebRuntime, {})
     await ctx.plugin(TestPersistence)
     await ctx.plugin(Storage)
@@ -114,6 +134,7 @@ export async function createHarness(): Promise<TestHarness> {
     await ctx.plugin(StorageDomain, { backend: 'json' })
     await ctx.plugin(WorkspaceRegistry)
     const workspace = await ctx.workspaceRegistry.create(projectRoot)
+    await beforePlugin?.({ ctx, persistence: ctx.sessionPersistence as TestPersistence, workspace, projectRoot })
     await ctx.plugin(BranchMarkService, {
       maxExcerptBytes: 1024,
       maxNoteBytes: 256,
@@ -161,12 +182,12 @@ export function transcript(
     isSeeded: false,
   }
   const session = Session.create(sessionId, [], header)
+  session.append('turn/start', { turn: 1 })
+  session.append('step/start', { turn: 1, step: 1 })
   session.append('request/header', {
     header: { config: { provider: 'test', model: 'test' } },
     reason: 'initial',
   })
-  session.append('turn/start', { turn: 1 })
-  session.append('step/start', { turn: 1, step: 1 })
   const user = createUserMessage({
     content: [{ type: 'text', text: 'How should this work?' }],
     source: { kind: 'user' },
@@ -181,6 +202,7 @@ export function transcript(
     turn: 1,
     step: 1,
     message: assistant,
+    stream: [],
   }, { surfaceOp: 'append' })
   if (complete) {
     session.append('step/end', { turn: 1, step: 1 })

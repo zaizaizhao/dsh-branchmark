@@ -1,6 +1,7 @@
 /** Session creation delegates to DSH while keeping each context mode explicit. */
 import { describe, expect, it, vi } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
+import { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { Clip, ClipId, RelatedSessionSummary } from 'dsh-branchmark-host/types'
@@ -30,6 +31,7 @@ function fixture() {
   const rename = vi.fn(async () => ({ ok: true, value: {} }))
   const prompt = vi.fn(async () => ({ ok: true, value: {} }))
   const record = vi.fn(async () => ({ ok: true, value: { ok: true, value: {} } }))
+  const prepared = vi.fn(async () => ({ ok: true, value: { ok: true, value: { sessionId: parent, atSeq: 17 } } }))
   const summaries: RelatedSessionSummary[] = []
   const related = vi.fn(async () => ({
     ok: true,
@@ -40,26 +42,41 @@ function fixture() {
     sessions: {
       create,
       fork,
-      open,
+      using: async <T>(_id: SessionId, _options: object, operation: (reference: { ready: Promise<{ session: { rename: typeof rename; prompt: typeof prompt } }> }) => T | Promise<T>) => operation({ ready: Promise.resolve({ session: { rename, prompt } }) }),
       binding: () => ({ session: { rename, prompt } }),
       list: { getSnapshot: () => ({ byId: listed }) },
     },
+    uiWorkspace: { openSession: open },
     workspaces: {
       list: { getSnapshot: () => ({ items: [{ workspaceId, sessionIds: [parent, 'saved-child'] }] }) },
     },
-    remote: { branchmark: { recordDerivedSession: record, listRelations: related } },
+    remote: { branchmark: { recordDerivedSession: record, listRelations: related, prepareFork: prepared } },
   } as unknown as Context
-  return { client: new BranchMarkClient(ctx), create, fork, open, rename, prompt, record, related, summaries }
+  return { client: new BranchMarkClient(ctx), create, fork, open, rename, prompt, record, related, prepared, summaries }
 }
 
 describe('ordinary branch launch', () => {
+  it('uses the Host-prepared completed-turn boundary for an exact DSH fork', async () => {
+    const h = fixture()
+    const primary: Clip = { ...selected, source: {
+      kind: 'session-message', sessionId: parent, messageId: MessageId('source-message'),
+      eventSeq: 3, turn: 1, role: 'assistant', range: { start: 0, end: 7 },
+      reopenable: true, forkable: true,
+    } }
+    await h.client.launch({ workspaceId, parentSessionId: parent, mode: 'full-fork',
+      clips: [primary], primaryClipId: primary.id, includeNotes: new Set([primary.id]) })
+    expect(h.prepared).toHaveBeenCalledWith({ workspaceId, clipId: primary.id })
+    expect(h.fork).toHaveBeenCalledWith({ sessionId: parent, atSeq: 17, increaseTitle: true })
+    expect(h.open).toHaveBeenCalledWith('fork-child')
+  })
+
   it('adopts the existing unprompted identity before opening it after reload', async () => {
     const h = fixture()
     const sessionId = 'saved-child' as SessionId
     h.summaries.push({ sessionId, available: true, title: 'Saved blank branch' })
     await h.client.openRelatedSession(sessionId, workspaceId)
     expect(h.related).toHaveBeenCalledWith({ workspaceId, includeSessions: true })
-    expect(h.create).toHaveBeenCalledWith({ workspaceId, sessionId })
+    expect(h.create).not.toHaveBeenCalled()
     expect(h.open).toHaveBeenCalledWith(sessionId)
     expect(h.prompt).not.toHaveBeenCalled()
     expect(h.record).not.toHaveBeenCalled()

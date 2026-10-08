@@ -6,4 +6,6 @@
 
 `BranchMarkClient` 集中调用 DSH Session/Workspace Controller、Composer 和 Typed Remote。完整分叉继承主要枝签所在完整轮次；仅枝签写入所选材料的 recall；空白分支只保存组织关联，创建时不携带任何历史、摘录或备注。会话树点击节点直接打开真实会话，窄面板保持可读层级，全景视图从主节点向下展开。Side Chat 仍是独立模型选择、只读工具和多标签的临时交流，不进入持久化会话树。
 
+DSH `0.2.0-rc.2` 的当前会话从 `SessionListState.byId` 中 `retainedBy.mainView` 确定。异步创建、记录、命名和发送使用 `sessions.using(..., { source: 'branchmarkOperation' }, ...)` 保留绑定，等待 `reference.ready` 后执行；界面跳转由 `uiWorkspace.openSession()` 拥有。完整分叉先取得 Host `prepareFork` 返回的完整轮次位置，不能把 Clip 消息位置直接当作截断点。会话树重开原有身份，不重新创建缺失会话。
+
 DSH 原生 Composer 引用仍从 draft mirror 恢复，无法解析的投影保留为文字。浏览器偏好只保存 Dock 布局；正文、备注、关系和顺序由 Host 持久化。接口与数据保证见[技术架构](../../docs/ARCHITECTURE.md)。

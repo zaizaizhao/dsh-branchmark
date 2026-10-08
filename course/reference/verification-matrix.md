@@ -6,7 +6,7 @@
 
 | 检查 | 真实使用的对象 | 能证明 | 不能证明 |
 | --- | --- | --- | --- |
-| [Host spec](../../packages/host/tests/branchmark.spec.ts) | Cordis、Session、Workspace、JSON storage；受控 TestPersistence 和 LLM adapter | 来源校验、visibility、顺序、关系/recall、摘要请求、模型隔离 | 真实 JSONL provider、真实 FS/Web 工具、实际模型回答、进程崩溃恢复 |
+| [Host spec](../../packages/host/tests/branchmark.spec.ts) | Cordis、Session、Workspace、JSON storage；受控 TestPersistence 和 LLM adapter | 来源校验、visibility、顺序、关系/recall、摘要请求、模型隔离 | 真实 JSONL provider、真实网络/模型回答、进程崩溃恢复 |
 | [Client domain spec](../../packages/client/tests/domain.spec.ts) | Controller、纯适配函数、受控 DSH Client 对象 | selection range、Composer 顺序/恢复/CAS、三种 launch、lineage 与偏好 | 宿主 DOM、真实 draft 恢复时序、CSS 与焦点行为 |
 | [DockHandle spec](../../packages/client/tests/dock-handle.spec.ts) | Happy DOM 中挂载的真实组件 | 手势阈值、提交/回滚、点击抑制、keyboard、resize、存储失败、cleanup | 实际浏览器的捕获投递、触摸滚动、碰撞和像素布局 |
 | [Bundle spec](../../packages/bundle/tests/bundle.spec.ts) | package manifest、patch | 声明和单 Host row | bundle 内容能否独立解析 |
@@ -14,7 +14,7 @@
 | [verify-release](../../scripts/verify-release.mjs) | manifests、实际安装的 peers、产物及发布元数据 | 版本和 generator 对齐、公开包结构 | npm 发布已发生或运行中服务已更新 |
 | [verify-course](../../scripts/verify-course.mjs) | 课程、manifest 与导航 | 版本口径、文档命令和链接锚点一致 | 教学深度、真实运行环境或模型质量 |
 
-Host [helper](../../packages/host/tests/helpers.ts)中的 persistence 是 Map-backed TestPersistence，FS 只是注入占位对象。它们不应被描述成真实 JSONL 与文件工具 e2e。新增工具测试要装入适当 provider 或受控执行替身，并标明能证明的层级。
+Host [helper](../../packages/host/tests/helpers.ts)中的 persistence 是 Map-backed TestPersistence，FS 使用精确目标版本的真实本地 provider。[Side Chat 工具测试](../../packages/host/tests/side-chat-tools.spec.ts)使用受控流和 Web provider 验证五个工具、项目外路径与写入拒绝、取消及关闭；它不证明真实网络或模型可用性。真实 JSONL 迁移与 Web UI 的本次结果见[适配报告](../../docs/verification/0.2.0-rc.2/README.md)。
 
 ## 真实 Web 场景
 
@@ -45,11 +45,11 @@ Host [helper](../../packages/host/tests/helpers.ts)中的 persistence 是 Map-ba
 
 - 初次摘要没有接入 send 的 AbortSignal；关闭访问不证明摘要已终止。
 - relation/usages 的单条 KV put 与 Session recall append 不是跨系统事务；没有完整故障恢复测试。
-- 现有测试没有覆盖五个只读工具、path escape、tool round 上限及所有 provider dialect。
+- tool round 上限及所有真实 provider dialect 仍需单独覆盖。
 - `maxReadChars` 在完整读取后截断，不限制文件读取峰值内存。
 - ForkDivider 的 marker 呈现不代替 lineage；多级 fork、恢复和日志代际要分别验证。
 - 当前没有自动跑真实 DSH 浏览器的完整视觉 suite，Happy DOM 不能补这个缺口。
-- 后续日志版本的旧 Clip 重定位、schema migration、跨设备同步与多租户授权不属于 rc.1 已实现能力。
+- 后续日志版本仍需复验旧 Clip 重定位；domain schema migration、跨设备同步与多租户授权未实现。
 
 ## 记录模板
 

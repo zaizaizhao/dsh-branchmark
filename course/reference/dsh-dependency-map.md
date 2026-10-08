@@ -2,7 +2,7 @@
 
 本插件没有重新实现模型适配器、Session Store、持久化、Workspace、文件系统、Web provider、RPC carrier 或 UI shell。它是这些 DSH 能力的 Consumer，并新增 Clip 领域逻辑与 Side Chat 产品层。本页回答“依赖谁”；为什么 DSH 把 Client 能力拆给这些所有者，见 [DSH Client 架构设计解读](dsh-client-architecture-rationale.md)。
 
-表格对应当前 BranchMark 的 DSH `0.1.2-rc.1` 依赖图。后续源码还涉及 handle 与日志格式，不能仅按角色名称推断兼容；升级时查看[兼容性清单](compatibility-and-limitations.md)与[第 13 章](../tutorials/13-dsh-prerelease-upgrade.md)。
+表格对应当前 BranchMark 的 DSH `0.2.0-rc.2` 依赖图。后续源码还涉及 handle 与日志格式，不能仅按角色名称推断兼容；升级时查看[兼容性清单](compatibility-and-limitations.md)与[第 13 章](../tutorials/13-dsh-prerelease-upgrade.md)。
 
 ## Host 运行依赖
 
@@ -25,7 +25,7 @@
 | 包 | 角色 | 本插件如何使用 |
 | --- | --- | --- |
 | `@deepseek-ai/cordis` | 插件生命周期、Service、Context、effect | `BranchMarkService extends Service`，资源在 effect disposer 中释放 |
-| `@deepseek-ai/dsh-typert-protocol` | `@Remote`、`bindTypertRemote` 与共享协议类型 | 标记 14 个 unary Host 方法，绑定 `branchmark` namespace |
+| `@deepseek-ai/dsh-typert-protocol` | `@Remote`、`bindTypertRemote` 与共享协议类型 | 标记 15 个 unary Host 方法，绑定 `branchmark` namespace |
 | `@deepseek-ai/dsh-typert-generator` | 构建期严格分析与 codec 生成 | Host `tsdown` 生成 `typert.host.*` 与 `typert.remote-client.*` |
 | `@deepseek-ai/dsh-typert-registry` | Host descriptor/codec 注册 | Bundle 重发 Typert contribution，DSH Loader 装载 |
 | `@deepseek-ai/dsh-api-gateway` | Host 调用分发与 Browser `ctx.remote` | 校验 args/result，调用 live `BranchMarkService` |
@@ -69,7 +69,7 @@ Bundle `package.json#dsh.client.inject` 声明浏览器 factory arrival 依赖�
 | `conversation.session.header.actions` | session list | 衍生关系 badge | 在标题旁增加动作，不替换 header |
 | `conversation.chat.node` | session keyed | `session/end-seed` 分隔线 | 可回放的业务节点，和 Session event 对齐 |
 
-Slot 的声明、owner props 与 inject face 以 DSH 源码为准：[`ui-layout` shell contract](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/client/ui-layout/src/client/index.ts)、[`ui-sidebar` contract](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/client/ui-sidebar/src/client/contract/slots.ts) 和 [`ui-conversation` contract](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/client/ui-conversation/src/client/contract/slots.ts)。
+Slot 的声明、owner props 与 inject face 以 DSH 源码为准：[`ui-layout` shell contract](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-layout/src/client/index.ts)、[`ui-sidebar` contract](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-sidebar/src/client/contract/slots.ts) 和 [`ui-conversation` contract](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/client/ui-conversation/src/client/contract/slots.ts)。
 
 ## 本插件没有使用的 DSH 能力
 
@@ -84,6 +84,6 @@ Slot 的声明、owner props 与 inject face 以 DSH 源码为准：[`ui-layout`
 
 ## Profile 前提
 
-标准 Web profile 已装载绝大多数依赖，具体行见 DSH [`dsh-base` patch](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/bundle/base/cordis.patch.yml) 与 [`dsh-web-app` patch](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/bundle/web-app/cordis.patch.yml)。如果用户移除任一 required Service，Cordis 会让 BranchMark 保持 pending，而不是在缺少能力时以降级逻辑运行。
+标准 Web profile 已装载绝大多数依赖，具体行见 DSH [`dsh-base` patch](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/bundle/base/cordis.patch.yml) 与 [`dsh-web-app` patch](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/bundle/web-app/cordis.patch.yml)。如果用户移除任一 required Service，Cordis 会让 BranchMark 保持 pending，而不是在缺少能力时以降级逻辑运行。
 
 `ctx.web` 存在不代表 search 与 fetch 都可用。Provider 是运行时选择的独立层；默认 Web profile 有 DeepSeek search provider，但没有 fetch provider。插件会把该错误作为工具结果交给模型和 UI，部署者若需要 fetch 必须显式安装/配置一个 provider。

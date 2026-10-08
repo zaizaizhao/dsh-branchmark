@@ -70,7 +70,7 @@ Side Chat 是不同机制：较早历史摘要、最近原始消息、完整枝�
 
 ### 普通衍生 Session
 
-1. **完整分叉**：`ctx.sessions.fork({ sessionId: sourceSessionId, atSeq: sourceEventSeq })`。DSH Host 选择第一个 `seq >= atSeq` 的 `turn/end`，并包含下一轮开始前的独立尾随事件。
+1. **完整分叉**：先调用 `remote.branchmark.prepareFork({ workspaceId, clipId })`，再将返回的 `sessionId/atSeq` 交给 `ctx.sessions.fork()`。BranchMark 解析主要 Clip 所在完整轮次和下一轮开始前的尾随事件；DSH 复制该位置之前的精确前缀。
 2. **仅携带枝签**：`ctx.sessions.create({ workspaceId })`，不设置父会话或 seed。
 3. Host 校验新 Session metadata：完整分叉的 `parentSession`、`isSeeded` 与精确 `inheritedEventCount` 必须匹配来源边界；仅枝签不得有 parent，且继承长度必须为 0。
 4. Host 写入一条衍生关系和全部 Clip 使用快照，并向新 Session 追加一条可折叠、可恢复的 `recall` 上下文消息。

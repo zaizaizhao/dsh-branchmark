@@ -1,10 +1,11 @@
 /** Durable Session links and frozen Clip context, independent of collection mutations. */
 
 import { randomUUID } from 'node:crypto'
+import { readPersistedSession } from './persisted-session.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { SessionLogOffset } from '@deepseek-ai/dsh-session'
-import { isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
+import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SessionInspection } from '@deepseek-ai/dsh-session-persistence'
 import { foldSessionTitle } from '@deepseek-ai/dsh-session-title'
@@ -13,6 +14,7 @@ import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { DerivedSessionRecord } from './spec.ts'
 import { rejected, success } from './result.ts'
 import type {
+  PrepareForkRequest, PrepareForkResult,
   Clip,
   ClipId,
   ClipFailure,
@@ -38,6 +40,31 @@ export class DerivedSessionStore {
     private readonly clips: KvTable<ClipId, Clip>,
     private readonly records: KvTable<SessionId, DerivedSessionRecord>,
   ) {}
+
+  /**
+   * Resolve the inclusive boundary of a saved source's completed turn.
+   * @param request - Workspace and active primary Clip.
+   * @returns A validated source and boundary, or a source/membership rejection.
+   */
+  async prepareFork(request: PrepareForkRequest): Promise<PrepareForkResult> {
+    const owned = this.ownedClip(request.workspaceId, request.clipId)
+    if (!owned.ok) return owned
+    const clip = owned.value
+    if (clip.status !== 'active' || clip.source.kind !== 'session-message' || !clip.source.forkable) {
+      return rejected({ code: 'invalid-request', message: 'the primary Clip cannot start a full fork' })
+    }
+    const source = clip.source
+    const membership = this.validateWorkspaceSession(request.workspaceId, source.sessionId)
+    if (membership !== undefined) return rejected(membership)
+    const inspection = await readPersistedSession(this.ctx.sessionPersistence, source.sessionId)
+    const event = inspection.events.find(value => value.seq === source.eventSeq)
+    const message = event === undefined ? null : deriveEventMessage(event)
+    const cut = this.expectedForkInheritedEventCount(inspection.events, source)
+    if (message?.id !== source.messageId || message.role !== source.role || cut === undefined) {
+      return rejected({ code: 'source-mismatch', sessionId: source.sessionId, eventSeq: source.eventSeq })
+    }
+    return success({ sessionId: source.sessionId, atSeq: cut - 1 })
+  }
 
   /** Validate a fresh Session and persist its relationship once, including concurrent calls.
    * @param request - Created Session, parent, mode, and explicitly selected attachments.
@@ -111,7 +138,7 @@ export class DerivedSessionStore {
     if (parentMembership !== undefined) return rejected(parentMembership)
     let inspection: SessionInspection
     try {
-      inspection = await this.ctx.sessionPersistence.inspect(request.derivedSessionId)
+      inspection = await readPersistedSession(this.ctx.sessionPersistence, request.derivedSessionId)
     } catch {
       return rejected({ code: 'session-not-found', sessionId: request.derivedSessionId })
     }
@@ -119,7 +146,7 @@ export class DerivedSessionStore {
     if (primary?.source.kind === 'session-message') {
       let sourceInspection: SessionInspection
       try {
-        sourceInspection = await this.ctx.sessionPersistence.inspect(primary.source.sessionId)
+        sourceInspection = await readPersistedSession(this.ctx.sessionPersistence, primary.source.sessionId)
       } catch {
         return rejected({ code: 'session-not-found', sessionId: primary.source.sessionId })
       }
@@ -183,7 +210,7 @@ export class DerivedSessionStore {
       derivedSession.append(
         'user/message',
         createUserMessage({
-          source: { kind: 'plugin', plugin: 'dsh-branchmark', form: 'recall' },
+          source: { kind: 'dsh-branchmark', form: 'recall' },
           content: [
             {
               type: 'text',
@@ -253,7 +280,7 @@ export class DerivedSessionStore {
     }
     let inspection: SessionInspection
     try {
-      inspection = await this.ctx.sessionPersistence.inspect(sessionId)
+      inspection = await readPersistedSession(this.ctx.sessionPersistence, sessionId)
     } catch {
       // Retained links survive a deleted or unreadable Session log.
       return { sessionId, available: false }

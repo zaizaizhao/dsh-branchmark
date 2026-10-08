@@ -4,6 +4,21 @@ BranchMark 的公开变化记录遵循 [Keep a Changelog](https://keepachangelog
 
 ## [Unreleased]
 
+### Changed
+
+- 本地候选 BranchMark `0.2.0-rc.1` 精确试配 npm DSH `0.2.0-rc.2`；更新 catalog、Typert generator、peers 与 lockfile，尚未发布 npm 包。
+- 持久 Session 读取改为集中管理 read handle，并在成功或失败后关闭；激活时以稳定消息身份校验并重定位已保存 Clip，保留正文、备注、标签和时间。
+- Client 使用显式 Session retention 与 Workspace 导航，图标使用 DSH Medium 导出；重开关系端点保留原 Session 身份。
+- 插件消息使用 `dsh-branchmark` source kind，Side Chat 工具结果改为独立 tool-role 消息。
+
+### Fixed
+
+- 完整分叉先由 Host `prepareFork` 解析主要 Clip 的完整轮次位置，再调用 DSH exact-prefix fork，避免只截取到消息而遗漏 turn/end。
+
+### Tests
+
+- 增加 read handle 关闭、旧 Clip 重定位、精确 fork cut、五种只读工具及 project escape/write 拒绝、回答取消和关闭测试；真实 npm Web 环境验收采用固定会话记录，不调用模型。
+
 ## [0.1.2-rc.2] - 2026-09-06
 
 ### Added

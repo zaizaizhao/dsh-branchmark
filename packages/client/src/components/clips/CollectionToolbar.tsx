@@ -1,5 +1,5 @@
 /** Search and trash remain distinct, labelled collection controls. */
-import { IconSearchOutline16, IconTrashOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconSearchOutlineMedium, IconTrashOutlineMedium } from '@deepseek-ai/dsh-client-ui-primitives'
 import { useBranchMarkText } from '../shared/text.ts'
 
 /** Render the search field and a separate trash button with an exact nonzero count.
@@ -23,7 +23,7 @@ export function CollectionToolbar({
   return (
     <div className="dbm-toolbar">
       <label className="dbm-search">
-        <IconSearchOutline16 size={14} />
+        <IconSearchOutlineMedium size={14} />
         <input
           type="search"
           value={search}
@@ -35,7 +35,7 @@ export function CollectionToolbar({
         />
       </label>
       <button type="button" className="dbm-trash-toggle" aria-pressed={trash} onClick={onToggleTrash}>
-        <IconTrashOutline16 size={15} />
+        <IconTrashOutlineMedium size={15} />
         <span>{t('trash')}</span>
         {trashCount > 0 && <b>{trashCount}</b>}
       </button>

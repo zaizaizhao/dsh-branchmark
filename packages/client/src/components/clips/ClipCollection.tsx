@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
-import { IconListPenOutline16, IconTrashOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconListPenOutlineMedium, IconTrashOutlineMedium } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Clip, ClipId } from 'dsh-branchmark-host/types'
 import type { BranchMarkClient } from '../../domain/client.ts'
 import type { BranchMarkUiController } from '../../domain/controller.ts'
@@ -163,7 +163,7 @@ export function ClipCollection({
       />
       {trash && (
         <div className="dbm-trash-banner">
-          <IconTrashOutline16 />
+          <IconTrashOutlineMedium />
           <span>
             <strong>{t('trash')}</strong>
             <small>{t('trashHint')}</small>
@@ -199,7 +199,7 @@ export function ClipCollection({
               setView((value) => (value === 'grid' ? 'list' : 'grid'))
             }}
           >
-            <IconListPenOutline16 />
+            <IconListPenOutlineMedium />
           </button>
         )}
       </div>
@@ -257,7 +257,7 @@ export function ClipCollection({
         <div className="dbm-empty">
           <div>
             <div className="dbm-empty-orb">
-              {trash ? <IconTrashOutline16 size={22} /> : <BranchMarkLogo compact size={20} />}
+              {trash ? <IconTrashOutlineMedium size={22} /> : <BranchMarkLogo compact size={20} />}
             </div>
             <strong>{t(filtered ? 'noMatches' : trash ? 'trashEmpty' : 'noClips')}</strong>
             <p>{t(filtered ? 'noMatchesHint' : trash ? 'trashHint' : 'noClipsHint')}</p>

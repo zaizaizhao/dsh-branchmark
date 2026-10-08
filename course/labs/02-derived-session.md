@@ -14,7 +14,7 @@
 
 完成实验 1，准备一个至少三轮且全部持久化的来源 Session。创建三条 Clip：第 2 轮 assistant 上一条作为 primary，第 1 轮或其他消息一条作为附件，另一个来源 Session 一条作为跨来源附件。为至少两条加 note。
 
-沿用实验 1 的 rc.1 基线，使用 `isSeeded + inspection.inheritedEventCount`。不要做多版本运行时探测；SessionHandle 是完成主线后的独立练习。
+沿用实验 1 的当前基线，使用 read handle 与 `isSeeded + inheritedEventCount`。不要做多版本运行时探测。
 
 ## 任务 1：定义三种 mode
 
@@ -37,22 +37,23 @@ Relation 对 full-fork 保存 primary/source fields，对 clips-only 禁止这�
 full-fork 调用：
 
 ```typescript
+const prepared = unwrap(await remote.branchmark.prepareFork({ workspaceId, clipId: primary.id }))
 sessions.fork({
-  sessionId: primary.source.sessionId,
-  atSeq: primary.source.eventSeq,
+  sessionId: prepared.sessionId,
+  atSeq: prepared.atSeq,
   increaseTitle: true,
 })
 ```
 
-clips-only 调用 API Session Controller 的 `sessions.create({ workspaceId })`。blank 同样创建新 Session，三条路径都调用 Host `recordDerivedSession`，显式记录组织父。
+clips-only 调用 API Session Controller 的 `sessions.create({ workspaceId })`。blank 同样创建新 Session，三条路径都通过 `sessions.using()` 保留 child，等待 `reference.ready` 后调用 Host `recordDerivedSession`，显式记录组织父。
 
 检查点：spy 证明 clips-only 没有调用 fork，full-fork 没有调用 create；二者都不调用 Composer `insertReference()` 或 `setDraft()`，Clip 上下文只由后续 Host recall append 提供。
 
 ## 任务 3：Host 验证 child 事实
 
-通过 `sessionPersistence.inspect()` 读取 child 的 header、events 与精确 inherited cut。clips-only 要求无 `parentSession`、`isSeeded=false`、cut 为 0；full-fork 要求 parent 正确、`isSeeded=true`、`inheritedEventCount` 等于预期。
+通过集中管理的 `readPersistedSession()` 读取 child 的 header、events 与精确 inherited cut。clips-only 要求无 `parentSession`、`isSeeded=false`、cut 为 0；full-fork 要求 parent 正确、`isSeeded=true`、`inheritedEventCount` 等于预期。
 
-必须读目标 DSH [`api/session-controller`](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/api/session-controller/src/commands.ts) 与 [`SessionHeader`](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/packages/core/session/src/types.ts) 的当前源码定位；不要假设课程版本和你的目标版本一致。
+必须读目标 DSH [`api/session-controller`](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/api/session-controller/src/commands.ts) 与 [`SessionHeader`](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/packages/core/session/src/types.ts) 的当前源码定位；不要假设课程版本和你的目标版本一致。
 
 检查点：创建一个无关 child 后伪造 full-fork record，Host 返回 `derived-session-mismatch`；relation table 不新增记录。
 
@@ -60,13 +61,13 @@ clips-only 调用 API Session Controller 的 `sessions.create({ workspaceId })`�
 
 先把 relation + usages 放进同一个 KV value，有附件时再向 child append plugin recall user message；blank 没有 usages 或 recall，并拒绝已有模型上下文的 child。Recall 正文按 attachment 顺序包含 excerpt 与被选择的 note。
 
-检查点：读取 child events，最后的 recall source 为 `kind=plugin`、`plugin=dsh-branchmark`、`form=recall`；模型输入可以从 event log 重建，Composer draft 仍为空。
+检查点：读取 child events，最后的 recall source 为 `kind=dsh-branchmark`、`form=recall`；模型输入可以从 event log 重建，Composer draft 仍为空。
 
 额外设计题：storage put 成功而 Session append 失败时如何恢复？当前实现没有跨系统事务。为你的练习实现至少写一份恢复设计，可选 `preparing/ready + retry` 或对账 repair；不要用“不会失败”回答。
 
 ## 任务 5：打开与后台发送
 
-无 question 时 `sessions.open(childId)`；有 question 时不要求先打开，取得 child binding 后调用：
+无 question 时 `uiWorkspace.openSession(childId)`；有 question 时不要求先打开，在 `sessions.using()` 的 `reference.ready` 后取得 child binding 并调用：
 
 ```typescript
 binding.session.prompt([{ type: 'text', text: question }], 'queue')
@@ -100,7 +101,7 @@ binding.session.prompt([{ type: 'text', text: question }], 'queue')
 
 Client launch 对照 [`domain/client.ts`](../../packages/client/src/domain/client.ts)，Host header 验证对照 [`DerivedSessionStore`](../../packages/host/src/relations.ts)，lineage 对照 [`domain/lineage.ts`](../../packages/client/src/domain/lineage.ts)，divider 对照 [`ForkDivider.tsx`](../../packages/client/src/components/ForkDivider.tsx)。
 
-若你发现需要复制父消息文本来实现 full-fork，请停下来重读 DSH [Session 文档](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/subsystems/session.md)；正确路径应由宿主 fork seed。
+若你发现需要复制父消息文本来实现 full-fork，请停下来重读 DSH [Session 文档](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/docs/subsystems/session.md)；正确路径应由宿主 fork seed。
 
 ## 复盘
 

@@ -72,18 +72,18 @@ class StrictSummaryAdapter extends LlmAdapter {
     } else {
       const calls = new Set<string>()
       for (const message of options.messages) {
+        if (message.role === 'tool' && !calls.has(message.toolCallId)) {
+          yield {
+            type: 'finish',
+            reason: {
+              kind: 'error',
+              failure: { code: 'INVALID_REQUEST', message: 'orphaned tool result in answer history' },
+            },
+          }
+          return
+        }
         for (const block of message.content) {
           if (block.type === 'tool-call') calls.add(block.id)
-          if (block.type === 'tool-result' && !calls.has(block.toolCallId)) {
-            yield {
-              type: 'finish',
-              reason: {
-                kind: 'error',
-                failure: { code: 'INVALID_REQUEST', message: 'orphaned tool result in answer history' },
-              },
-            }
-            return
-          }
         }
       }
     }
@@ -169,6 +169,7 @@ describe('BranchMarkService', () => {
       { method: 'deleteForever', invocation: { kind: 'direct' } },
       { method: 'batchUpdate', invocation: { kind: 'direct' } },
       { method: 'recordDerivedSession', invocation: { kind: 'direct' } },
+      { method: 'prepareFork', invocation: { kind: 'direct' } },
       { method: 'listRelations', invocation: { kind: 'direct' } },
     ])
   })
@@ -481,7 +482,7 @@ describe('BranchMarkService', () => {
     expect(child.snapshotEvents().at(-1)).toMatchObject({
       type: 'user/message',
       data: {
-        source: { kind: 'plugin', plugin: 'dsh-branchmark', form: 'recall' },
+        source: { kind: 'dsh-branchmark', form: 'recall' },
         content: [{ type: 'text', text: expect.stringContaining('Carry this note') }],
       },
       surfaceOp: 'append',

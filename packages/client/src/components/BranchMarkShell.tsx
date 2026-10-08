@@ -1,3 +1,4 @@
+import { currentSessionId as selectedSessionId } from '../domain/client.ts'
 import { useEffect, useState } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { PropsRuntime, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
@@ -8,7 +9,7 @@ import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
-import { IconChevronRightOutline14, IconCloseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconChevronRightOutlineMedium, IconCloseOutlineMedium } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { BranchMarkClient } from '../domain/client.ts'
 import type { BranchMarkDockView, BranchMarkLauncher, BranchMarkUiController } from '../domain/controller.ts'
 import {
@@ -217,7 +218,7 @@ function DockPanel({
               controller.collapseDock()
             }}
           >
-            <IconChevronRightOutline14 />
+            <IconChevronRightOutlineMedium />
           </button>
           <button
             type="button"
@@ -227,7 +228,7 @@ function DockPanel({
               controller.hideDock()
             }}
           >
-            <IconCloseOutline16 />
+            <IconCloseOutlineMedium />
           </button>
         </header>
         <div
@@ -320,7 +321,7 @@ function DockPanel({
  * @returns The additive BranchMark overlay without resizing the DSH conversation layout.
  */
 function BranchMarkShellContent({ useSessions, useWorkspaces, controller, client }: ShellProps) {
-  const currentSessionId = useSessions((snapshot: SessionListState) => snapshot.current)
+  const currentSessionId = useSessions(selectedSessionId)
   const sessionIds = useSessions((snapshot: SessionListState) => snapshot.ids)
   const sessionsById = useSessions((snapshot: SessionListState) => snapshot.byId)
   useWorkspaces((snapshot: WorkspaceSnapshot) => snapshot.items)

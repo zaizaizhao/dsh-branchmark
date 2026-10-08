@@ -21,7 +21,7 @@ assert.equal(hostModule.default?.name, 'BranchMarkService')
 
 const typertModule = await import(new URL('lib/typert.host.js', bundleRoot).href)
 assert.equal(typertModule.TYPERT.package, 'dsh-branchmark')
-assert.equal(typertModule.TYPERT.invocations.length, 14)
+assert.equal(typertModule.TYPERT.invocations.length, 15)
 
 const client = outputs.find(([name]) => name === 'client.js')?.[1]
 verifyBrowserBundle(client)

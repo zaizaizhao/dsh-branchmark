@@ -1,10 +1,10 @@
 # 第 13 章：跟随 DSH 预发布版本升级
 
-本章是一条升级审计路线，不是当前 API 目录。先完成第 3、5、6、7、10、11 章，能运行 rc.1 教材，再选择另一个精确 DSH 目标。目标是给出“哪些功能受影响、由谁修改、什么证据足够”的回答，而不是遇到类型错误就加兼容分支。
+本章是一条升级审计路线，不是当前 API 目录。先完成第 3、5、6、7、10、11 章，能运行当前候选教材，再选择另一个精确 DSH 目标。目标是给出“哪些功能受影响、由谁修改、什么证据足够”的回答，而不是遇到类型错误就加兼容分支。
 
 ## 1. 先固定比较基准
 
-[版本基线](../reference/version-baseline.md)固定当前 release 与后续源码快照。升级时至少记录：
+[版本基线](../reference/version-baseline.md)固定当前 npm release 与对应源码。升级时至少记录：
 
 | 身份 | 要回答的问题 |
 | --- | --- |
@@ -18,7 +18,7 @@
 
 ## 2. 用差异判断改动量
 
-在 DSH 源码 checkout，而不是 BranchMark 目录，执行这组已发布版本比较：
+在 DSH 源码 checkout，而不是 BranchMark 目录，执行这组历史发布身份比较：
 
 ```sh
 git fetch origin
@@ -47,9 +47,11 @@ git diff dsh-v0.1.2-alpha.5 dsh-v0.1.2-rc.1 -- packages/core/session/package.jso
 
 ## 4. 当前依赖表就是审计起点
 
-rc.1 主线使用：
+DSH `0.2.0-rc.2` 适配主线使用：
 
-- `SessionPersistence.inspect()` 返回 meta、events 与 inherited cut。
+- `readPersistedSession()` 通过 `open(read)/read/finally close` 返回 header、events 与 inherited cut。
+- Host 激活时按稳定消息身份校验并重定位旧 Clip；完整分叉前 `prepareFork` 返回完整轮次位置。
+- Client 异步操作使用显式 retention，导航使用 `uiWorkspace.openSession`，当前会话从 `retainedBy.mainView` 读取。
 - `SessionHeader.parentSession/isSeeded` 与 `SessionInspection.inheritedEventCount` 校验 lineage。
 - live `Session.seq/eventAt/snapshotEvents` 分别表达标量、索引和数组读取。
 - `useInput` 订阅 Composer occurrence，公开 insert/codec 完成引用恢复和提交。
@@ -57,9 +59,9 @@ rc.1 主线使用：
 
 细节集中在[依赖矩阵](../reference/dsh-dependency-map.md)和[Session 身份参考](../reference/session-identity-and-migrations.md)。每项记录“保留、改名、语义改变、移除、待核对”之一；“能 import”不能直接填成兼容。
 
-## 5. 后续目标不能只改四个 inspect
+## 5. API 适配与来源重定位分别验证
 
-在固定上游源码中，read handle 有显式 close 责任，日志 v2 又可能重排 event seq。这是两个独立问题：
+当前发布目标的 read handle 有显式 close 责任，日志代际迁移又可能重排 event seq。这是两个独立问题，当前候选分别用读取模块和激活时的 Clip 校验解决：
 
 ```text
 资源适配：open(read) → read → finally close
@@ -68,7 +70,7 @@ rc.1 主线使用：
 
 只完成第一行，旧 Clip 仍可能指向错误位置；只在 Host 记录关系时修复第二行，又晚于 Client 的 fork 创建。所有消费者与失败策略见[来源重定位设计](../reference/session-identity-and-migrations.md#6-重定位设计必须覆盖全部消费者)。
 
-练习只设计读取模块的输入/输出和失败用例，不把未实现 helper 放进当前源码导航；也不要用 `if ("inspect" in service)` 同时支持两套预发布 API。一个包对应一个经过验证的 DSH 目标。
+对照现有读取模块和旧 Clip fixture，为新的目标设计输入/输出和失败用例；不要用 `if ("inspect" in service)` 同时支持两套预发布 API。一个包对应一个经过验证的 DSH 目标。
 
 ## 6. 用户数据要用旧记录验收
 
@@ -101,7 +103,7 @@ rc.1 主线使用：
 
 ## 8. 发布与源码实验分开
 
-本项目的正式包版本独立递增，并声明唯一的已发布 DSH 目标；发布步骤与可用 npm 通道只由 [RELEASING.md](../../RELEASING.md)维护。源码实验没有义务发到 npm，也不能把 master-compatible 产物伪装成 rc.1 包。
+本项目的正式包版本独立递增，并声明唯一的已发布 DSH 目标；发布步骤与可用 npm 通道只由 [RELEASING.md](../../RELEASING.md)维护。源码实验没有义务发到 npm，也不能把 未验证的 master 产物伪装成已发布目标兼容包。
 
 若将来确需给外部测试者发 edge 包，应先单独确定发布身份、标签和对应 verifier 政策。当前检查要求四份插件 manifest 同号，并把 generator 和 DSH peers 固定到同一兼容目标；一个带 SHA 的包版本不能替代这些检查。本课程不会创建 edge 标签或执行发布。
 

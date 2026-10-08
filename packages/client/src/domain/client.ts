@@ -5,6 +5,8 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type {} from '@deepseek-ai/dsh-api-gateway/client'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
+import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
+import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import type {} from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { InputState } from '@deepseek-ai/dsh-client-ui-conversation/client'
@@ -67,6 +69,22 @@ export interface ComposerReferenceRecoveryResult {
 
 const BRANCHMARK_CLIPBOARD_TOKEN = /@branchmark:([A-Za-z0-9-]+)/gu
 
+declare module '@deepseek-ai/dsh-api-session-controller/client' {
+  interface SessionReferenceSourceMap {
+    /** Short-lived BranchMark operations outside the selected Conversation. */
+    branchmarkOperation: unknown
+  }
+}
+
+/**
+ * Resolve the Conversation selected by the native main view.
+ * @param snapshot - Session catalog with native reference-source counts.
+ * @returns Selected Session identity, or undefined while no main view retains one.
+ */
+export function currentSessionId(snapshot: SessionListState): SessionId | undefined {
+  return Object.values(snapshot.byId).find(session => (session.retainedBy.mainView ?? 0) > 0)?.id
+}
+
 /** Deep browser integration module that keeps DSH state and transport details out of components. */
 export class BranchMarkClient {
   constructor(private readonly ctx: ClientContext) {}
@@ -78,7 +96,7 @@ export class BranchMarkClient {
   }
 
   currentWorkspace(): WorkspaceId | undefined {
-    const current = this.ctx.sessions.list.getSnapshot().current
+    const current = currentSessionId(this.ctx.sessions.list.getSnapshot())
     if (current !== undefined) return this.workspaceForSession(current)
     const workspaces = this.ctx.workspaces.list.getSnapshot().items
     const sessions = this.ctx.sessions.list.getSnapshot().byId
@@ -359,9 +377,12 @@ export class BranchMarkClient {
       if (primary?.source.kind !== 'session-message' || !primary.source.forkable) {
         throw remoteError('fork-unavailable', '主要来源当前不能完整分叉，请显式切换为仅携带枝签。')
       }
+      const prepared = this.unwrap(await this.ctx.remote.branchmark.prepareFork({
+        workspaceId: input.workspaceId, clipId: primary.id,
+      }))
       sessionId = await this.ctx.sessions.fork({
-        sessionId: primary.source.sessionId,
-        atSeq: primary.source.eventSeq,
+        sessionId: prepared.sessionId,
+        atSeq: prepared.atSeq,
         increaseTitle: true,
       })
     } else {
@@ -374,37 +395,34 @@ export class BranchMarkClient {
         includeNote: input.includeNotes.has(clip.id),
       }),
     )
-    await this.recordDerived({
-      derivedSessionId: sessionId,
-      workspaceId: input.workspaceId,
-      mode: input.mode,
-      ...(input.mode === 'full-fork' && primary?.source.kind === 'session-message'
-        ? { parentSessionId: primary.source.sessionId }
-        : { parentSessionId: input.parentSessionId }),
-      ...(input.mode === 'full-fork' && primary !== undefined ? { primaryClipId: primary.id } : {}),
-      attachments,
-    })
-    if (input.title?.trim()) {
-      const binding = this.ctx.sessions.binding(sessionId)
-      if (binding === undefined)
-        throw remoteError('session-unavailable', '新会话已创建，但尚未建立客户端绑定。')
-      const renamed = await binding.session.rename(input.title.trim())
-      if (!renamed.ok) throw remoteError(renamed.error.code, renamed.error.message)
-    }
-    if (input.question === undefined) {
-      this.ctx.sessions.open(sessionId)
+    return this.ctx.sessions.using(sessionId, { source: 'branchmarkOperation' }, async reference => {
+      const binding = await reference.ready
+      await this.recordDerived({
+        derivedSessionId: sessionId,
+        workspaceId: input.workspaceId,
+        mode: input.mode,
+        ...(input.mode === 'full-fork' && primary?.source.kind === 'session-message'
+          ? { parentSessionId: primary.source.sessionId }
+          : { parentSessionId: input.parentSessionId }),
+        ...(input.mode === 'full-fork' && primary !== undefined ? { primaryClipId: primary.id } : {}),
+        attachments,
+      })
+      if (input.title?.trim()) {
+        const renamed = await binding.session.rename(input.title.trim())
+        if (!renamed.ok) throw remoteError(renamed.error.code, renamed.error.message)
+      }
+      if (input.question === undefined) {
+        this.ctx.uiWorkspace.openSession(sessionId)
+        return { sessionId }
+      }
+      const result = await binding.session.prompt([{ type: 'text', text: input.question }], 'queue')
+      if (!result.ok) throw remoteError(result.error.code, result.error.message)
       return { sessionId }
-    }
-    const binding = this.ctx.sessions.binding(sessionId)
-    if (binding === undefined)
-      throw remoteError('session-unavailable', '新会话已经创建，但客户端尚未建立其绑定。')
-    const result = await binding.session.prompt([{ type: 'text', text: input.question }], 'queue')
-    if (!result.ok) throw remoteError(result.error.code, result.error.message)
-    return { sessionId }
+    })
   }
 
   openSession(sessionId: SessionId): void {
-    this.ctx.sessions.open(sessionId)
+    this.ctx.uiWorkspace.openSession(sessionId)
   }
 
   /** Adopt a persisted related Session omitted from DSH's unprompted-session list.
@@ -424,9 +442,11 @@ export class BranchMarkClient {
       if (!related.sessions.some((session) => session.sessionId === sessionId && session.available)) {
         throw remoteError('session-not-found', this.failureMessage({ code: 'session-not-found' }))
       }
-      await this.ctx.sessions.create({ workspaceId, sessionId })
     }
-    this.ctx.sessions.open(sessionId)
+    await this.ctx.sessions.using(sessionId, { source: 'branchmarkOperation' }, async reference => {
+      await reference.ready
+      this.ctx.uiWorkspace.openSession(sessionId)
+    })
   }
 
   private async recordDerived(

@@ -42,15 +42,18 @@ I built BranchMark to keep useful knowledge and conversations that need follow-u
 
 ## Quick start
 
-The supported pair is **BranchMark `0.1.2-rc.2` + DSH `0.1.2-rc.1`**, using the Web Profile. Node.js must satisfy `^22.19.0 || >=24.0.0`.
+The source candidate targets **BranchMark `0.2.0-rc.1` + DSH `0.2.0-rc.2`**, tested with the Web Profile. This BranchMark candidate has not been published to npm; build its tarball from source. Published BranchMark `0.1.2-rc.2` targets DSH `0.1.2-rc.1`. Node.js must satisfy `^22.19.0 || >=24.0.0`.
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.1.2-rc.1
-dsh plugin --profile web add dsh-branchmark@0.1.2-rc.2
+npm install --global @deepseek-ai/dsh@0.2.0-rc.2
+pnpm install --frozen-lockfile
+pnpm run build
+pnpm run pack:bundle
+dsh plugin --profile web add "$(pwd)/dist/dsh-branchmark-0.2.0-rc.1.tgz"
 dsh --profile web
 ```
 
-If you already have the matching DSH version, run the plugin installation command and restart the Web Profile. Side Chat and regular conversation prompts require an available model configured in DSH.
+Run the build commands from this repository root. If you already have the matching DSH version, build and install the plugin, then restart the Web Profile. Use an isolated `DSH_HOME` for the trial; the [adaptation report](docs/verification/0.2.0-rc.2/README.md) records the procedure and evidence. Saving, organizing, quoting, and opening all three branch modes without a question do not call a model. Sending a Side Chat or regular conversation prompt requires an available model.
 
 ### How to use
 

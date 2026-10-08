@@ -51,7 +51,7 @@
 - [紧凑批量命令与枝签排序 Agent Note](../.agents/notes/implemented/feature/2026-08-30-compact-batch-commands-and-clip-ordering.zh.md)
   置顶分组、完整集合重排和 Composer draft mirror 恢复的设计决策；卡片和会话树交互由[会话树设计记录](../.agents/notes/implemented/feature/2026-09-06-session-tree-and-clip-interactions.md)维护。
 - [DSH alpha.2 Client 能力集成 Agent Note](../.agents/notes/implemented/architecture/2026-08-31-dsh-alpha2-client-capability-integration.zh.md)
-  Client 所有权和单版本策略的历史决策起点；该记录中的版本/旧验证不替代本课程 rc.1 基线与本次结果。
+  Client 所有权和单版本策略的历史决策起点；该记录中的版本/旧验证不替代本课程当前基线与本次结果。
 - [BranchMark source tree](../packages)
   可运行实现的最终依据。教程中的片段用于解释，完整行为以这里的源文件和测试为准。
 - [Official DeepSeek Harness repository at the course source anchor](https://github.com/deepseek-ai/deepseek-harness/tree/a66e4702047846cdaa10c66c9d3df3951f5ea70d)
@@ -72,7 +72,7 @@
 - [课程版本基线](reference/version-baseline.md)：主线 release commit、npm 查询日期和本地源码状态。
 - [rc.1 官方 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1)：注意它的更新摘要与“alpha.5 到 rc.1”不是相同比较区间。
 - [Session 身份与迁移参考](reference/session-identity-and-migrations.md)：seq/offset、读取成本、lineage/marker，以及后续 handle 和旧 Clip 重定位风险的集中入口。
-- [固定后续源码快照](https://github.com/deepseek-ai/deepseek-harness/tree/d347e70390)：独立上游审计目标，不替代当前 npm rc.1。
+- [当前 DSH release 源码](https://github.com/deepseek-ai/deepseek-harness/tree/639ed015397290b3745d163aafe02ffee4aa3f84)：对应 npm `0.2.0-rc.2`，主线固定此 commit。
 - [后续 handle 定义](https://github.com/deepseek-ai/deepseek-harness/blob/d347e70390/packages/session/session-persistence/src/handle.ts)：读写所有权、close 和 durability barrier。
 - [后续 v1→v2 迁移](https://github.com/deepseek-ai/deepseek-harness/blob/d347e70390/packages/session/session-format-v1-to-v2/src/migration.ts)：chunk 折叠、seq 重排、inherited cut 与日志内引用重映射。
 - [相邻格式迁移规则](https://github.com/deepseek-ai/deepseek-harness/blob/d347e70390/.agents/notes/implemented/architecture/2026-08-31-released-session-format-migrations.md)：旧代际保留不等于支持回退或降级。
@@ -87,4 +87,4 @@
 ## Gaps
 
 - 当前官方教程没有把 Host Remote、独立 Client Module、原生 Composer 引用恢复、普通 Session 分叉和直接 LLM 调用串成一个完整的树外插件实例；本课程用当前插件源码补齐这条端到端路径。
-- DSH `0.1.2-rc.1` 仍是预发布版本，API Session/Workspace Controller 与 UI Conversation/Chat 的组合没有稳定兼容承诺；每次升级必须执行本课程的兼容性审计。
+- DSH `0.2.0-rc.2` 仍是预发布版本，API Session/Workspace Controller 与 UI Conversation/Chat 的组合没有稳定兼容承诺；每次升级必须执行本课程的兼容性审计。

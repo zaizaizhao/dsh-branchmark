@@ -1,5 +1,14 @@
 /** Public JSON-safe types shared by the BranchMark Host and browser plugin. */
 
+import type { ContextFormed } from '@deepseek-ai/dsh-llm'
+
+declare module '@deepseek-ai/dsh-llm' {
+  interface MessageSourceMap {
+    /** Explicitly selected excerpts and temporary exploration owned by BranchMark. */
+    'dsh-branchmark': { readonly kind: 'dsh-branchmark' } & ContextFormed
+  }
+}
+
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -183,6 +192,21 @@ export interface ClipUsage {
 
 /** Plugin-owned semantics associated with a DSH ordinary Session. */
 export type DerivedSessionMode = 'full-fork' | 'clips-only' | 'blank'
+
+/** Saved source whose completed turn must be inherited by a full fork. */
+export interface PrepareForkRequest {
+  readonly workspaceId: WorkspaceId
+  readonly clipId: ClipId
+}
+
+/** Exact inclusive DSH boundary resolved before creating a child Session. */
+export interface PrepareForkValue {
+  readonly sessionId: SessionId
+  readonly atSeq: number
+}
+
+/** Prepared source identity and boundary, or an unavailable source. */
+export type PrepareForkResult = ClipSuccess<PrepareForkValue> | ClipRejected
 
 /** Persisted organizational link; only full-fork also inherits DSH history. */
 export interface DerivedSessionRelation {

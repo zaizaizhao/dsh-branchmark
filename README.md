@@ -42,15 +42,18 @@ BranchMark 是一个 DSH Web 插件：保存值得保留的回答，在 Side Cha
 
 ## 快速开始
 
-当前兼容组合为 **BranchMark `0.1.2-rc.2` + DSH `0.1.2-rc.1`**，仅支持 Web Profile。Node.js 要求 `^22.19.0 || >=24.0.0`。
+当前源码试配组合为 **BranchMark `0.2.0-rc.1` + DSH `0.2.0-rc.2`**，验收对象为 Web Profile。BranchMark 候选尚未发布到 npm，需要从源码构建 tarball；已发布的 BranchMark `0.1.2-rc.2` 仍对应 DSH `0.1.2-rc.1`。Node.js 要求 `^22.19.0 || >=24.0.0`。
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.1.2-rc.1
-dsh plugin --profile web add dsh-branchmark@0.1.2-rc.2
+npm install --global @deepseek-ai/dsh@0.2.0-rc.2
+pnpm install --frozen-lockfile
+pnpm run build
+pnpm run pack:bundle
+dsh plugin --profile web add "$(pwd)/dist/dsh-branchmark-0.2.0-rc.1.tgz"
 dsh --profile web
 ```
 
-已安装对应 DSH 的用户，只需执行插件安装命令，再重启 Web Profile。Side Chat 和正式会话提问需要在 DSH 中配置可用模型。
+构建命令在本仓库根目录执行。已安装对应 DSH 的用户，只需构建并安装插件，再重启 Web Profile。试配建议使用独立 `DSH_HOME`，步骤和验收结果见[适配报告](docs/verification/0.2.0-rc.2/README.md)。保存、整理、引用和不发送问题的三种分支不调用模型；Side Chat 或正式会话发送问题时才需要可用模型。
 
 ### 怎么用
 

@@ -1,6 +1,7 @@
 /** Process-local read-only Side Chat runtime; it never creates or writes a DSH Session. */
 
 import { randomUUID } from 'node:crypto'
+import { readPersistedSession } from './persisted-session.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-web'
@@ -8,7 +9,7 @@ import {
   BlockAssembler, createToolResultMessage, createUserMessage, ReasoningEffortId,
 } from '@deepseek-ai/dsh-llm'
 import type {
-  ContentBlock, LlmCallConfig, Message, ToolCallBlock, ToolResultBlock, ToolSchema,
+  ContentBlock, LlmCallConfig, Message, ToolCallBlock, ToolResultMessage, ToolSchema,
 } from '@deepseek-ai/dsh-llm'
 import { deriveEventMessage, foldRequestHeader, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
@@ -121,24 +122,21 @@ function sideChatId(): SideChatId {
 function contentText(content: readonly ContentBlock[]): string {
   return content.flatMap(block => {
     if (block.type === 'text' || block.type === 'reasoning') return [block.text]
-    if (block.type === 'tool-result') return [contentText(block.content)]
     return []
   }).join('\n\n')
 }
 
-function toolResults(messages: readonly Message[]): ReadonlyMap<string, ToolResultBlock> {
-  const results = new Map<string, ToolResultBlock>()
+function toolResults(messages: readonly Message[]): ReadonlyMap<string, ToolResultMessage> {
+  const results = new Map<string, ToolResultMessage>()
   for (const message of messages) {
-    for (const block of message.content) {
-      if (block.type === 'tool-result') results.set(block.toolCallId, block)
-    }
+    if (message.role === 'tool') results.set(message.toolCallId, message)
   }
   return results
 }
 
 function messageSnapshot(
   message: Message,
-  results: ReadonlyMap<string, ToolResultBlock>,
+  results: ReadonlyMap<string, ToolResultMessage>,
   answerRunning: boolean,
 ) {
   const text = message.content.flatMap(block => block.type === 'text' ? [block.text] : []).join('\n\n')
@@ -193,7 +191,7 @@ function clipRecall(clips: readonly Clip[], selections: ReadonlyMap<ClipId, bool
     ].join('\n')
   }).join('\n\n')
   return createUserMessage({
-    source: { kind: 'plugin', plugin: 'dsh-branchmark', form: 'recall' },
+    source: { kind: 'dsh-branchmark', form: 'recall' },
     content: [{ type: 'text', text: `Explicitly selected Clips:\n\n${text}` }],
   })
 }
@@ -212,15 +210,14 @@ function summaryTranscript(messages: readonly Message[]): string {
   return JSON.stringify(messages.map((message, index) => ({
     index: index + 1,
     role: message.source.kind === 'tool' ? 'tool' : message.role,
-    content: message.content.flatMap((block): string[] => {
+    content: message.role === 'tool'
+      ? [`Tool result ${message.toolCallId}${message.isError === true ? ' (error)' : ''}: ${contentText(message.content)}`]
+      : message.content.flatMap((block): string[] => {
       switch (block.type) {
         case 'text': return [`Text: ${block.text}`]
         case 'reasoning': return []
         case 'image': return ['Image: [omitted]']
         case 'tool-call': return [`Tool call ${block.name}: ${block.arguments}`]
-        case 'tool-result': return [
-          `Tool result ${block.toolCallId}${block.isError === true ? ' (error)' : ''}: ${contentText(block.content)}`,
-        ]
         default: return []
       }
     }),
@@ -313,7 +310,7 @@ export class TemporarySideChatRuntime {
   async create(request: CreateSideChatRequest, clips: readonly Clip[]): Promise<SideChatSnapshot | undefined> {
     const primary = clips.find(clip => clip.id === request.primaryClipId)
     if (primary?.source.kind !== 'session-message' || !primary.source.forkable) return undefined
-    const inspection = await this.ctx.sessionPersistence.inspect(primary.source.sessionId)
+    const inspection = await readPersistedSession(this.ctx.sessionPersistence, primary.source.sessionId)
     const prefix = sourcePrefix(inspection.events, primary.source.eventSeq, primary.source.turn)
     if (prefix === undefined) return undefined
     const header = foldRequestHeader(prefix)
@@ -390,7 +387,7 @@ export class TemporarySideChatRuntime {
     if (entry === undefined) return undefined
     if (entry.status === 'running') return 'busy'
     const question = createUserMessage({
-      source: { kind: 'plugin', plugin: 'dsh-branchmark' },
+      source: { kind: 'dsh-branchmark' },
       content: [{ type: 'text', text }],
     })
     entry.messages = [...entry.messages, question]
@@ -432,7 +429,7 @@ export class TemporarySideChatRuntime {
       try {
         const summary = await this.summarize(entry.route, earlier)
         context.push(createUserMessage({
-          source: { kind: 'plugin', plugin: 'dsh-branchmark', form: 'recall' },
+          source: { kind: 'dsh-branchmark', form: 'recall' },
           content: [{ type: 'text', text: `AI summary of earlier source history:\n${summary}` }],
         }))
       } catch (error) {
@@ -458,7 +455,7 @@ export class TemporarySideChatRuntime {
       ? route
       : { ...route, provider: this.config.summaryProvider, model: this.config.summaryModel }
     const request = [createUserMessage({
-      source: { kind: 'plugin', plugin: 'dsh-branchmark' },
+      source: { kind: 'dsh-branchmark' },
       content: [{
         type: 'text',
         text: [
@@ -512,7 +509,7 @@ export class TemporarySideChatRuntime {
           entry.updatedAt = timestamp()
         }
         const assistant = assembler.message({
-          kind: 'model', provider: entry.route.provider, model: entry.route.model,
+          provider: entry.route.provider, model: entry.route.model,
           ...(assembler.replayState === undefined ? {} : { replayState: assembler.replayState }),
         })
         if (assembler.finish.kind === 'aborted') {

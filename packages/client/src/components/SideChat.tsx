@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import {
-  IconCheckOutline16, IconChevronDownOutline14, IconCloseOutline16, IconFolderOpenOutline16,
-  IconGlobeOutline14, IconPlusOutline16, IconSearchOutline16, IconSparkle16, MarkdownText,
+  IconCheckOutlineMedium, IconChevronDownOutlineMedium, IconCloseOutlineMedium, IconFolderOpenOutlineMedium,
+  IconGlobeOutlineMedium, IconPlusOutlineMedium, IconSearchOutlineMedium, IconSparkleMedium, MarkdownText,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   SideChatId, SideChatMessageSnapshot, SideChatModelOption, SideChatModelSelection,
@@ -98,10 +98,10 @@ function toolSummary(tool: SideChatToolSnapshot): string {
 
 function ToolActivity({ tool }: { readonly tool: SideChatToolSnapshot }) {
   const icon = tool.name === 'web_search' || tool.name === 'web_fetch'
-    ? <IconGlobeOutline14 />
+    ? <IconGlobeOutlineMedium />
     : tool.name === 'project_search'
-      ? <IconSearchOutline16 size={14} />
-      : <IconFolderOpenOutline16 size={14} />
+      ? <IconSearchOutlineMedium size={14} />
+      : <IconFolderOpenOutlineMedium size={14} />
   return (
     <details className="dbm-side-tool" data-status={tool.status}>
       <summary>
@@ -165,7 +165,7 @@ function SideChatModelPicker({ tab, client, controller }: {
       >
         <span>{selected?.name ?? tab.model.model}</span>
         {effectiveEffort !== undefined && <small>{selected?.reasoning?.efforts.find(item => item.id === effectiveEffort)?.name ?? effectiveEffort}</small>}
-        <IconChevronDownOutline14 />
+        <IconChevronDownOutlineMedium />
       </button>
       {open && (
         <div className="dbm-side-model-menu" role="menu" aria-label="Side Chat 模型">
@@ -190,7 +190,7 @@ function SideChatModelPicker({ tab, client, controller }: {
                     }) }}
                   >
                     <span><strong>{model.name}</strong>{model.description !== undefined && <small>{model.description}</small>}</span>
-                    {active && <IconCheckOutline16 />}
+                    {active && <IconCheckOutlineMedium />}
                   </button>
                 )
               })}
@@ -250,7 +250,7 @@ function SideChatMessage({ tab, message, client, controller }: {
     >
       {message.reasoning !== undefined && message.reasoning !== '' && (
         <details className="dbm-side-reasoning">
-          <summary><IconSparkle16 size={13} /><strong>Think</strong><i aria-hidden /><span>{message.reasoning.split('\n')[0]}</span></summary>
+          <summary><IconSparkleMedium size={13} /><strong>Think</strong><i aria-hidden /><span>{message.reasoning.split('\n')[0]}</span></summary>
           <div><MarkdownText text={message.reasoning} labels={BRANCHMARK_MARKDOWN_LABELS} /></div>
         </details>
       )}
@@ -346,7 +346,7 @@ export function SideChatView({ client, controller }: {
     return (
       <div className="dbm-empty dbm-side-empty">
         <div>
-          <div className="dbm-empty-orb"><IconPlusOutline16 /></div>
+          <div className="dbm-empty-orb"><IconPlusOutlineMedium /></div>
           <strong>还没有临时 Side Chat</strong>
           <p>从任意枝签卡片点击“Side Chat”开始。它不会写入主会话，关闭标签后立即销毁。</p>
         </div>
@@ -364,7 +364,7 @@ export function SideChatView({ client, controller }: {
               Side Chat {String(index + 1)}
             </button>
             <button type="button" aria-label="关闭并销毁 Side Chat" onClick={() => { void close(tab.id) }}>
-              <IconCloseOutline16 size={12} />
+              <IconCloseOutlineMedium size={12} />
             </button>
           </div>
         ))}
@@ -390,7 +390,7 @@ export function SideChatView({ client, controller }: {
           <div className="dbm-side-message" data-role="assistant" data-streaming="true">
             {active.partialReasoning !== '' && (
               <details className="dbm-side-reasoning" open>
-                <summary><IconSparkle16 size={13} /><strong>Think</strong><i aria-hidden /><span>正在思考…</span></summary>
+                <summary><IconSparkleMedium size={13} /><strong>Think</strong><i aria-hidden /><span>正在思考…</span></summary>
                 <div><MarkdownText text={active.partialReasoning} streaming labels={BRANCHMARK_MARKDOWN_LABELS} /></div>
               </details>
             )}

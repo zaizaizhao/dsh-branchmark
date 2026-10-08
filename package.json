@@ -1,6 +1,6 @@
 {
   "name": "dsh-branchmark-workspace",
-  "version": "0.1.2-rc.2",
+  "version": "0.2.0-rc.1",
   "private": true,
   "description": "Excerpt-driven session branching and conversation lineage for DeepSeek Harness",
   "keywords": [
@@ -46,7 +46,7 @@
     "release:check": "pnpm run check && pnpm run verify:docs && pnpm run verify:release && pnpm exec publint packages/bundle && pnpm --dir packages/bundle publish --dry-run --access public --no-git-checks"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-typert-generator": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-typert-generator": "0.2.0-rc.2",
     "@types/node": "^22.20.0",
     "@types/react": "~18.3.1",
     "github-slugger": "^2.0.0",
@@ -59,6 +59,8 @@
     "tsdown": "^0.22.2",
     "typescript": "^6.0.3",
     "unrun": "0.3.1",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "@deepseek-ai/cordis-plugin-include": "1.0.9",
+    "@deepseek-ai/cordis-plugin-loader": "1.0.5"
   }
 }

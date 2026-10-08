@@ -15,7 +15,7 @@
 
 完成主线第 1–5 章，并确认空 Host/Client/Bundle 能 build。实验只实现 session-scope active Clip，不实现 UI、project scope、note、tag、trash、Fork 或 Side Chat。
 
-固定[rc.1 基线](../reference/version-baseline.md)，使用 `sessionPersistence.inspect()`。不要求支持多个 DSH 版本；完成主线后才进入第 13 章的迁移练习。
+固定[当前版本基线](../reference/version-baseline.md)，集中执行 `open(read) → read → finally close`。不要求支持多个 DSH 版本；第 13 章说明进一步升级的方法。
 
 ## 约束
 
@@ -78,7 +78,7 @@ list({ workspaceId, ownerSessionId }) -> business result<Clip[]>
 
 1. Workspace 存在，且 `ownerSessionId` 属于 Workspace。
 2. `source.sessionId === ownerSessionId`。
-3. `sessionPersistence.inspect()` 取得来源 header 与 events。
+3. `readPersistedSession()` 取得来源 header 与 events。
 4. `eventSeq` 对应 append surface 的 `user/message` 或 `assistant/message`。
 5. `deriveEventMessage` 后 id/role/turn 一致。
 6. canonical message text 的 `slice(range.start, range.end) === excerpt`。
@@ -97,7 +97,7 @@ list({ workspaceId, ownerSessionId }) -> business result<Clip[]>
 4. excerpt 与 range slice 不同返回 `excerpt-mismatch`，table 仍为空。
 5. Session 不属于 Workspace 返回 `session-outside-workspace`，不能通过 list 读到数据。
 
-测试 transcript 应使用真实 DSH Session append event 序列，不能把 `inspect()` mock 成一个已经计算好的 message object。
+测试 transcript 应使用真实 DSH Session append event 序列，不能把 read handle 的 `read()` mock 成一个已经计算好的 message object。
 
 fixture 使用受控 persistence 并保留真实事件结构。重启读取要用新的 storage 实例或隔离 Web profile 验证，不能从同一 Map 再 get 一次就宣称持久化通过。
 
@@ -114,7 +114,7 @@ fixture 使用受控 persistence 并保留真实事件结构。重启读取要�
 
 ## 提示与对照源码
 
-卡在事件到 message 的映射时，只查看 [`resolvePersistedSource`](../../packages/host/src/index.ts)；卡在 schema 时查看 [`spec.ts`](../../packages/host/src/spec.ts)；卡在生成链时查看 [`host tsdown config`](../../packages/host/tsdown.config.ts)与 DSH [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/api-gateway.md)。
+卡在事件到 message 的映射时，只查看 [`resolvePersistedSource`](../../packages/host/src/index.ts)；卡在 schema 时查看 [`spec.ts`](../../packages/host/src/spec.ts)；卡在生成链时查看 [`host tsdown config`](../../packages/host/tsdown.config.ts)与 DSH [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/docs/api-gateway.md)。
 
 不要直接复制全部 `types.ts`，否则会把本实验尚未理解的 Side Chat/derived relation 类型一起带入。
 

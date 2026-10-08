@@ -1,6 +1,6 @@
 /** Branch semantics exercised through the real Session and storage services. */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
+import { SessionId, SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { SessionInspection } from '@deepseek-ai/dsh-session-persistence'
@@ -56,6 +56,33 @@ async function child(harness: TestHarness, id: string, source?: ReturnType<typeo
 }
 
 describe('persisted branch relationships', () => {
+  it('prepares the complete turn for DSH exact-prefix forks and rejects a message-only cut', async () => {
+    const { h, source, clip } = await setup()
+    const parent = h.ctx.sessions.create(source.session.id, {
+      seed: source.session.snapshotEvents(), meta: { cwd: h.projectRoot },
+    })
+    h.persistence.persist(parent)
+    const prepared = await h.ctx.branchmark.prepareFork({ workspaceId: h.workspace.id, clipId: clip.id })
+    if (!prepared.ok) throw new Error(prepared.error.code)
+    expect(prepared.value.atSeq).toBeGreaterThan(source.assistantEventSeq)
+
+    for (const [id, boundary, accepted] of [
+      ['message-cut', source.assistantEventSeq, false],
+      ['complete-cut', prepared.value.atSeq, true],
+    ] as const) {
+      const derived = h.ctx.sessions.fork(parent, SessionSeq(boundary), SessionId(id))
+      h.persistence.persist(derived)
+      await h.workspace.attachSession(derived.id)
+      const result = await h.ctx.branchmark.recordDerivedSession({
+        workspaceId: h.workspace.id, derivedSessionId: derived.id, parentSessionId: parent.id,
+        mode: 'full-fork', primaryClipId: clip.id, attachments: [{ clipId: clip.id, includeNote: true }],
+      })
+      expect(result.ok).toBe(accepted)
+      if (!accepted) expect(result).toMatchObject({ error: { code: 'derived-session-mismatch' } })
+      else expect(derived.inheritedEventCount).toBe(prepared.value.atSeq + 1)
+    }
+  })
+
   it('resolves unprompted Session metadata without exposing or changing its context', async () => {
     const { h, source } = await setup()
     const blank = await child(h, 'unprompted')

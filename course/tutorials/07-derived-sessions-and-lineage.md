@@ -2,7 +2,7 @@
 
 本章实现三种持久化模式：完整继承来源历史的 full-fork、只携带显式 Clip 的 clips-only，以及不携带上下文的 blank。完成后，你应能从 DSH Session header 证明父子关系、把 Clip recall 写入模型可见日志、支持“创建并打开”和“创建并发送”，并说明插件关系为什么不能冒充 DSH lineage。
 
-本章使用 rc.1：`SessionHeader.isSeeded` 表示继承前缀存在，`SessionInspection.inheritedEventCount` 表示精确长度。事件身份、读取成本和 marker 的区别见[Session 身份参考](../reference/session-identity-and-migrations.md)，不在主线混入后续版本的 handle API。
+本章使用 DSH `0.2.0-rc.2`：`SessionHeader.isSeeded` 表示继承前缀存在，`SessionInspection.inheritedEventCount` 表示精确长度。事件身份、读取成本和 marker 的区别见[Session 身份参考](../reference/session-identity-and-migrations.md)；持久读取通过集中管理的 read handle。
 
 ## 1. 先画清四种对象
 
@@ -28,25 +28,26 @@ Side Chat
 
 ## 2. full-fork 从主要 Clip 的来源开始
 
-多选 Clip 时，用户必须选择一个 primary；其余只是附件。primary 必须是 `session-message` 且 `forkable=true`。Browser 调用 API Session Controller：
+多选 Clip 时，用户必须选择一个 primary；其余只是附件。primary 必须是 `session-message` 且 `forkable=true`。Browser 先取得 Host 解析出的完整轮次位置，再调用 API Session Controller：
 
 ```typescript
+const prepared = unwrap(await ctx.remote.branchmark.prepareFork({ workspaceId, clipId: primary.id }))
 sessionId = await ctx.sessions.fork({
-  sessionId: primary.source.sessionId,
-  atSeq: primary.source.eventSeq,
+  sessionId: prepared.sessionId,
+  atSeq: prepared.atSeq,
   increaseTitle: true,
 })
 ```
 
-实现见 [`BranchMarkClient.launch`](../../packages/client/src/domain/client.ts)。这里传的是摘录所在 message 的 event seq，而不是当前父会话末尾，因此用户在父会话中间第 N 轮摘录时，child 只继承到包含该消息的完整第 N 轮。
+实现见 [`BranchMarkClient.launch`](../../packages/client/src/domain/client.ts)。`prepareFork` 用当前持久 Clip 解析主要消息所在轮次，返回 turn/end 之后、下一 turn/start 之前的 inclusive 位置。`unwrap` 处理外层 transport 和内层业务结果。消息位置与完整轮次位置不同，不能直接以 `primary.source.eventSeq` 创建 child。
 
 `fork` 属于 API Session Controller 而不是 Workspace UI 或具体 Runtime class，因为完整 turn 截断、child binding 可寻址、父子 header 与错误语义都属于 Session domain。插件只提交来源 identity 和 `atSeq`，不会复制 Session manager 或 transport 实现；这个所有权选择的收益见[架构设计解读](../reference/dsh-client-architecture-rationale.md#8-为什么-session-创建和分叉属于-api-session-controller)。
 
-## 3. DSH 如何把 message seq 对齐到完整 turn
+## 3. 完整轮次解析与 DSH 精确截断
 
-Client `ISessions.fork` 最终调用 Host API Session Controller。当前 Host 的算法在来源事件中找到第一个 `seq >= atSeq` 的 `turn/end`，以它作为 seed boundary；随后还包含下一次 `turn/start` 之前的独立尾随事件。源码锚点见 [DSH 源码导航](../reference/source-map.md)与 [`docs/subsystems/session.md`](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/subsystems/session.md)。
+Client `ISessions.fork` 最终调用 Host API Session Controller。DSH `0.2.0-rc.2` 复制到 inclusive `atSeq` 的精确前缀，并平衡不完整的生命周期。BranchMark 自己从主要消息所在完整 turn/end 延伸到下一 turn/start 之前，确保 child 继承整个目标轮次。源码锚点见 [DSH 源码导航](../reference/source-map.md)与 [`docs/subsystems/session.md`](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/docs/subsystems/session.md)。
 
-低层 `SessionStore.fork` 只接受可平衡的边界，创建 child 时写入：
+低层 `SessionStore.fork` 保留该精确前缀长度，创建 child 时写入：
 
 ```text
 SessionHeader.parentSession = sourceSessionId
@@ -62,13 +63,13 @@ Session constructor 接收 seed 时可能追加 `session/end-seed`；已有末�
 
 Browser 完成 fork 后调用 `recordDerivedSession`。Host 不能因为调用顺序看起来合理就相信 child 真由 primary 派生；它会：
 
-1. inspect child Session。
-2. inspect primary source Session。
+1. 通过 read handle 读取 child Session。
+2. 通过 read handle 读取 primary source Session。
 3. 用与当前 DSH fork 对齐的算法计算预期 `inheritedEventCount`。
 4. 检查 child `parentSession === source.sessionId`、`isSeeded === true` 且 `inheritedEventCount === expected`。
 5. 只有一致才写插件 relation 和 recall。
 
-这防止调用者创建任意 Session 后伪造“继承来源上下文”标记。插件的 `expectedForkInheritedEventCount()` 还会把 boundary 后、下一轮开始前的 standalone events 算入，以匹配当前 Session Controller 行为。
+这防止调用者创建任意 Session 后伪造“继承来源上下文”标记。插件的 `expectedForkInheritedEventCount()` 还会把 boundary 后、下一轮开始前的 standalone events 算入，以匹配 `prepareFork` 传给当前 Session Controller 的精确前缀。
 
 ## 5. clips-only 创建真正的新 Session
 
@@ -78,11 +79,11 @@ Browser 完成 fork 后调用 `recordDerivedSession`。Host 不能因为调用�
 sessionId = await ctx.sessions.create({ workspaceId })
 ```
 
-不指定 `sessionId` 时，该接口创建一个新 Session；Workspace UI 的 `connectWorkspace` 则可以复用 blank Session，两者不能互换。Host 随后验证 clips-only child 没有 `parentSession`、`isSeeded` 为 false，并且 `inheritedEventCount` 为 0。升级策略见[兼容性限制](../reference/compatibility-and-limitations.md)。
+该接口创建一个新 Session；Workspace UI 的 `connectWorkspace` 则可以复用 blank Session，两者不能互换。Host 随后验证 clips-only child 没有 `parentSession`、`isSeeded` 为 false，并且 `inheritedEventCount` 为 0。升级策略见[兼容性限制](../reference/compatibility-and-limitations.md)。
 
 DSH 把“严格创建领域实体”和“为导航寻找或复用可显示 Session”分给不同所有者，可以避免一个方便的 UI helper 同时承担两个矛盾语义。BranchMark 选择 `ISessions.create`，因此测试可以直接证明返回的是新 Session，而不是从 UI 状态反推是否发生了复用。
 
-空白分支同样调用不带 id 的 `sessions.create`，但 attachments 必须为空。Host 还拒绝已有模型上下文的 child，只保存组织关系，不追加 recall。Launcher 的标题与新问题都是用户可选输入，旧枝签和备注不会进入 blank 的模型请求。
+空白分支同样调用 `sessions.create`，但 attachments 必须为空。Host 还拒绝已有模型上下文的 child，只保存组织关系，不追加 recall。Launcher 的标题与新问题都是用户可选输入，旧枝签和备注不会进入 blank 的模型请求。
 
 ## 6. Relation、usage 与 recall 各自解决什么
 
@@ -96,7 +97,7 @@ recall 事件使用：
 
 ```typescript
 derivedSession.append('user/message', createUserMessage({
-  source: { kind: 'plugin', plugin: 'dsh-branchmark', form: 'recall' },
+  source: { kind: 'dsh-branchmark', form: 'recall' },
   content: [{ type: 'text', text: recallText }],
 }), { surfaceOp: 'append' })
 ```
@@ -113,10 +114,10 @@ relation/usages 在同一 KV value 内原子提交，但 storage domain 与 Sess
 
 Launcher 支持两个完成动作：
 
-- 创建：先创建/分叉、记录 relation 和所选附件的 recall，然后 `sessions.open(sessionId)` 跳到 child；用户在空 Composer 输入问题。
+- 创建：先创建/分叉、记录 relation 和所选附件的 recall，然后 `uiWorkspace.openSession(sessionId)` 跳到 child；用户在空 Composer 输入问题。
 - 创建并发送：Launcher 弹出问题输入框；完成 relation/recall 后取得 child binding，调用 `binding.session.prompt(..., 'queue')`。它不必先切换页面，任务会直接在后台运行。
 
-`queue` 是明确提交策略。prompt 失败时 child 与已记录上下文仍存在；当前 `launch()` 直接传播错误，没有统一的部分成功 DTO。先读取关系和 child，不能盲目重试整条流程创建重复会话，也不能自动删除可能已有内容的 child。改善部分成功提示属于独立实现任务。
+创建后的记录、命名和发送全部放入 `sessions.using(sessionId, { source: 'branchmarkOperation' }, async reference => ...)`，等待 `reference.ready` 后操作，回调结束时释放 retention。`queue` 是明确提交策略。prompt 失败时 child 与已记录上下文仍存在；当前 `launch()` 直接传播错误，没有统一的部分成功 DTO。先读取关系和 child，不能盲目重试整条流程创建重复会话，也不能自动删除可能已有内容的 child。改善部分成功提示属于独立实现任务。
 
 ## 9. 双向关系与删除后的可追溯性
 
@@ -143,7 +144,7 @@ Launcher 支持两个完成动作：
 [child 后续问题与回答]
 ```
 
-点击分隔条调用 `sessions.open(sourceSessionId)`。分隔位置来自已匹配的 `session/end-seed`，不是数 DOM 消息；当前 definition 匹配这类 marker，不证明它是唯一 fork 切点。二次 fork 与恢复生命周期需要专门测试，见[兼容性限制](../reference/compatibility-and-limitations.md)。
+点击分隔条调用 `uiWorkspace.openSession(sourceSessionId)`。分隔位置来自已匹配的 `session/end-seed`，不是数 DOM 消息；当前 definition 匹配这类 marker，不证明它是唯一 fork 切点。二次 fork 与恢复生命周期需要专门测试，见[兼容性限制](../reference/compatibility-and-limitations.md)。
 
 Header action 同样先查 relation，以“完整分叉”“仅携带枝签”或“空白分支”标识实际上下文模式，点击后打开会话树。
 

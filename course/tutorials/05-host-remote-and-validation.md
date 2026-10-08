@@ -17,7 +17,7 @@ export class BranchMarkService extends Service {
 }
 ```
 
-Cordis 的 `inject` 不只是文档。缺少必需服务时，插件不会在一个半可用状态下继续运行。服务初始化时打开 domain，并用 `ctx.effect()` 注册 domain 与 Side Chat runtime 的反向清理；相关基础语义见 DSH 的 [Cordis primer](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/cordis-primer.md)。
+Cordis 的 `inject` 不只是文档。缺少必需服务时，插件不会在一个半可用状态下继续运行。服务初始化时打开 domain，并用 `ctx.effect()` 注册 domain 与 Side Chat runtime 的反向清理；相关基础语义见 DSH 的 [Cordis primer](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/docs/cordis-primer.md)。
 
 ## 2. 配置在加载时完成校验
 
@@ -25,15 +25,15 @@ Service 用 Schemastery 声明所有可调边界，例如 excerpt/note/tag 大�
 
 开发时遵循两个规则：部署会变化的值进入 `Config`，固定协议事实保留常量；配置自身能判断的错误在加载阶段失败。例如专用摘要 provider 和 model 必须同时为空或同时设置，不能等第一次提问才发现半份路由。
 
-## 3. 14 个 Remote 方法按职责分组
+## 3. 15 个 Remote 方法按职责分组
 
-当前 Host 暴露 14 个 `@Remote` 方法，完整 DTO 与错误表见 [Remote API 参考](../reference/remote-api.md)。按职责阅读更容易理解：
+当前 Host 暴露 15 个 `@Remote` 方法，完整 DTO 与错误表见 [Remote API 参考](../reference/remote-api.md)。按职责阅读更容易理解：
 
 | 职责 | 方法 |
 | --- | --- |
 | Side Chat 生命周期 | `createSideChat`、`getSideChat`、`sendSideChat`、`selectSideChatModel`、`cancelSideChat`、`closeSideChat` |
 | Clip CRUD 与批量操作 | `create`、`list`、`update`、`setStatus`、`deleteForever`、`batchUpdate` |
-| 衍生 Session 关系 | `recordDerivedSession`、`listRelations` |
+| 衍生 Session 关系 | `prepareFork`、`recordDerivedSession`、`listRelations` |
 
 这些方法是 Browser 与 Host 的协议面，不等于给模型使用的 tool。Side Chat 的五个只读 tool 是另一套 LLM request schema，第 9 章再实现。
 
@@ -54,7 +54,7 @@ Browser: ctx.remote.$mount(branchmarkRemote)
 ctx.remote.branchmark.create(...)
 ```
 
-生成链的配置见 [`packages/host/tsdown.config.ts`](../../packages/host/tsdown.config.ts)，官方约束见 [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/api-gateway.md)。Remote 方法应使用可生成的公开 DTO，避免把 Cordis service、class instance、函数或隐式 closure 放进 wire 类型。
+生成链的配置见 [`packages/host/tsdown.config.ts`](../../packages/host/tsdown.config.ts)，官方约束见 [API Gateway 文档](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/docs/api-gateway.md)。Remote 方法应使用可生成的公开 DTO，避免把 Cordis service、class instance、函数或隐式 closure 放进 wire 类型。
 
 ## 5. 理解两层结果封装
 
@@ -72,7 +72,7 @@ return transport.value.value
 
 外层是 DSH Gateway/Typert transport 结果，表示模块、连接、参数解码或调用是否成功；内层是 BranchMark 业务结果，表示 Workspace、来源、字段与状态是否满足规则。不要把业务拒绝实现成未分类 throw，也不要在 UI 中把所有失败都显示成“网络错误”。
 
-DSH 的 Remote failure 使用一个 merge-extensible code/details 表和 `RemoteError`，code 带 `<domain>/<reason>` 前缀；跨 Host/Client/Worker 按结构标记和 code 判断，不依赖跨 realm 的 `instanceof`。未分类异常由 Gateway 折叠为 `gateway/internal`，设计依据见[官方记录](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/.agents/notes/implemented/architecture/2026-08-28-ctx-remote-failure-vocabulary.md)。
+DSH 的 Remote failure 使用一个 merge-extensible code/details 表和 `RemoteError`，code 带 `<domain>/<reason>` 前缀；跨 Host/Client/Worker 按结构标记和 code 判断，不依赖跨 realm 的 `instanceof`。未分类异常由 Gateway 折叠为 `gateway/internal`，设计依据见[官方记录](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/.agents/notes/implemented/architecture/2026-08-28-ctx-remote-failure-vocabulary.md)。
 
 BranchMark 的内层 `ClipSuccess | ClipRejected` 是插件自己的协议选择，不是 DSH 要求。当前 [`BranchMarkClient.unwrap()`](../../packages/client/src/domain/client.ts)把 DSH 外层和 BranchMark 内层集中在一个边界处理，组件不会看到两层判断；如果从零设计一个只面向当前 DSH 的 Remote namespace，也可以在 Host 业务失败点直接使用 DSH `RemoteError`，让每个调用只保留一层 `RemoteResult<T>`。两种层次与取舍见[架构设计解读](../reference/dsh-client-architecture-rationale.md#7-为什么-dsh-统一-remote-failure)。
 
@@ -85,7 +85,7 @@ Browser 只能提交“我观察到这些字段”，Host 必须重新证明。�
     ↓
 验证 excerpt/note 的 UTF-8 byte limit，规范化 tags
     ↓
-sessionPersistence.inspect(sourceSessionId)
+readPersistedSession(sessionPersistence, sourceSessionId)
     ↓
 按 eventSeq 找 user/message 或 assistant/message append event
     ↓
@@ -100,7 +100,7 @@ deriveEventMessage，核对 messageId / role / turn
 storage put
 ```
 
-这里的 `sessionPersistence.inspect()` 是 rc.1 的真实读取入口，精确 fork cut 在 `inspection.inheritedEventCount`。主线不实现 SessionHandle；将来换日志格式时还必须重新定位旧 Clip，不能只替换读取方法，见[Session 身份参考](../reference/session-identity-and-migrations.md)。
+`readPersistedSession()` 从 `open(id, 'read')` 取得 header 与精确 inherited cut，读取 events 后在 `finally` 关闭 handle。Host 激活时还校验并重定位旧 Clip；两种适配分别处理资源释放和消息位置，见[Session 身份参考](../reference/session-identity-and-migrations.md)。
 
 关键实现位于 [`resolveSource` 与 `resolvePersistedSource`](../../packages/host/src/index.ts)。用户消息还要求事件来源为真正的 `source.kind === 'user'`，避免插件自己追加的 recall 被伪装成普通用户输入。
 

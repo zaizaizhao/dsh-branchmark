@@ -23,7 +23,7 @@ Host 是业务和 DTO owner，Client 是浏览器集成与 UI owner，Bundle 是
 
 [Typert republish](../../packages/bundle/src/typert.ts)把 contribution 的 package identity 设为最终安装名 `dsh-branchmark`。它不是更改 Remote schema，而是让 registry 从正确的公开包找到入口。
 
-浏览器文件不是独立 ESM 页面。DSH rc.1 需要 `window.__ModuleLoader__.load({ id, factory })` 的 lazy-CJS factory，React 与 DSH 模块由宿主模块表提供。源文件与生成配置见[第 3 章](03-scaffold-and-build.md)；不要把 publint 的 CJS 提示通过改成普通 ESM 来“修好”。
+浏览器文件不是独立 ESM 页面。DSH当前基线需要 `window.__ModuleLoader__.load({ id, factory })` 的 lazy-CJS factory，React 与 DSH 模块由宿主模块表提供。源文件与生成配置见[第 3 章](03-scaffold-and-build.md)；不要把 publint 的 CJS 提示通过改成普通 ESM 来“修好”。
 
 ## 3. 构建、检查、打包
 
@@ -34,7 +34,7 @@ pnpm install --frozen-lockfile
 pnpm run check
 pnpm run verify:release
 pnpm run pack:bundle
-tar -tf dist/dsh-branchmark-0.1.2-rc.2.tgz
+tar -tf dist/dsh-branchmark-0.2.0-rc.1.tgz
 ```
 
 `check` 已包含构建，不必在同一次无修改验收中再把所有窄命令重复执行。`pack:bundle` 生成本次候选包；tarball 内应只有 manifest `files` 允许的 JS/DTS、patch、README、LICENSE 和 package.json，不包含 source maps、测试、凭据、真实 Session 数据或私有源码工作区。
@@ -49,10 +49,10 @@ tar -tf dist/dsh-branchmark-0.1.2-rc.2.tgz
 BRANCHMARK_COURSE_ROOT="$(pwd)"
 BRANCHMARK_COURSE_RUNTIME="$(mktemp -d)"
 BRANCHMARK_COURSE_HOME="$(mktemp -d)"
-npm install --prefix "$BRANCHMARK_COURSE_RUNTIME" @deepseek-ai/dsh@0.1.2-rc.1
+npm install --prefix "$BRANCHMARK_COURSE_RUNTIME" @deepseek-ai/dsh@0.2.0-rc.2
 export PATH="$BRANCHMARK_COURSE_RUNTIME/node_modules/.bin:$PATH"
 dsh --version
-DSH_HOME="$BRANCHMARK_COURSE_HOME" dsh plugin --profile web add "$BRANCHMARK_COURSE_ROOT/dist/dsh-branchmark-0.1.2-rc.2.tgz"
+DSH_HOME="$BRANCHMARK_COURSE_HOME" dsh plugin --profile web add "$BRANCHMARK_COURSE_ROOT/dist/dsh-branchmark-0.2.0-rc.1.tgz"
 DSH_HOME="$BRANCHMARK_COURSE_HOME" dsh --profile web --dump-config
 DSH_HOME="$BRANCHMARK_COURSE_HOME" dsh --profile web --no-open --port 0
 ```
@@ -61,7 +61,7 @@ DSH_HOME="$BRANCHMARK_COURSE_HOME" dsh --profile web --no-open --port 0
 
 必须使用 `web` profile，不能任意取一个只含 base 的 profile 名就期待出现 Web UI。需要模型时由实验执行者在此测试 home 的 DSH settings/credentials 配置；不要整份打印或复制日常凭据到课程记录。Windows 使用相同 profile 原理，但这组 shell 命令不作为 Windows 验证证据。
 
-profile 包管理由其 manifest 决定；安装日志里的 pnpm 版本可能与教材的 11.7.0 不同，不能据此修改课程 lockfile。本次 rc.1 安装可见 profile 使用 pnpm 11.1.3。若 npm 提示依赖安装脚本待审核，先核对具体包和实际失败，不执行全局批量放行来绕过本机策略。
+profile 包管理由其 manifest 决定；安装日志里的 pnpm 版本可能与教材的 11.7.0 不同，不能据此修改课程 lockfile。本次当前基线安装可见 profile 使用 pnpm 11.1.3。若 npm 提示依赖安装脚本待审核，先核对具体包和实际失败，不执行全局批量放行来绕过本机策略。
 
 ## 5. 安装成功的四个观察点
 

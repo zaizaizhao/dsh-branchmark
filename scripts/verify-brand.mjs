@@ -73,7 +73,7 @@ const readmeLogo = await readFile(`${root}/assets/brand/branchmark-logo-threadbo
 assert.match(readmeHero, /assets\/brand\/branchmark-logo-threadbook-v4-color\.svg/)
 assert.match(readmeHero, /<h1 align="center">枝签 · BranchMark<\/h1>/)
 assert.match(readmeHero, /摘一段，生一枝。/)
-assert.match(readmeHero, /重点知识摘录、可追溯 Session 树和注意力分叉/)
+assert.match(readmeHero, /DSH Web 插件.*Side Chat.*会话树/)
 assert.match(themeLogo, /currentColor/)
 assert.doesNotMatch(themeLogo, /#[\da-f]{3,8}/iu)
 assert.doesNotMatch(readmeLogo, /currentColor/)
