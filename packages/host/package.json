@@ -1,6 +1,6 @@
 {
   "name": "dsh-branchmark-host",
-  "version": "0.1.2-rc.2",
+  "version": "0.2.0-rc.1",
   "private": true,
   "description": "Host-side BranchMark storage, source validation, Side Chat, and conversation lineage for DeepSeek Harness",
   "type": "module",
@@ -67,6 +67,7 @@
     "@deepseek-ai/cordis": "catalog:",
     "@deepseek-ai/dsh-brand": "catalog:",
     "@deepseek-ai/dsh-fs": "catalog:",
+    "@deepseek-ai/dsh-fs-local": "catalog:",
     "@deepseek-ai/dsh-llm": "catalog:",
     "@deepseek-ai/dsh-session": "catalog:",
     "@deepseek-ai/dsh-session-persistence": "catalog:",

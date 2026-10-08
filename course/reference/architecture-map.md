@@ -2,7 +2,7 @@
 
 本页是查阅型参考，回答“一个动作跨过了哪些模块、最后写到哪里”。实现顺序见[主线课程](../README.md#主线课程)，类型和方法细节见[Remote API](remote-api.md)，DSH Client 为什么采用这些所有者见[架构设计解读](dsh-client-architecture-rationale.md)。
 
-本图描述当前 BranchMark `0.1.2-rc.1` 源码：持久日志通过 `sessionPersistence.inspect` 读取，lineage 使用 `SessionHeader.isSeeded` 与 `SessionInspection.inheritedEventCount`。后续源码的 handle 与日志格式需单独审计，不能混入本图；见[Session 身份参考](session-identity-and-migrations.md)。
+本图描述 BranchMark `0.2.0-rc.1` 候选源码：`readPersistedSession` 管理 read handle，lineage 使用 `SessionHeader.isSeeded` 与 `inheritedEventCount`；旧 Clip 在 Host 激活时校验并重定位，完整分叉通过 `prepareFork` 解析位置。见[Session 身份参考](session-identity-and-migrations.md)。
 
 ## 运行时组件
 
@@ -18,7 +18,7 @@ DSH Web profile
 │   └── BranchMarkService
 │       ├── clips KvTable
 │       ├── derived_sessions KvTable
-│       ├── 14-method Typert Remote namespace
+│       ├── 15-method Typert Remote namespace
 │       └── TemporarySideChatRuntime Map
 └── Browser
     ├── DSH API Controllers
@@ -77,7 +77,7 @@ DSH Chat node key + rendered excerpt
   ↓ selectionCandidate
 SessionId + MessageId + eventSeq + turn + UTF-16 range
   ↓ remote.branchmark.create
-Host sessionPersistence.inspect(sessionId)
+Host readPersistedSession(sessionPersistence, sessionId)
   ↓ deriveEventMessage + canonicalMessageText
 严格校验 identity / role / turn / slice === excerpt
   ↓ clips.put
@@ -134,8 +134,9 @@ label 是可见短文本，clipboard projection 是持久化/复制文本，ref 
 selected Clips
   ↓ BranchMarkLauncherSheet chooses mode, primary Clip, note flags
   ├── full-fork
-  │     ↓ ctx.sessions.fork({ sessionId: sourceSessionId, atSeq: sourceEventSeq })
-  │   DSH Host extends cut to the first matching turn/end and trailing standalone events
+  │     ↓ remote.branchmark.prepareFork({ workspaceId, clipId: primaryClipId })
+  │     ↓ ctx.sessions.fork({ sessionId: prepared.sessionId, atSeq: prepared.atSeq })
+  │   BranchMark resolves the completed turn and trailing standalone events; DSH copies the exact prefix
   │     ↓ child metadata: parentSession + isSeeded + inheritedEventCount
   └── clips-only
         ↓ ctx.sessions.create({ workspaceId })
@@ -143,10 +144,10 @@ selected Clips
 
 created SessionId
   ↓ remote.branchmark.recordDerivedSession
-Host re-inspects child and source headers
+Host reads child and source through scoped read handles
   ↓ one-record derived_sessions.put(relation + ClipUsage snapshots)
   ↓ child.append(user/message, plugin recall)
-  ├── create-and-open → sessions.open(child)
+  ├── create-and-open → uiWorkspace.openSession(child)
   └── create-and-send → child binding.session.prompt(question, 'queue')
 ```
 
@@ -193,7 +194,7 @@ full-fork 同时拥有两份关系：DSH lineage 说明“从哪个 Session 分�
 
 - 浏览器提交的 Workspace、Session、消息锚点、选区与 Clip id 都是不可信输入。
 - Typert Gateway 校验 wire JSON 的字段和类型，但业务归属仍由 `BranchMarkService` 校验。
-- `workspaceRegistry.sessionIds` 与 `sessionPersistence.inspect()` 是 Session/Workspace 来源真相。
+- `workspaceRegistry.sessionIds` 与 `readPersistedSession()` 是 Session/Workspace 来源真相。
 - `ctx.fs.contains(root, target)` 是项目文件工具的路径 containment 检查；字符串前缀比较不具备这个保证。
 - `ctx.web.fetch` 的网络安全取决于已装 provider。DSH 当前本地 HTTP provider 不默认阻断私网地址，Web profile 默认也没有 fetch provider；详见[兼容性与限制](compatibility-and-limitations.md#web-fetch-不是默认可用能力)。
 - Side Chat 不获得 Shell、写文件、Session 修改、subagent 或权限升级工具。

@@ -1,5 +1,6 @@
+import { currentSessionId as selectedSessionId } from '../domain/client.ts'
 import { useEffect, useRef, useState } from 'react'
-import { IconCloseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutlineMedium } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type { InputState } from '@deepseek-ai/dsh-client-ui-conversation/client'
@@ -29,7 +30,7 @@ export function BranchMarkSidebarButton({
   controller,
   client,
 }: SidebarProps) {
-  useSessions((snapshot: SessionListState) => snapshot.current)
+  useSessions(selectedSessionId)
   useWorkspaces((snapshot: WorkspaceSnapshot) => snapshot.items)
   const state = useBranchMarkUi(controller)
   const workspaceId = client.currentWorkspace()
@@ -153,7 +154,7 @@ export function BranchMarkDrawerButton({
                     remove(occurrence.occurrenceId)
                   }}
                 >
-                  <IconCloseOutline16 size={12} />
+                  <IconCloseOutlineMedium size={12} />
                 </button>
               </div>
             ))}

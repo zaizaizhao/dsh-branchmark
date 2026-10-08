@@ -1,6 +1,6 @@
 /** Session and temporary Side Chat launch orchestration inside the Dock. */
 import { useId, useState } from 'react'
-import { IconCloseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutlineMedium } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ClipId, DerivedSessionMode } from 'dsh-branchmark-host/types'
 import type { BranchMarkClient } from '../../domain/client.ts'
 import type { BranchMarkLauncher, BranchMarkUiController } from '../../domain/controller.ts'
@@ -125,7 +125,7 @@ export function BranchMarkLauncherSheet({
             controller.closeLauncher()
           }}
         >
-          <IconCloseOutline16 />
+          <IconCloseOutlineMedium />
         </button>
       </div>
       <div className="dbm-launch-scroll">

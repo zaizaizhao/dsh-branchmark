@@ -1,8 +1,8 @@
 /** Natural-height excerpt reading with controls only when content is clipped. */
 import { useEffect, useRef, useState } from 'react'
 import {
-  IconChevronDownOutline14,
-  IconFullscreenOutline16,
+  IconChevronDownOutlineMedium,
+  IconFullscreenOutlineMedium,
   MarkdownText,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { BRANCHMARK_MARKDOWN_LABELS } from '../markdown.ts'
@@ -53,11 +53,11 @@ export function ClipExcerpt({ text, onFocus }: { readonly text: string; readonly
               setExpanded((value) => !value)
             }}
           >
-            <IconChevronDownOutline14 />
+            <IconChevronDownOutlineMedium />
             {t(expanded ? 'collapseExcerpt' : 'expandExcerpt')}
           </button>
           <button type="button" className="dbm-reading-action dbm-focus-trigger" onClick={onFocus}>
-            <IconFullscreenOutline16 size={13} />
+            <IconFullscreenOutlineMedium size={13} />
             {t('focusReading')}
           </button>
         </div>

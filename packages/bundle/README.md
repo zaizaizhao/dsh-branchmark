@@ -23,7 +23,7 @@ Excerpt-driven session branching and conversation lineage for DeepSeek Harness.
 
 | BranchMark | DeepSeek Harness | Node.js | DSH surface |
 | --- | --- | --- | --- |
-| `0.1.2-rc.2` | `0.1.2-rc.1` | `^22.19.0 \|\| >=24.0.0` | Web profile |
+| `0.2.0-rc.1` 本地候选 | `0.2.0-rc.2` | `^22.19.0 \|\| >=24.0.0` | Web profile |
 
 DSH 仍处于预发布阶段。上表之外的组合没有经过兼容性验证；升级 DSH 前应在独立 profile 中重新完成安装与 UI smoke test。
 
@@ -31,16 +31,23 @@ DSH 仍处于预发布阶段。上表之外的组合没有经过兼容性验证�
 
 ## 安装
 
-先安装目标 DSH，再把兼容表中的 BranchMark Bundle 加入 Web Profile：
+本候选尚未发布到 npm。先在源码根目录构建 tarball，再把它安装到目标 DSH 的 Web Profile：
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.1.2-rc.1
-dsh plugin --profile web add dsh-branchmark@0.1.2-rc.2
+npm install --global @deepseek-ai/dsh@0.2.0-rc.2
+pnpm install --frozen-lockfile
+pnpm run build
+pnpm run pack:bundle
+dsh plugin --profile web add "$(pwd)/dist/dsh-branchmark-0.2.0-rc.1.tgz"
 dsh --profile web --dump-config
 dsh --profile web
 ```
 
-`dsh --version` 必须输出 `0.1.2-rc.1`，`--dump-config` 必须包含 `dsh-branchmark` 和 `branchmark-host`。不要把此包安装到 DSH `0.1.1-rc.2`；该版本使用精确固定的 BranchMark `0.1.1-rc.2`。
+`dsh --version` 必须输出 `0.2.0-rc.2`，`--dump-config` 必须包含 `dsh-branchmark` 和 `branchmark-host`。已发布的 BranchMark `0.1.2-rc.2` 对应 DSH `0.1.2-rc.1`，不能用于此 DSH 目标。
+
+此候选正式发布后，npm 安装命令为 `dsh plugin --profile web add dsh-branchmark@0.2.0-rc.1`；发布前使用上方本地 tarball。
+
+升级读取由 DSH 迁移 Session 日志，BranchMark 再以稳定消息身份校验并重定位已保存 Clip 的事件位置。无法确认来源时保留摘录内容并禁用完整分叉。首次试配使用数据副本；新日志代际不提供降级保证。
 
 卸载：
 

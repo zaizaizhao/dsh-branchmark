@@ -30,7 +30,7 @@ ctx.inject(['remote.branchmark'], (scope) => {
 
 Composer 引用不占用额外 Slot；插件向 `ctx.inputTriggers` 注册 `branchmark` source，并通过 `SessionInput.insertReference()` 写入原生 occurrence。完整注册见 [`client/index.tsx`](../../packages/client/src/client/index.tsx)。`shell.overlay` 的宿主容器本身允许 click-through，插件只让可交互区域接收 pointer event；不要把透明全屏根节点注册成阻塞层。
 
-rc.1 的 `conversation.input.left` 不提供 `InputZone.input` owner prop。入口组件从标准 `useInput(state => state.occurrences)` 订阅引用，动作走 `inputActions`；不能从宿主内部 InputBar 对象读取状态。[`EntryButtons.tsx`](../../packages/client/src/components/EntryButtons.tsx)是可运行实现，selector 的所有权解释见[Client 架构参考](../reference/dsh-client-architecture-rationale.md)。
+当前基线 的 `conversation.input.left` 不提供 `InputZone.input` owner prop。入口组件从标准 `useInput(state => state.occurrences)` 订阅引用，动作走 `inputActions`；不能从宿主内部 InputBar 对象读取状态。[`EntryButtons.tsx`](../../packages/client/src/components/EntryButtons.tsx)是可运行实现，selector 的所有权解释见[Client 架构参考](../reference/dsh-client-architecture-rationale.md)。
 
 ## 3. UI controller 只拥有 Browser 状态
 
@@ -62,7 +62,7 @@ DOM 只告诉我们可见文字与节点位置。`BranchMarkClient` 先通过 `c
 - streaming/未 settled assistant 没有稳定 final anchor，因此不能摘录为持久来源。
 - hidden node、tool-only node 和无法解析 location 的 node 被跳过。
 
-实现位于 [`domain/selection.ts`](../../packages/client/src/domain/selection.ts)。这一步得到候选锚点；Host 仍以 rc.1 的 `inspect()` 复核持久日志。持久 Clip 不能以 DOM node key 代替 message identity。
+实现位于 [`domain/selection.ts`](../../packages/client/src/domain/selection.ts)。这一步得到候选锚点；Host 仍通过 read handle 复核持久日志。持久 Clip 不能以 DOM node key 代替 message identity。
 
 这里同时依赖 UI Conversation 和 UI Chat 是有意分层，不是重复取数。UI Conversation 只拥有 Session event window 到 target snapshot 的通用组装与 binding；UI Chat 拥有 Chat node 的具体类型、keyed store、顺序和 selection 语义。DSH 这样做能让 Chat、Trajectory 等 target 共享稳定 id、分页和增量回放机制，又不要求彼此共享最终 projection；新增 BranchMark node 也不需要修改 Session Controller 的中央 switch。算法动机与 keyed snapshot 收益见[架构设计解读](../reference/dsh-client-architecture-rationale.md#4-为什么-conversation-与-chat-分开)。
 

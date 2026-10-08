@@ -103,7 +103,7 @@ this.derivedSessions = domain.table('derived_sessions')
 
 `Domain.close()` 会先拒绝新写入，排空已经排队的写入，再释放 backend unit。Disposer 必须跟随 BranchMark Service，而不是只依赖 storage facility 在进程退出时兜底。
 
-官方 storage 语义见 [`docs/subsystems/storage.md`](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/subsystems/storage.md)：reads 来自 authoritative in-memory state；write 先 durable、再更新内存、再发 change event；失败写入不会污染读取状态。
+官方 storage 语义见 [`docs/subsystems/storage.md`](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/docs/subsystems/storage.md)：reads 来自 authoritative in-memory state；write 先 durable、再更新内存、再发 change event；失败写入不会污染读取状态。
 
 ## 7. KV 记录应当替换而不是原地修改
 

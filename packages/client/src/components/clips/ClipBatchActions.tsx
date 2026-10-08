@@ -1,9 +1,9 @@
 /** Multi-selection actions share the same compact commands as individual cards. */
 import {
-  IconBranchOutline16,
-  IconEllipsisOutline16,
-  IconPaperclipOutline16,
-  IconSparkle16,
+  IconBranchOutlineMedium,
+  IconEllipsisOutlineMedium,
+  IconPaperclipOutlineMedium,
+  IconSparkleMedium,
   Menu,
   Modal,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -63,15 +63,15 @@ export function ClipBatchActions({
       </div>
       <div className="dbm-batch-actions">
         <button type="button" className="dbm-button dbm-button-branch" disabled={busy} onClick={onNewSession}>
-          <IconBranchOutline16 size={13} />
+          <IconBranchOutlineMedium size={13} />
           {t('newSession')}
         </button>
         <button type="button" className="dbm-button" disabled={busy || !canQuote} onClick={onQuote}>
-          <IconPaperclipOutline16 size={13} />
+          <IconPaperclipOutlineMedium size={13} />
           {t('quote')}
         </button>
         <button type="button" className="dbm-button" disabled={busy} onClick={onSideChat}>
-          <IconSparkle16 size={13} />
+          <IconSparkleMedium size={13} />
           {t('sideChat')}
         </button>
         <Menu
@@ -106,7 +106,7 @@ export function ClipBatchActions({
                 onOpenChange(!open)
               }}
             >
-              <IconEllipsisOutline16 />
+              <IconEllipsisOutlineMedium />
             </button>
           }
         />

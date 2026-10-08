@@ -28,7 +28,7 @@
 
 建立一张适配表，至少记录 API Controller/UI adapter/target/Renderer 的 owner 映射、`ISessions.create/fork`、Host fork boundary、SessionHeader、`session/end-seed`、五个 Slot、Input Trigger reference contract、Conversation/Chat View、Chat row anchor、Remote failure contract、Typert artifacts 和 `dsh.client` format。若目标版本与本课程锚点不同，先更新设计，不照搬实现，也不要用另一个聚合 facade 掩盖 owner 变化。
 
-主线采用[rc.1 基线](../reference/version-baseline.md)，记录源码、artifact、installed、runtime 四层。上游迁移的额外交付另按第 13 章处理，不把 handle/v2 设计方案写成主线现有 API。
+主线采用[当前基线](../reference/version-baseline.md)，记录源码、artifact、installed、runtime 四层。上游迁移的额外交付另按第 13 章处理，区分当前已实现的读取/重定位与新的迁移方案。
 
 检查点：你能用源码位置回答“full-fork 最终截止哪个事件”和“Browser client.js 由谁发现与加载”。
 
@@ -38,11 +38,11 @@
 
 Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 Node index 与 Browser CJS ModuleLoader wrapper；Bundle 先只 republish一个空 Host plugin。
 
-检查点：生成自己 manifest 声明的文件，default export 可加载，tarball 没有 workspace path。最小骨架还没有 14 个 Remote，不应运行完整产品 roster 断言，也不为通过检查伪造占位方法。
+检查点：生成自己 manifest 声明的文件，default export 可加载，tarball 没有 workspace path。最小骨架还没有 15 个 Remote，不应运行完整产品 roster 断言，也不为通过检查伪造占位方法。
 
 ## 4. 完成最小 durable Clip 纵向切片
 
-只实现一条路径：Browser candidate → Remote create → Host inspect 校验 → storage put → Remote list。沿用 rc.1 inspection，先不写 React selection UI。
+只实现一条路径：Browser candidate → Remote create → Host inspect 校验 → storage put → Remote list。沿用集中管理的 read handle，先不写 React selection UI。
 
 顺序是 branded ids 与 DTO → Zod domain v1 → Service init/dispose → `create/list` Remote → generated Remote mount → Host tests。伪造 eventSeq/messageId/range/excerpt 各加一个拒绝用例。
 
@@ -176,6 +176,6 @@ Host 加 `typertPlugin({ mode: 'package', faces: ['host'] })`；Client 输出 No
 | --- | --- | --- |
 | Keyless 工程完成 | 主干功能、生成/测试/打包、隔离 Web、浮签与引用实验 | 真实摘要和工具回答全部通过 |
 | 完整复现完成 | Keyless 证据 + 实验 3 指定 provider 的实际结果 | 所有 provider/平台均支持，或可自动发布 |
-| 上游适配加分 | 第 13 章矩阵 + 旧 Clip 数据迁移反例 + 单独目标测试 | rc.1 包天然兼容后续格式 |
+| 上游适配加分 | 第 13 章矩阵 + 旧 Clip 数据迁移反例 + 单独目标测试 |当前基线包天然兼容后续格式 |
 
 把[验证模板](../reference/verification-matrix.md#记录模板)作为交付首页：标明版本、工作树差异、tarball、测试命令、真实场景和已知限制。课程复现不要求 npm 发布，发布权限与工程验收分开。

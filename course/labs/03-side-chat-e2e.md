@@ -14,7 +14,7 @@
 
 使用独立 DSH home/profile 安装本次 tarball，并在 DSH 自己的 credentials/settings 中配置 provider。不要把 API key 写入插件 config 或 shell command。
 
-先按[第 10 章](../tutorials/10-package-install-and-adapt.md)固定 rc.1 CLI 和 home。做两阶段 preflight：模型目录能返回；同一 profile 下的实际短推理请求能完成。目录存在不保证 provider 有可用路由。若缺凭证、返回 model_not_found/503 或持续超时，记录失败阶段并把依赖它的验收标 BLOCKED；不要自动换模型后仍说原模型通过。
+先按[第 10 章](../tutorials/10-package-install-and-adapt.md)固定当前基线CLI 和 home。做两阶段 preflight：模型目录能返回；同一 profile 下的实际短推理请求能完成。目录存在不保证 provider 有可用路由。若缺凭证、返回 model_not_found/503 或持续超时，记录失败阶段并把依赖它的验收标 BLOCKED；不要自动换模型后仍说原模型通过。
 
 在测试 Workspace 创建：
 

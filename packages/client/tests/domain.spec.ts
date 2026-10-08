@@ -37,15 +37,15 @@ import { BranchMarkTextContext } from '../src/components/shared/text.ts'
 import { zh } from '../src/locales/zh.ts'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
-  IconBranchOutline16: () => null,
-  IconChevronDownOutline14: () => null,
-  IconCloseOutline16: () => null,
-  IconEditOutline16: () => null,
-  IconEllipsisOutline16: () => null,
-  IconFullscreenOutline16: () => null,
-  IconPaperclipOutline16: () => null,
-  IconSparkle16: () => null,
-  IconTrashOutline16: () => null,
+  IconBranchOutlineMedium: () => null,
+  IconChevronDownOutlineMedium: () => null,
+  IconCloseOutlineMedium: () => null,
+  IconEditOutlineMedium: () => null,
+  IconEllipsisOutlineMedium: () => null,
+  IconFullscreenOutlineMedium: () => null,
+  IconPaperclipOutlineMedium: () => null,
+  IconSparkleMedium: () => null,
+  IconTrashOutlineMedium: () => null,
   MarkdownText: () => null,
   Modal: () => null,
   Menu: ({
@@ -183,8 +183,8 @@ describe('BranchMark browser domain', () => {
           getSnapshot: () => ({
             current,
             byId: {
-              [firstSessionId]: { updatedAt: 10 },
-              [secondSessionId]: { updatedAt: 20 },
+              [firstSessionId]: { id: firstSessionId, updatedAt: 10, retainedBy: current === firstSessionId ? { mainView: 1 } : {} },
+              [secondSessionId]: { id: secondSessionId, updatedAt: 20, retainedBy: current === secondSessionId ? { mainView: 1 } : {} },
             },
           }),
         },
@@ -512,8 +512,8 @@ describe('BranchMark browser domain', () => {
     const html = renderToStaticMarkup(
       createElement(BranchMarkSidebarButton, {
         wide: true,
-        useSessions: (selector: (value: { current: SessionId }) => unknown) =>
-          selector({ current: sessionId }),
+        useSessions: (selector: (value: { byId: object }) => unknown) =>
+          selector({ byId: {} }),
         useWorkspaces: (selector: (value: { items: readonly [] }) => unknown) => selector({ items: [] }),
         controller: new BranchMarkUiController(),
         client: { currentWorkspace: () => workspaceId },
@@ -722,7 +722,8 @@ describe('BranchMark browser domain', () => {
     const context = {
       sessions: {
         create,
-        open,
+        using: async (_id: SessionId, _options: object, operation: (reference: { ready: Promise<{ session: { prompt: typeof prompt } }> }) => unknown) =>
+          operation({ ready: Promise.resolve({ session: { prompt } }) }),
         scope: () => ({ conversation: { send: conversationSend } }),
         binding: () => ({ session: { prompt } }),
       },
@@ -731,6 +732,7 @@ describe('BranchMark browser domain', () => {
           for: () => ({ setDraft }),
         },
       },
+      uiWorkspace: { openSession: open },
       remote: { branchmark: { recordDerivedSession } },
     } as unknown as ClientContext
     const client = new BranchMarkClient(context)

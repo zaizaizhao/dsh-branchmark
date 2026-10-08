@@ -1,6 +1,6 @@
 # 实验 6：隔离安装与发布演练
 
-本实验把“本地构建成功”推进到“实际安装包正确”。先完成第 10、11 章，使用 rc.1 基线；不发布 npm、不修改 dist-tag、不推送 Git tag。涉及在线模型的部分仍需要实验执行者准备 provider。
+本实验把“本地构建成功”推进到“实际安装包正确”。先完成第 10、11 章，使用 当前基线；不发布 npm、不修改 dist-tag、不推送 Git tag。涉及在线模型的部分仍需要实验执行者准备 provider。
 
 ## 任务 1：记录 source 与 artifact
 
@@ -12,7 +12,7 @@ git status --short
 pnpm run release:check
 pnpm audit --prod --audit-level high
 pnpm run pack:bundle
-tar -tf dist/dsh-branchmark-0.1.2-rc.2.tgz
+tar -tf dist/dsh-branchmark-0.2.0-rc.1.tgz
 ```
 
 给记录附上退出状态与 tarball 路径。清单必须无 source maps、真实 Session 数据和私有工作区依赖；不要把上一次生成的旧包当作本次产物。dry-run 会检查包装内容，但不向 npm 发布。

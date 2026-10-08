@@ -1,10 +1,10 @@
 /** Secondary Clip operations use the host's accessible anchored menu. */
 import { useState } from 'react'
 import {
-  IconEditOutline16,
-  IconEllipsisOutline16,
-  IconFullscreenOutline16,
-  IconTrashOutline16,
+  IconEditOutlineMedium,
+  IconEllipsisOutlineMedium,
+  IconFullscreenOutlineMedium,
+  IconTrashOutlineMedium,
   Menu,
   type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -31,17 +31,17 @@ export function ClipCardMenu({
   const items: MenuEntry[] =
     clip.status === 'trashed'
       ? [
-          { id: 'focus', label: t('focusReading'), icon: <IconFullscreenOutline16 /> },
-          { id: 'delete', label: t('deleteForever'), danger: true, icon: <IconTrashOutline16 /> },
+          { id: 'focus', label: t('focusReading'), icon: <IconFullscreenOutlineMedium /> },
+          { id: 'delete', label: t('deleteForever'), danger: true, icon: <IconTrashOutlineMedium /> },
         ]
       : [
-          { id: 'focus', label: t('focusReading'), icon: <IconFullscreenOutline16 /> },
-          { id: 'note', label: t('editNote'), icon: <IconEditOutline16 /> },
+          { id: 'focus', label: t('focusReading'), icon: <IconFullscreenOutlineMedium /> },
+          { id: 'note', label: t('editNote'), icon: <IconEditOutlineMedium /> },
           { id: 'tags', label: t('editTags') },
           { id: 'pin', label: t(clip.pinnedAt === undefined ? 'pin' : 'unpin') },
           ...(clip.scope === 'session' ? [{ id: 'project', label: t('saveToProject') }] : []),
           { type: 'separator', id: 'separator' },
-          { id: 'trash', label: t('moveToTrash'), danger: true, icon: <IconTrashOutline16 /> },
+          { id: 'trash', label: t('moveToTrash'), danger: true, icon: <IconTrashOutlineMedium /> },
         ]
   return (
     <span
@@ -76,7 +76,7 @@ export function ClipCardMenu({
               setOpen((value) => !value)
             }}
           >
-            <IconEllipsisOutline16 />
+            <IconEllipsisOutlineMedium />
           </button>
         }
       />

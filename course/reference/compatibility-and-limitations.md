@@ -1,10 +1,10 @@
 # 兼容性、限制与升级检查
 
-本页列出 rc.1 实现依赖的事实和主动接受的限制，不是未来承诺。版本与 npm 状态见[版本基线](version-baseline.md)，自动化和真实环境的证据见[验证矩阵](verification-matrix.md)。
+本页列出当前适配实现依赖的事实和主动接受的限制，不是未来承诺。版本与 npm 状态见[版本基线](version-baseline.md)，自动化和真实环境的证据见[验证矩阵](verification-matrix.md)。
 
 ## 版本口径与最新审计结论
 
-主线源码、generator、DSH peers 和安装实验对应一个精确 rc.1 目标。后续源码中的 SessionHandle、日志 v2、文件附件语义与旧 Clip 重定位必须单独审计，不属于当前兼容承诺；方法见[第 13 章](../tutorials/13-dsh-prerelease-upgrade.md)。
+源码、generator、DSH peers 和安装实验精确对应 DSH `0.2.0-rc.2`。read handle、旧 Clip 重定位与完整轮次位置解析已实现；后续 API、日志格式和文件附件语义仍须逐项审计；方法见[第 13 章](../tutorials/13-dsh-prerelease-upgrade.md)。
 
 历史分支、临时适配工作区或旧测试报告不代表当前 checkout 的验证结果。发布前重新记录实际版本、commit、tarball、profile、端口和结果。
 
@@ -12,8 +12,8 @@
 
 | 依赖 | 当前用法 | 变化后必须重验 |
 | --- | --- | --- |
-| API Session Controller | `create/fork/open/binding/scope` | 新建不复用 blank Session；fork cut 与 binding 可用 |
-| Session persistence | `inspect()`、header、events、inherited cut | 资源生命周期和持久来源身份 |
+| API Session Controller | `create/fork/using/binding/scope`；UI 跳转由 `uiWorkspace.openSession` 提供 | 新建不复用 blank Session；fork cut 与 binding 可用 |
+| Session persistence | `open(read)/read/close`、header、events、inherited cut | 资源生命周期和持久来源身份 |
 | live Session | `seq/eventAt/snapshotEvents`、append recall | 读取成本、消息重建和提交失败 |
 | Client owners | API Controller、标准 UI hooks、Conversation/Chat target | 依赖表、binding、Slot props 和 cleanup |
 | Chat selection | `data-chat-flow-key` 与 settled Chat node | DOM/AST range 映射、流式中间态拒绝 |
@@ -47,7 +47,7 @@ full-fork 依赖 parent、seeded 位和精确 inherited cut；`session/end-seed`
 
 ## Web fetch 不是默认可用能力
 
-rc.1 base 组合没有默认 fetch provider；方法存在、schema 已发送不代表部署可以执行。没有 provider 时应观察工具失败。官方[Web 文档](https://github.com/deepseek-ai/deepseek-harness/blob/a66e4702047846cdaa10c66c9d3df3951f5ea70d/docs/subsystems/web.md)还指出 HTTP fetch 的私网策略依赖 provider，不能把通用 `ctx.web.fetch` 当作自动 SSRF 防护。
+DSH `0.2.0-rc.2` base 组合的 Web 能力须核对已装 provider；方法存在、schema 已发送不代表部署可以执行。没有 provider 时应观察工具失败。官方[Web 文档](https://github.com/deepseek-ai/deepseek-harness/blob/639ed015397290b3745d163aafe02ffee4aa3f84/docs/subsystems/web.md)还指出 HTTP fetch 的私网策略依赖 provider，不能把通用 `ctx.web.fetch` 当作自动 SSRF 防护。
 
 ## Side Chat 的已知限制
 
@@ -65,7 +65,7 @@ Clip 按 Workspace/owner Session 归属，不绑定 Worktree。session/project v
 
 list 扫描 domain 后过滤；全文匹配 excerpt/note，不做分词、语义检索或来源标题搜索。多标签是 AND。完整重排只允许 active 的精确集合，同组拖动，筛选和回收站禁止；跨记录写入不承诺事务回滚。
 
-当前没有导入导出、同步、冲突合并或 schema migration。temporary-answer Clip 没有持久来源消息锚点，不能 reopen/full-fork。Markdown AST 投影也不是任意自定义 renderer 的完整逆变换。
+当前只有已保存消息 Clip 的来源重定位，没有导入导出、同步、冲突合并或 domain schema migration。temporary-answer Clip 没有持久来源消息锚点，不能 reopen/full-fork。Markdown AST 投影也不是任意自定义 renderer 的完整逆变换。
 
 ## 跨 durable subsystem 的提交限制
 

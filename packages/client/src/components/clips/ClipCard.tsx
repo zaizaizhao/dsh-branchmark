@@ -2,10 +2,10 @@
 import { useState, type ReactNode } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import {
-  IconBranchOutline16,
-  IconChevronDownOutline14,
-  IconPaperclipOutline16,
-  IconSparkle16,
+  IconBranchOutlineMedium,
+  IconChevronDownOutlineMedium,
+  IconPaperclipOutlineMedium,
+  IconSparkleMedium,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Clip, DerivedSessionRelation } from 'dsh-branchmark-host/types'
 import type { BranchMarkClient } from '../../domain/client.ts'
@@ -118,9 +118,9 @@ export function ClipCard({
             }}
           >
             <summary>
-              <IconBranchOutline16 size={12} />
+              <IconBranchOutlineMedium size={12} />
               {t('derivedCount', { count: relations.length })}
-              <IconChevronDownOutline14 />
+              <IconChevronDownOutlineMedium />
             </summary>
             {relations.map((relation) => (
               <button
@@ -170,7 +170,7 @@ export function ClipCard({
                   controller.openLauncher('session', clip.workspaceId, clip.ownerSessionId, [clip])
                 }}
               >
-                <IconBranchOutline16 size={13} />
+                <IconBranchOutlineMedium size={13} />
                 {t('newSession')}
               </button>
               <button
@@ -180,7 +180,7 @@ export function ClipCard({
                 title={currentSessionId === undefined ? t('composerUnavailable') : t('quote')}
                 onClick={quote}
               >
-                <IconPaperclipOutline16 size={13} />
+                <IconPaperclipOutlineMedium size={13} />
                 {t('quote')}
               </button>
               <button
@@ -191,7 +191,7 @@ export function ClipCard({
                   void startSideChat()
                 }}
               >
-                <IconSparkle16 size={13} />
+                <IconSparkleMedium size={13} />
                 {t('sideChat')}
               </button>
             </>

@@ -21,17 +21,17 @@ import { deriveCurrentLineage } from '../src/domain/lineage.ts'
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
   const icon = () => createElement('svg', { 'aria-hidden': true })
   return {
-    IconBranchOutline16: icon,
-    IconChevronDownOutline14: icon,
-    IconCloseOutline16: icon,
-    IconEditOutline16: icon,
-    IconEllipsisOutline16: icon,
-    IconFullscreenOutline16: icon,
-    IconPaperclipOutline16: icon,
-    IconSparkle16: icon,
-    IconTrashOutline16: icon,
-    IconSearchOutline16: icon,
-    IconListPenOutline16: icon,
+    IconBranchOutlineMedium: icon,
+    IconChevronDownOutlineMedium: icon,
+    IconCloseOutlineMedium: icon,
+    IconEditOutlineMedium: icon,
+    IconEllipsisOutlineMedium: icon,
+    IconFullscreenOutlineMedium: icon,
+    IconPaperclipOutlineMedium: icon,
+    IconSparkleMedium: icon,
+    IconTrashOutlineMedium: icon,
+    IconSearchOutlineMedium: icon,
+    IconListPenOutlineMedium: icon,
     MarkdownText: ({ text }: { text: string }) => createElement('p', null, text),
     Modal: ({
       open,

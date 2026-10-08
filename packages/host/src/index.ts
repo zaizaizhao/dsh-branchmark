@@ -1,6 +1,7 @@
 /** Durable Clip storage and typed Remote API for BranchMark. */
 
 import { randomUUID } from 'node:crypto'
+import { readPersistedSession } from './persisted-session.ts'
 import { Buffer } from 'node:buffer'
 import { Context, Service } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
@@ -8,6 +9,7 @@ import type { Message } from '@deepseek-ai/dsh-llm'
 import { deriveEventMessage, isAppendSurfaceEvent } from '@deepseek-ai/dsh-session/surface'
 import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SessionInspection } from '@deepseek-ai/dsh-session-persistence'
+import { SessionPersistenceNotFoundError } from '@deepseek-ai/dsh-session-persistence'
 import type { KvTable } from '@deepseek-ai/dsh-storage-domain'
 import { bindTypertRemote, Remote } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-workspace'
@@ -22,6 +24,7 @@ import type {
   GetSideChatResult, ListClipsRequest, ListClipsResult,
   ListRelationsRequest, ListRelationsResult, RecordDerivedSessionRequest,
   RecordDerivedSessionResult, SendSideChatRequest, SendSideChatResult,
+  PrepareForkRequest, PrepareForkResult,
   SelectSideChatModelRequest, SelectSideChatModelResult,
   SetClipStatusRequest, SetClipStatusResult, SideChatIdentityRequest,
   SessionMessageClipSource, SessionMessageClipSourceInput, UpdateClipRequest,
@@ -134,6 +137,7 @@ export class BranchMarkService extends Service {
     const domain = await this.ctx.storageDomain.open(branchMarkDomainSpec)
     this.ctx.effect(() => async () => { await domain.close() }, 'branchmark.domain')
     this.clips = domain.table('clips')
+    await this.relocateStoredSources()
     this.relations = new DerivedSessionStore(this.ctx, this.clips, domain.table('derived_sessions'))
     this.ctx.effect(() => () => { this.sideChats.destroy() }, 'branchmark.sideChats')
   }
@@ -465,6 +469,16 @@ export class BranchMarkService extends Service {
     return this.requireRelations().record(request)
   }
 
+  /**
+   * Validate the completed source prefix before a client creates a full fork.
+   * @param request - Workspace and selected primary Clip.
+   * @returns Source Session and exact inclusive boundary, or an unavailable source.
+   */
+  @Remote('prepareFork')
+  async prepareFork(request: PrepareForkRequest): Promise<PrepareForkResult> {
+    return this.requireRelations().prepareFork(request)
+  }
+
   /** Read retained relationships and Clip snapshots in the requested Workspace. */
   @Remote('listRelations')
   async listRelations(request: ListRelationsRequest): Promise<ListRelationsResult> {
@@ -483,6 +497,43 @@ export class BranchMarkService extends Service {
     return undefined
   }
 
+  /** Stored message identities survive log migrations that renumber event positions. */
+  private async relocateStoredSources(): Promise<void> {
+    const histories = new Map<SessionId, Promise<SessionInspection | undefined>>()
+    const read = async (id: SessionId): Promise<SessionInspection | undefined> => {
+      try {
+        return await readPersistedSession(this.ctx.sessionPersistence, id)
+      } catch (error) {
+        if (error instanceof SessionPersistenceNotFoundError) return undefined
+        throw error
+      }
+    }
+    for (const [id, clip] of this.requireClips().entries()) {
+      if (clip.source.kind !== 'session-message') continue
+      const source = clip.source
+      const disableFork = async (): Promise<void> => {
+        if (source.forkable) await this.requireClips().put(id, { ...clip, source: { ...source, forkable: false } })
+      }
+      let pending = histories.get(source.sessionId)
+      if (pending === undefined) {
+        pending = read(source.sessionId)
+        histories.set(source.sessionId, pending)
+      }
+      const history = await pending
+      if (history === undefined) { await disableFork(); continue }
+      const matches = history.events.filter(event =>
+        isAppendSurfaceEvent(event) && deriveEventMessage(event)?.id === source.messageId)
+      if (matches.length !== 1) { await disableFork(); continue }
+      const event = matches[0]
+      if (event === undefined) continue
+      const resolved = this.resolvePersistedSource({ ...source, eventSeq: event.seq }, history, clip.excerpt)
+      if (!resolved.ok) { await disableFork(); continue }
+      if (resolved.ok && (source.eventSeq !== resolved.value.eventSeq || source.forkable !== resolved.value.forkable)) {
+        await this.requireClips().put(id, { ...clip, source: resolved.value })
+      }
+    }
+  }
+
   private async resolveSource(
     input: ClipSourceInput,
     ownerSessionId: SessionId,
@@ -498,7 +549,7 @@ export class BranchMarkService extends Service {
     }
     let inspection: SessionInspection
     try {
-      inspection = await this.ctx.sessionPersistence.inspect(input.sessionId)
+      inspection = await readPersistedSession(this.ctx.sessionPersistence, input.sessionId)
     } catch {
       return rejected({ code: 'session-not-found', sessionId: input.sessionId })
     }

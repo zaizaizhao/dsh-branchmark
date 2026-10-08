@@ -1,6 +1,6 @@
 /** Header entry reflecting the actual branch context mode. */
 import { useEffect, useState } from 'react'
-import { IconBranchOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconBranchOutlineMedium } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { DerivedSessionRelation } from 'dsh-branchmark-host/types'
@@ -52,7 +52,7 @@ export function BranchMarkLineageAction({ sessionId, controller, client, t }: Li
         controller.openDock('lineage')
       }}
     >
-      <IconBranchOutline16 size={14} />
+      <IconBranchOutlineMedium size={14} />
       {t(label[relation.mode])}
     </button>
   )

@@ -30,6 +30,7 @@ export const inject = [
   'slots',
   'sessions',
   'workspaces',
+  'uiWorkspace',
   'remote',
   'uiConversation',
   'conversation',

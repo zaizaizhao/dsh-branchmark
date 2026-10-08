@@ -17,7 +17,7 @@ dsh-branchmark (Bundle)
 
 发布 Bundle 的 patch 只插入一个可从 profile 根目录解析的 `dsh-branchmark` Loader 行。该包的 Node 入口转交给 Host 实现，同时通过 `dsh.client` 与 `exports["./client"]` 暴露已编译的浏览器入口。源码仍按 Host 与 Client 两个工作区维护：Host 提供 durable Clip 和临时 Side Chat，Client 只负责选区映射、交互状态和调用现有 DSH Session 能力。
 
-发布产物把 Host、浏览器 Client、Host Typert 与 Remote codec 编译进同一个包；它不在运行时解析 `dsh-branchmark-host` 或 `dsh-branchmark-client` 私有工作区。顶层 `verify:bundle` 门禁检查默认 Host 导出、14 个 Remote invocation、自有 Typert package identity、浏览器模块包装和 `remote.branchmark` 注入。
+发布产物把 Host、浏览器 Client、Host Typert 与 Remote codec 编译进同一个包；它不在运行时解析 `dsh-branchmark-host` 或 `dsh-branchmark-client` 私有工作区。顶层 `verify:bundle` 门禁检查默认 Host 导出、15 个 Remote invocation、自有 Typert package identity、浏览器模块包装和 `remote.branchmark` 注入。
 
 ## DSH 扩展点
 
@@ -61,14 +61,14 @@ Domain 名称为 `clip_explorer`，schema version 为 1。这个内部持久化�
 
 关系与使用快照通过一个 KV `put` 原子提交，避免关系存在但使用快照缺失。新关系请求显式携带 `parentSessionId`，完整分叉的组织父必须等于其主要 Clip 的来源；仅枝签和空白分支以该字段记录组织关联，不写入 DSH `parentSession`。空白分支的附件和使用快照均为空。永久删除 Clip 不触碰该表。
 
-`DerivedSessionStore` 负责父子 Workspace 归属、DSH header 与历史校验、并发去重和记录查询。`listRelations({ includeSessions: true })` 逐个 inspect 关系端点，通过 DSH `foldSessionTitle` 返回标题和可用性，不传输日志正文。Client 将其与 Workspace 内的原生列表合并；未列出的可读会话通过指定现有 id 的 `sessions.create` 接口恢复绑定后打开，缺失记录拒绝打开。已有关系记录的 `parentSessionId` 保持可选读取；缺少该字段时，只能复用已记录的完整分叉来源或 DSH 原生 parent，不能根据现有 Clip 猜测旧的组织父。
+`DerivedSessionStore` 负责父子 Workspace 归属、DSH header 与历史校验、并发去重和记录查询。`listRelations({ includeSessions: true })` 通过 read handle 逐个读取关系端点，通过 DSH `foldSessionTitle` 返回标题和可用性，不传输日志正文。Client 将其与 Workspace 内的原生列表合并；未列出的可读会话通过 `sessions.using` 保留现有 id，等待绑定就绪后由 `uiWorkspace.openSession` 打开，缺失记录拒绝打开。已有关系记录的 `parentSessionId` 保持可选读取；缺少该字段时，只能复用已记录的完整分叉来源或 DSH 原生 parent，不能根据现有 Clip 猜测旧的组织父。
 
 ## 来源验证
 
 Client 的 DOM 选区只是一条观察，不是可信输入。Host 在创建 Clip 时：
 
 1. 验证 Workspace 存在且 owner Session 属于 Workspace；
-2. 读取 `sessionPersistence.inspect(sessionId)`；
+2. 通过 `readPersistedSession(sessionPersistence, sessionId)` 取得 header/cut/events，并关闭 read handle；
 3. 找到 `eventSeq` 对应的 append-origin `user/message` 或 `assistant/message`；
 4. 验证 DSH `MessageId`、role 与 turn；
 5. 用 DSH surface projection得到 canonical message text；
@@ -79,7 +79,7 @@ Client 先按相交的 `[data-chat-flow-key]` 拆分跨消息选区，再把每�
 
 ## Fork 一致性
 
-Client 把来源消息的事件序号交给原生 Fork。DSH 将边界推进到该消息所在完整轮次的 `turn/end`，随后包含下一轮 `turn/start` 前的独立尾随事件。
+Client 先请求 `prepareFork`；Host 依据已校验的主要 Clip，找到同一轮次的 `turn/end` 并包含下一轮 `turn/start` 前的尾随事件，返回 inclusive `atSeq`。DSH `0.2.0-rc.2` 的原生 Fork 复制该位置之前的精确前缀；直接传消息位置会产生不完整轮次。
 
 这里的来源是 Clip 所在的父 Session，不是 Clip 正文本身。新 Session 的 header 记录该父 Session 和 `isSeeded`，精确继承长度由 inspection 的 `inheritedEventCount` 表示。DSH 以普通会话历史投影并显示 seed；插件不复制、伪造或隐藏这些消息，只渲染继承横幅、来源入口和分叉分隔线。
 
@@ -159,11 +159,11 @@ DSH 的公开 `InputActions.setDraft()` 只接受完整新 draft，并通过公�
 
 `branchmark` Input Trigger source 不向 `@` 菜单提供候选项，只拥有这些程序化引用的 codec。提交时 `codec.serialize()` 重新从会话私有集合与项目集合读取 Clip，校验它仍处于 active 状态，再生成可读模型上下文。缺失、回收站或格式无效会拒绝序列化；DSH 保留 draft 与 Chip 并阻止发送。该过程不使用内部 XML 标签，也不会由引用动作自动提交。
 
-携带枝签的衍生 Session 不走上述 Composer 表示。Host 在校验新 Session header 与衍生关系后，将 Clip 使用快照渲染为 `source.kind=plugin, form=recall` 的 `user/message` 并追加到 Session surface。创建并打开时 Composer 保持空白；创建并发送时 Client 只把用户问题交给公开的 `SessionFace.prompt()`。枝签上下文因而对模型可见、由日志恢复、在 UI 中显示为可折叠回忆行，同时不成为用户可误改的输入框正文。空白分支不创建 recall；只有用户之后显式输入的问题才成为新的消息。
+携带枝签的衍生 Session 不走上述 Composer 表示。Host 在校验新 Session header 与衍生关系后，将 Clip 使用快照渲染为 `source.kind=dsh-branchmark, form=recall` 的 `user/message` 并追加到 Session surface。创建并打开时 Composer 保持空白；创建并发送时 Client 只把用户问题交给公开的 `SessionFace.prompt()`。枝签上下文因而对模型可见、由日志恢复、作为 recall 输入交由宿主渲染，同时不成为用户可误改的输入框正文。空白分支不创建 recall；只有用户之后显式输入的问题才成为新的消息。
 
 ## 已知兼容性边界
 
-- 插件以 DSH `0.1.2-rc.1` npm/release tag 的已导出 API 和 Slot contract 为目标；同版本字符串的后续 `master` 源码不属于这个发布目标。
+- 插件以 DSH `0.2.0-rc.2` npm/release tag 的已导出 API 和 Slot contract 为目标；同版本字符串的后续 `master` 源码不属于这个发布目标。
 - Composer 引用依赖 `@deepseek-ai/dsh-client-ui-input-trigger` 的 `ReferenceInsert`、`InputTriggerSource.codec` 和 `SessionInput.insertReference()`；任一能力缺失都会让 Client 插件在装载或构建阶段失败，不会回退为可见全文草稿。
-- API Session Controller 的 `ISessions` 公开 `create`、`fork`、`open`、`binding` 与 `scope`。插件直接调用这些接口，并且不会通过可能复用既有空白 Session 的 Workspace 导航动作实现“仅枝签”。
+- API Session Controller 的 `ISessions` 公开 `create`、`fork`、`using`、`binding` 与 `scope`。异步操作通过显式 `branchmarkOperation` retention 保留绑定；界面跳转由 `uiWorkspace.openSession` 拥有。当前 Session 从 `byId` 的 `retainedBy.mainView` 读取，严格新建仍使用 `sessions.create`。
 - `storageDomain` 不提供二级索引 API；当前全文搜索在 Workspace 可见 Clip 集合上执行有界本地扫描。若大规模数据需要倒排索引，应在后续 schema version 中增加插件自有索引记录，而不是绕过 storage domain。

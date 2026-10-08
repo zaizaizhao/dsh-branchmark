@@ -1,6 +1,6 @@
 /** Loads plugin links and combines them with the host's known Session catalog. */
 import { useEffect, useMemo, useState } from 'react'
-import { IconBranchOutline16, IconFullscreenOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconBranchOutlineMedium, IconFullscreenOutlineMedium, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
@@ -114,7 +114,7 @@ export function LineageView({
             setOverview(true)
           }}
         >
-          <IconFullscreenOutline16 size={13} />
+          <IconFullscreenOutlineMedium size={13} />
           {t('treeOverview')}
         </button>
       </div>
@@ -142,7 +142,7 @@ export function LineageView({
             <small>{t('currentBranchHint')}</small>
           </span>
           <button type="button" className="dbm-button dbm-button-branch" onClick={continueBranch}>
-            <IconBranchOutline16 size={13} />
+            <IconBranchOutlineMedium size={13} />
             {t('continueBranch')}
           </button>
         </div>

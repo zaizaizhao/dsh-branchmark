@@ -1,6 +1,6 @@
 # BranchMark Typed Remote API
 
-本页记录当前 `branchmark` namespace 的 14 个 unary 方法。声明源是 [`BranchMarkService`](../../packages/host/src/index.ts)，生成的 Client 签名在构建后写入 `packages/host/lib/typert.remote-client.d.ts`。生成文件不可手改。
+本页记录当前 `branchmark` namespace 的 15 个 unary 方法。声明源是 [`BranchMarkService`](../../packages/host/src/index.ts)，生成的 Client 签名在构建后写入 `packages/host/lib/typert.remote-client.d.ts`。生成文件不可手改。
 
 ## 调用结果的两层 envelope
 
@@ -38,10 +38,11 @@ DSH 当前 Remote 设计本身只要求外层 `RemoteResult<T>`，并用一个 m
 
 | Remote | 请求 | 成功值 | 写入 |
 | --- | --- | --- | --- |
+| `prepareFork` | Workspace、主要 Clip id | `{ sessionId, atSeq }`（inclusive 完整轮次位置） | 无 |
 | `recordDerivedSession` | child、Workspace、`parentSessionId`、mode、primary、attachments | `{ relation, usages }` | 一个 `derived_sessions.put`；有附件时才追加 recall |
 | `listRelations` | Workspace，可选 `clipId`、`derivedSessionId`、`includeSessions` | `{ relations, usages, sessions }` | 无 |
 
-`recordDerivedSession` 不创建 Session。Browser 必须先调用 DSH `fork` 或 `create`；Host 再检查 child header 与请求 mode 是否一致。三种模式均要求同 Workspace 内不同于 child 的组织父。`blank` 禁止附件和已有模型上下文；`full-fork` 要求 primary 与原生父一致。`includeSessions: true` 返回关系端点的 `{ sessionId, title?, nativeParentId?, available }`，缺失或不可读的端点仍保留为 `available: false`；不指定时 `sessions` 为空。关系记录不可覆盖，并发或重复 child id 返回 `derived-session-already-recorded`。
+`recordDerivedSession` 不创建 Session。完整分叉先调用 `prepareFork`，再用返回的位置调用 DSH `fork`；其余模式调用 `create`。创建后以 `sessions.using()` 保留并等待绑定；Host 再检查 child header 与请求 mode 是否一致。三种模式均要求同 Workspace 内不同于 child 的组织父。`blank` 禁止附件和已有模型上下文；`full-fork` 要求 primary 与原生父一致。`includeSessions: true` 返回关系端点的 `{ sessionId, title?, nativeParentId?, available }`，缺失或不可读的端点仍保留为 `available: false`；不指定时 `sessions` 为空。关系记录不可覆盖，并发或重复 child id 返回 `derived-session-already-recorded`。
 
 ## 临时 Side Chat
 
@@ -63,7 +64,7 @@ Side Chat snapshot 是缩窄 wire projection，不包含隐藏来源上下文、
 | code | 含义 | 常见修复 |
 | --- | --- | --- |
 | `workspace-not-found` | Workspace 不存在 | 刷新当前 Workspace，停止使用旧 id |
-| `session-not-found` | Session 无法 inspect | 重新打开来源或选择新来源 |
+| `session-not-found` | Session 无法通过 read handle 读取 | 重新打开来源或选择新来源 |
 | `session-outside-workspace` | owner Session 不属于 Workspace | 使用 `workspaceForSession` 的结果，不接受任意组合 |
 | `source-not-found` | event seq 不是可摘录消息 | 重新选择已完成 Chat node |
 | `source-mismatch` | message id、role 或 turn 不一致 | 丢弃旧 candidate，重新映射 UI |
@@ -84,4 +85,4 @@ Side Chat snapshot 是缩窄 wire projection，不包含隐藏来源上下文、
 
 Remote 方法必须是 public、non-static、non-generic 的实例方法；参数必须是必填的简单命名参数，不能使用 destructuring、默认值、rest 或 optional parameter。复杂 Host 对象不能直接穿过 wire；本插件的 public DTO 全部是 JSON-safe 值，因此不需要 Typert lookup provider。
 
-当前 Bundle 校验要求 contribution 中存在 14 个 invocation。修改 roster 时同步更新 [`scripts/verify-bundle.mjs`](../../scripts/verify-bundle.mjs) 与 Host roster test，避免生成文件与装载产物漂移。
+当前 Bundle 校验要求 contribution 中存在 15 个 invocation。修改 roster 时同步更新 [`scripts/verify-bundle.mjs`](../../scripts/verify-bundle.mjs) 与 Host roster test，避免生成文件与装载产物漂移。

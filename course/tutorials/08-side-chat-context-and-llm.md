@@ -2,7 +2,7 @@
 
 本章实现不创建普通 Session 的临时问答运行时。完成后，你应能从 primary Clip 恢复来源模型配置与消息前缀，把较早历史压成摘要、保留最近原始消息和完整 Clip，并直接通过 DSH LLM capability 流式回答。
 
-本章使用 rc.1 的 `sessionPersistence.inspect()`。取得 events、决定来源位置、重建消息是不同步骤；日志格式升级需要逐步复核，不能因为摘要函数没改就断言整条路径兼容，见[第 13 章](13-dsh-prerelease-upgrade.md)。
+本章使用 `readPersistedSession()` 集中读取并关闭 read handle。取得 events、决定来源位置、重建消息是不同步骤；日志格式升级需要逐步复核，不能因为摘要函数没改就断言整条路径兼容，见[第 13 章](13-dsh-prerelease-upgrade.md)。
 
 ## 1. Side Chat 不是“小号 Session”
 
@@ -115,7 +115,7 @@ Runtime 不把 earlier 的原始多角色 `Message[]` 直接发给摘要 endpoin
 摘要和 selected Clips 都通过 `createUserMessage` 构造，source 标为：
 
 ```typescript
-{ kind: 'plugin', plugin: 'dsh-branchmark', form: 'recall' }
+{ kind: 'dsh-branchmark', form: 'recall' }
 ```
 
 它们不冒充父 Session 的原始 user message。Clip recall 为每条材料写出来源提示、excerpt 和被选择的 note；temporary answer 只标为临时来源，不含可跳转 Session anchor。
